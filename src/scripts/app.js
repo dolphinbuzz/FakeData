@@ -84,15 +84,47 @@ const data = {
   company: {
     title: "Empresa gerada",
     label: "Empresa",
+    context: () => {
+      const nome = pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo"]);
+      const segmento = pick(["Tecnologia", "Varejo", "Consultoria", "Educação", "Saúde"]);
+      const estado = pick([
+        { sigla: "SP", nome: "São Paulo", cidades: ["São Paulo", "Campinas", "Santos"] },
+        { sigla: "RJ", nome: "Rio de Janeiro", cidades: ["Rio de Janeiro", "Niterói", "Petrópolis"] },
+        { sigla: "MG", nome: "Minas Gerais", cidades: ["Belo Horizonte", "Uberlândia", "Juiz de Fora"] },
+        { sigla: "PR", nome: "Paraná", cidades: ["Curitiba", "Londrina", "Maringá"] },
+        { sigla: "RS", nome: "Rio Grande do Sul", cidades: ["Porto Alegre", "Caxias do Sul", "Pelotas"] },
+        { sigla: "BA", nome: "Bahia", cidades: ["Salvador", "Feira de Santana", "Vitória da Conquista"] }
+      ]);
+
+      return {
+        nome,
+        segmento,
+        estado,
+        cidade: pick(estado.cidades),
+        endereco: pick(["Rua das Flores", "Avenida Brasil", "Rua das Acácias", "Avenida Central", "Rua do Comércio"]),
+        numero: String(randomInt(10, 1999)),
+        bairro: pick(["Centro", "Jardim América", "Vila Nova", "Bela Vista", "Jardim Paulista"]),
+        cep: `${digits(5)}-${digits(3)}`
+      };
+    },
     fields: [
-      ["Razão social", () => `${pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo"])} ${pick(["Tecnologia", "Soluções", "Serviços", "Comércio"])} Ltda.`],
+      ["Razão social", (ctx) => `${ctx.nome} ${pick(["Tecnologia", "Soluções", "Serviços", "Comércio"])} Ltda.`],
       ["CNPJ", () => cnpj(
         document.querySelector("#cnpj-formatted").checked,
         document.querySelector("#cnpj-alphanumeric").checked
       )],
+      ["Inscrição Estadual", () => gerarInscricaoEstadual()],
+      ["Data de abertura", () => gerarDataAbertura()],
       ["E-mail", () => gerarEmailEmpresa()],
+      ["Site", (ctx) => gerarSite(ctx.nome)],
       ["Telefone", () => gerarTelefoneFixo()],
-      ["Segmento", () => pick(["Tecnologia", "Varejo", "Consultoria", "Educação", "Saúde"])]
+      ["Segmento", (ctx) => ctx.segmento],
+      ["CEP", (ctx) => ctx.cep],
+      ["Endereço", (ctx) => ctx.endereco],
+      ["Número", (ctx) => ctx.numero],
+      ["Bairro", (ctx) => ctx.bairro],
+      ["Cidade", (ctx) => ctx.cidade],
+      ["Estado", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`]
     ]
   }
 };
@@ -240,6 +272,18 @@ function gerarEmailPessoa(nome, sobrenome) {
 function gerarEmailEmpresa() {
   const dominios = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
   return `contato${randomInt(10, 999)}@${pick(dominios)}`;
+}
+
+function gerarSite(nome) {
+  return `https://www.${normalizar(nome).replace(/\s+/g, "")}${randomInt(1, 99)}.com.br`;
+}
+
+function gerarInscricaoEstadual() {
+  return `${digits(3)}.${digits(3)}.${digits(3)}-${digits(2)}`;
+}
+
+function gerarDataAbertura() {
+  return `${pad(randomInt(1, 28))}/${pad(randomInt(1, 12))}/${randomInt(1980, 2025)}`;
 }
 
 function gerarNomeFiliacao() {
