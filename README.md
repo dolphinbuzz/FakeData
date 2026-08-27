@@ -13,6 +13,17 @@ O popup oferece geradores de Pessoa, Veículo e Empresa. A UF pode ser seleciona
 
 Clique em **↗ Lateral** para abrir o FakeData no painel lateral do navegador. O painel permanece aberto enquanto você navega entre páginas e abas da janela.
 
+## Preenchimento de formulários
+
+Ao abrir o popup ou o painel lateral em uma página HTTP(S), a seção **Mapear campos** lista os inputs, selects e áreas de texto editáveis. O tipo é inferido por heurísticas gerais, usando `name`, `autocomplete`, labels associadas, `aria-label`, placeholder, tipo do input e contexto estrutural do formulário (e não apenas IDs). Cada linha permite:
+
+- escolher ou corrigir o tipo de dado;
+- visualizar e editar o seletor CSS;
+- localizar o campo na página;
+- preencher somente aquele campo.
+
+Use **Salvar seletores** para manter os mapeamentos em `chrome.storage.local`, separados por URL, e **Preencher todos** para gerar um valor novo e preencher todos os campos mapeados de uma vez. Os eventos `input` e `change` são disparados para manter compatibilidade com frameworks como React e Vue. Campos em páginas protegidas do navegador (por exemplo, `chrome://`) não podem ser acessados.
+
 ## Estrutura
 
 ```text
@@ -23,6 +34,7 @@ FakeData/
     ├── popup.html
     ├── privacy.html
     ├── scripts/app.js
+    ├── scripts/content.js
     └── styles/
         ├── popup.css
         └── privacy.css

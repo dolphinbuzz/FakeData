@@ -145,6 +145,35 @@ const data = {
 
 let selectedType = "person";
 let currentResult = null;
+let activeTab = null;
+let activePageUrl = "";
+let pageFields = [];
+
+const MAPPING_TYPES = [
+  ["auto", "Inferir automaticamente"],
+  ["name", "Nome"],
+  ["cpf", "CPF"],
+  ["cnpj", "CNPJ"],
+  ["email", "E-mail"],
+  ["phone", "Telefone"],
+  ["rg", "RG"],
+  ["cep", "CEP"],
+  ["address", "Endereço"],
+  ["number", "Número"],
+  ["neighborhood", "Bairro"],
+  ["city", "Cidade"],
+  ["state", "Estado / UF"],
+  ["profession", "Profissão"],
+  ["income", "Renda"],
+  ["birthDate", "Data de nascimento"],
+  ["gender", "Sexo / gênero"],
+  ["mother", "Nome da mãe"],
+  ["father", "Nome do pai"],
+  ["company", "Empresa"],
+  ["plate", "Placa"],
+  ["website", "Site / URL"],
+  ["text", "Texto"]
+];
 
 const resultSection = document.querySelector("#result-section");
 const resultFields = document.querySelector("#result-fields");
@@ -157,6 +186,11 @@ const companyOptions = document.querySelector("#company-options");
 const openSidepanelButton = document.querySelector("#open-sidepanel-button");
 const themeToggle = document.querySelector("#theme-toggle");
 const ufSelect = document.querySelector("#uf-select");
+const scanFieldsButton = document.querySelector("#scan-fields-button");
+const saveMappingsButton = document.querySelector("#save-mappings-button");
+const fillAllButton = document.querySelector("#fill-all-button");
+const pageFieldsElement = document.querySelector("#page-fields");
+const pageFieldsStatus = document.querySelector("#page-fields-status");
 
 ESTADOS.forEach((estado) => {
   const option = document.createElement("option");
@@ -212,6 +246,12 @@ openSidepanelButton.addEventListener("click", () => {
   window.close();
 });
 
+if (scanFieldsButton) scanFieldsButton.addEventListener("click", scanPageFields);
+if (saveMappingsButton) saveMappingsButton.addEventListener("click", savePageMappings);
+if (fillAllButton) fillAllButton.addEventListener("click", fillAllPageFields);
+
+if (pageFieldsElement) scanPageFields();
+
 function generate() {
   const definition = data[selectedType];
   const context = definition.context ? definition.context() : {};
@@ -231,6 +271,198 @@ function generate() {
     button.addEventListener("click", () => copyText(button.dataset.value, button));
   });
   resultSection.classList.remove("is-hidden");
+}
+
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getActiveTab(callback) {
+  if (!chrome.tabs || !chrome.tabs.query) {
+    callback(null);
+    return;
+  }
+  chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => callback(tabs && tabs[0]));
+}
+
+function sendToPage(message, callback) {
+  if (!activeTab || !activeTab.id || !chrome.tabs || !chrome.tabs.sendMessage) {
+    callback(null, new Error("Nenhuma página ativa."));
+    return;
+  }
+  chrome.tabs.sendMessage(activeTab.id, message, (response) => {
+    const error = chrome.runtime.lastError;
+    callback(response, error || null);
+  });
+}
+
+function readMappings(url, callback) {
+  chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
+    const stored = result["fakedata-field-mappings"] || {};
+    let mappings = stored[url] || [];
+    if (typeof mappings === "string") {
+      try { mappings = JSON.parse(mappings); } catch (error) { mappings = []; }
+    }
+    callback(Array.isArray(mappings) ? mappings : []);
+  });
+}
+
+function scanPageFields() {
+  if (!pageFieldsStatus) return;
+  pageFieldsStatus.textContent = "Lendo campos da página...";
+  getActiveTab((tab) => {
+    activeTab = tab;
+    activePageUrl = tab && tab.url ? tab.url : "";
+    if (!activeTab || !activeTab.id || !/^https?:/i.test(activePageUrl)) {
+      pageFields = [];
+      renderPageFields();
+      pageFieldsStatus.textContent = "A página ativa não permite acesso a formulários.";
+      return;
+    }
+    sendToPage({ action: "SCAN_FIELDS" }, (response, error) => {
+      if (error || !response) {
+        pageFields = [];
+        renderPageFields();
+        pageFieldsStatus.textContent = "Não foi possível ler esta página. Recarregue-a e tente novamente.";
+        return;
+      }
+      readMappings(activePageUrl, (saved) => {
+        pageFields = (response.fields || []).map((field) => {
+          const mapping = saved.find((item) => item.key === field.key || item.selector === field.selector);
+          return {
+            ...field,
+            dataType: mapping && mapping.dataType ? mapping.dataType : field.inferredType || "text",
+            selector: mapping && mapping.selector ? mapping.selector : field.selector
+          };
+        });
+        renderPageFields();
+        pageFieldsStatus.textContent = pageFields.length
+          ? `${pageFields.length} campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.`
+          : "Nenhum campo editável encontrado nesta página.";
+      });
+    });
+  });
+}
+
+function renderPageFields() {
+  if (!pageFieldsElement) return;
+  pageFieldsElement.innerHTML = pageFields.map((field, index) => {
+    const options = MAPPING_TYPES.map(([value, label]) =>
+      `<option value="${escapeHtml(value)}" ${field.dataType === value ? "selected" : ""}>${escapeHtml(label)}</option>`
+    ).join("");
+    return `
+      <div class="page-field" data-index="${index}">
+        <div class="page-field-heading">
+          <span class="page-field-label" title="${escapeHtml(field.label)}">${escapeHtml(field.label)}</span>
+          <span class="muted">${escapeHtml(field.inputType || field.tagName)}</span>
+        </div>
+        <select class="page-field-type" aria-label="Tipo para ${escapeHtml(field.label)}">${options}</select>
+        <input class="page-field-selector" type="text" aria-label="Seletor para ${escapeHtml(field.label)}" value="${escapeHtml(field.selector)}">
+        <div class="page-field-actions">
+          <button type="button" data-action="highlight">Localizar</button>
+          <button type="button" data-action="fill">Preencher</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  pageFieldsElement.querySelectorAll(".page-field").forEach((row) => {
+    const index = Number(row.dataset.index);
+    row.querySelector(".page-field-type").addEventListener("change", (event) => {
+      pageFields[index].dataType = event.target.value;
+    });
+    row.querySelector(".page-field-selector").addEventListener("input", (event) => {
+      pageFields[index].selector = event.target.value;
+    });
+    row.querySelector('[data-action="highlight"]').addEventListener("click", () => {
+      sendToPage({ action: "HIGHLIGHT_FIELD", selector: pageFields[index].selector }, () => {});
+    });
+    row.querySelector('[data-action="fill"]').addEventListener("click", () => fillPageField(index));
+  });
+}
+
+function savePageMappings() {
+  if (!activePageUrl || !pageFields.length) {
+    if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum mapeamento para salvar.";
+    return;
+  }
+  const mappings = pageFields.map((field) => ({
+    key: field.key,
+    selector: field.selector,
+    dataType: field.dataType
+  }));
+  chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
+    const stored = result["fakedata-field-mappings"] || {};
+    stored[activePageUrl] = mappings;
+    chrome.storage.local.set({ "fakedata-field-mappings": stored }, () => {
+      if (pageFieldsStatus) pageFieldsStatus.textContent = "Mapeamentos salvos para esta URL.";
+    });
+  });
+}
+
+function fillPageField(index) {
+  const field = pageFields[index];
+  if (!field) return;
+  const value = generateMappedValue(field.dataType === "auto" ? field.inferredType : field.dataType);
+  sendToPage({ action: "FILL_FIELD", selector: field.selector, value }, (response, error) => {
+    if (pageFieldsStatus) {
+      pageFieldsStatus.textContent = error || !response || !response.filled
+        ? "Não foi possível preencher esse campo. Verifique o seletor."
+        : `${field.label} preenchido.`;
+    }
+  });
+}
+
+function fillAllPageFields() {
+  if (!pageFields.length) {
+    if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum campo mapeado.";
+    return;
+  }
+  const context = data.person.context();
+  const fields = pageFields.map((field) => ({
+    selector: field.selector,
+    value: generateMappedValue(field.dataType === "auto" ? field.inferredType : field.dataType, context)
+  }));
+  sendToPage({ action: "FILL_ALL", fields }, (response, error) => {
+    if (pageFieldsStatus) {
+      pageFieldsStatus.textContent = error || !response
+        ? "Não foi possível preencher os campos desta página."
+        : `${response.filled} de ${response.total} campo(s) preenchido(s).`;
+    }
+  });
+}
+
+function generateMappedValue(type, context = data.person.context()) {
+  const personValues = {
+    name: `${context.nome} ${context.sobrenome}`,
+    cpf: cpf(document.querySelector("#cpf-formatted") ? document.querySelector("#cpf-formatted").checked : true),
+    rg: gerarRG(),
+    email: gerarEmailPessoa(context.nome, context.sobrenome),
+    phone: gerarTelefoneCelular(context.estado),
+    birthDate: `${pad(randomInt(1, 28))}/${pad(randomInt(1, 12))}/${randomInt(1970, 2003)}`,
+    gender: pick(["Feminino", "Masculino"]),
+    mother: context.mae,
+    father: context.pai,
+    cep: context.cep,
+    address: context.endereco,
+    number: context.numero,
+    neighborhood: context.bairro,
+    city: context.cidade,
+    state: `${context.estado.sigla} - ${context.estado.nome}`,
+    profession: pick(["Analista de QA", "Desenvolvedor(a)", "Designer", "Gerente de projetos", "Contador(a)", "Professor(a)", "Engenheiro(a)"]),
+    income: `R$ ${randomInt(1800, 18000).toLocaleString("pt-BR")},00`,
+    company: `${pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo"])} Tecnologia Ltda.`,
+    cnpj: cnpj(document.querySelector("#cnpj-formatted") ? document.querySelector("#cnpj-formatted").checked : true, document.querySelector("#cnpj-alphanumeric") ? document.querySelector("#cnpj-alphanumeric").checked : false),
+    plate: gerarPlaca(),
+    website: gerarSite(pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo"])),
+    text: randomWord()
+  };
+  return personValues[type] || personValues.text;
 }
 
 function gerarEstadoSelecionado() {

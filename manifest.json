@@ -11,7 +11,23 @@
     "default_path": "src/popup.html"
   },
   "permissions": [
-    "sidePanel"
+    "sidePanel",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/scripts/content.js"
+      ],
+      "run_at": "document_idle"
+    }
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
