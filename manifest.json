@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "FakeData",
+  "version": "1.0.0",
+  "description": "Gere dados falsos para testes de QA de forma rápida.",
+  "action": {
+    "default_title": "FakeData",
+    "default_popup": "popup.html"
+  },
+  "permissions": []
+}
