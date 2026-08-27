@@ -204,6 +204,32 @@ h2 {
   line-height: 1;
 }
 
+.uf-control {
+  display: block;
+  margin: -4px 0 18px;
+}
+
+.uf-control .options-label {
+  display: block;
+  margin-bottom: 7px;
+}
+
+.uf-control select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.uf-control select:focus {
+  border-color: var(--accent);
+}
+
 .format-options {
   display: flex;
   flex-wrap: wrap;

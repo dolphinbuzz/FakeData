@@ -1,5 +1,33 @@
 // Interface e regras do gerador da extensão.
 const DDDS = ["11", "21", "31", "41", "51", "61", "71", "81", "85", "47", "48", "62", "65", "67", "91", "98"];
+const ESTADOS = [
+  { sigla: "SP", nome: "São Paulo", cidades: ["São Paulo", "Campinas", "Santos", "Ribeirão Preto"], ddds: ["11", "12", "13", "14", "15", "16", "17", "18", "19"] },
+  { sigla: "RJ", nome: "Rio de Janeiro", cidades: ["Rio de Janeiro", "Niterói", "Petrópolis"], ddds: ["21", "22", "24"] },
+  { sigla: "MG", nome: "Minas Gerais", cidades: ["Belo Horizonte", "Uberlândia", "Juiz de Fora"], ddds: ["31", "32", "33", "34", "35", "37", "38"] },
+  { sigla: "PR", nome: "Paraná", cidades: ["Curitiba", "Londrina", "Maringá"], ddds: ["41", "42", "43", "44", "45", "46"] },
+  { sigla: "RS", nome: "Rio Grande do Sul", cidades: ["Porto Alegre", "Caxias do Sul", "Pelotas"], ddds: ["51", "53", "54", "55"] },
+  { sigla: "BA", nome: "Bahia", cidades: ["Salvador", "Feira de Santana", "Vitória da Conquista"], ddds: ["71", "73", "74", "75", "77"] },
+  { sigla: "SC", nome: "Santa Catarina", cidades: ["Florianópolis", "Joinville", "Blumenau"], ddds: ["47", "48", "49"] },
+  { sigla: "PE", nome: "Pernambuco", cidades: ["Recife", "Olinda", "Caruaru"], ddds: ["81", "87"] },
+  { sigla: "GO", nome: "Goiás", cidades: ["Goiânia", "Anápolis", "Aparecida de Goiânia"], ddds: ["61", "62", "64"] },
+  { sigla: "AC", nome: "Acre", cidades: ["Rio Branco", "Cruzeiro do Sul"], ddds: ["68"] },
+  { sigla: "AL", nome: "Alagoas", cidades: ["Maceió", "Arapiraca"], ddds: ["82"] },
+  { sigla: "AM", nome: "Amazonas", cidades: ["Manaus", "Parintins"], ddds: ["92", "97"] },
+  { sigla: "AP", nome: "Amapá", cidades: ["Macapá", "Santana"], ddds: ["96"] },
+  { sigla: "CE", nome: "Ceará", cidades: ["Fortaleza", "Caucaia", "Juazeiro do Norte"], ddds: ["85", "88"] },
+  { sigla: "DF", nome: "Distrito Federal", cidades: ["Brasília"], ddds: ["61"] },
+  { sigla: "ES", nome: "Espírito Santo", cidades: ["Vitória", "Vila Velha", "Serra"], ddds: ["27", "28"] },
+  { sigla: "MA", nome: "Maranhão", cidades: ["São Luís", "Imperatriz"], ddds: ["98", "99"] },
+  { sigla: "MS", nome: "Mato Grosso do Sul", cidades: ["Campo Grande", "Dourados"], ddds: ["67"] },
+  { sigla: "MT", nome: "Mato Grosso", cidades: ["Cuiabá", "Várzea Grande", "Rondonópolis"], ddds: ["65", "66"] },
+  { sigla: "PA", nome: "Pará", cidades: ["Belém", "Santarém", "Ananindeua"], ddds: ["91", "93", "94"] },
+  { sigla: "PB", nome: "Paraíba", cidades: ["João Pessoa", "Campina Grande"], ddds: ["83"] },
+  { sigla: "PI", nome: "Piauí", cidades: ["Teresina", "Parnaíba"], ddds: ["86", "89"] },
+  { sigla: "RO", nome: "Rondônia", cidades: ["Porto Velho", "Ji-Paraná"], ddds: ["69"] },
+  { sigla: "RR", nome: "Roraima", cidades: ["Boa Vista", "Rorainópolis"], ddds: ["95"] },
+  { sigla: "SE", nome: "Sergipe", cidades: ["Aracaju", "Nossa Senhora do Socorro"], ddds: ["79"] },
+  { sigla: "TO", nome: "Tocantins", cidades: ["Palmas", "Araguaína"], ddds: ["63"] }
+];
 
 const data = {
   person: {
@@ -20,17 +48,7 @@ const data = {
         "Alves", "Carvalho", "Mendes", "Lopes", "Correia", "Dias", "Moreira"
       ]);
       const sexo = pick(["Feminino", "Masculino"]);
-      const estado = pick([
-        { sigla: "SP", nome: "São Paulo", cidades: ["São Paulo", "Campinas", "Santos", "Ribeirão Preto"] },
-        { sigla: "RJ", nome: "Rio de Janeiro", cidades: ["Rio de Janeiro", "Niterói", "Petrópolis"] },
-        { sigla: "MG", nome: "Minas Gerais", cidades: ["Belo Horizonte", "Uberlândia", "Juiz de Fora"] },
-        { sigla: "PR", nome: "Paraná", cidades: ["Curitiba", "Londrina", "Maringá"] },
-        { sigla: "RS", nome: "Rio Grande do Sul", cidades: ["Porto Alegre", "Caxias do Sul", "Pelotas"] },
-        { sigla: "BA", nome: "Bahia", cidades: ["Salvador", "Feira de Santana", "Vitória da Conquista"] },
-        { sigla: "SC", nome: "Santa Catarina", cidades: ["Florianópolis", "Joinville", "Blumenau"] },
-        { sigla: "PE", nome: "Pernambuco", cidades: ["Recife", "Olinda", "Caruaru"] },
-        { sigla: "GO", nome: "Goiás", cidades: ["Goiânia", "Anápolis", "Aparecida de Goiânia"] }
-      ]);
+      const estado = gerarEstadoSelecionado();
       return {
         nome,
         sobrenome,
@@ -51,7 +69,7 @@ const data = {
       ["RG", () => gerarRG()],
       ["Sexo", (ctx) => ctx.sexo],
       ["E-mail", (ctx) => gerarEmailPessoa(ctx.nome, ctx.sobrenome)],
-      ["Telefone", () => gerarTelefoneCelular()],
+      ["Telefone", (ctx) => gerarTelefoneCelular(ctx.estado)],
       ["Data nasc.", () => `${pad(randomInt(1, 28))}/${pad(randomInt(1, 12))}/${randomInt(1970, 2003)}`],
       ["Mãe", (ctx) => ctx.mae],
       ["Pai", (ctx) => ctx.pai],
@@ -73,12 +91,14 @@ const data = {
   vehicle: {
     title: "Veículo gerado",
     label: "Veículo",
+    context: () => ({ estado: gerarEstadoSelecionado() }),
     fields: [
       ["Marca", () => pick(["Toyota", "Volkswagen", "Chevrolet", "Honda", "Fiat", "Hyundai"])],
       ["Modelo", () => pick(["Corolla", "T-Cross", "Onix", "Civic", "Argo", "HB20"])],
       ["Placa", () => gerarPlaca()],
       ["Ano", () => gerarAno()],
-      ["Cor", () => pick(["Preto", "Branco", "Prata", "Azul", "Vermelho"])]
+      ["Cor", () => pick(["Preto", "Branco", "Prata", "Azul", "Vermelho"])],
+      ["UF", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`]
     ]
   },
   company: {
@@ -87,14 +107,7 @@ const data = {
     context: () => {
       const nome = pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo"]);
       const segmento = pick(["Tecnologia", "Varejo", "Consultoria", "Educação", "Saúde"]);
-      const estado = pick([
-        { sigla: "SP", nome: "São Paulo", cidades: ["São Paulo", "Campinas", "Santos"] },
-        { sigla: "RJ", nome: "Rio de Janeiro", cidades: ["Rio de Janeiro", "Niterói", "Petrópolis"] },
-        { sigla: "MG", nome: "Minas Gerais", cidades: ["Belo Horizonte", "Uberlândia", "Juiz de Fora"] },
-        { sigla: "PR", nome: "Paraná", cidades: ["Curitiba", "Londrina", "Maringá"] },
-        { sigla: "RS", nome: "Rio Grande do Sul", cidades: ["Porto Alegre", "Caxias do Sul", "Pelotas"] },
-        { sigla: "BA", nome: "Bahia", cidades: ["Salvador", "Feira de Santana", "Vitória da Conquista"] }
-      ]);
+      const estado = gerarEstadoSelecionado();
 
       return {
         nome,
@@ -117,7 +130,7 @@ const data = {
       ["Data de abertura", () => gerarDataAbertura()],
       ["E-mail", () => gerarEmailEmpresa()],
       ["Site", (ctx) => gerarSite(ctx.nome)],
-      ["Telefone", () => gerarTelefoneFixo()],
+      ["Telefone", (ctx) => gerarTelefoneFixo(ctx.estado)],
       ["Segmento", (ctx) => ctx.segmento],
       ["CEP", (ctx) => ctx.cep],
       ["Endereço", (ctx) => ctx.endereco],
@@ -142,6 +155,14 @@ const personOptions = document.querySelector("#person-options");
 const companyOptions = document.querySelector("#company-options");
 const openSidepanelButton = document.querySelector("#open-sidepanel-button");
 const themeToggle = document.querySelector("#theme-toggle");
+const ufSelect = document.querySelector("#uf-select");
+
+ESTADOS.forEach((estado) => {
+  const option = document.createElement("option");
+  option.value = estado.sigla;
+  option.textContent = `${estado.sigla} - ${estado.nome}`;
+  ufSelect.appendChild(option);
+});
 
 function applyTheme(theme) {
   const selectedTheme = theme === "light" ? "light" : "dark";
@@ -177,6 +198,7 @@ document.querySelectorAll(".type-button").forEach((button) => {
 });
 
 generateButton.addEventListener("click", generate);
+ufSelect.addEventListener("change", generate);
 copyJsonButton.addEventListener("click", () => copyText(JSON.stringify(currentResult, null, 2), copyJsonButton));
 openSidepanelButton.addEventListener("click", () => {
   chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch((error) => {
@@ -204,6 +226,14 @@ function generate() {
     button.addEventListener("click", () => copyText(button.dataset.value, button));
   });
   resultSection.classList.remove("is-hidden");
+}
+
+function gerarEstadoSelecionado() {
+  const selectedUf = ufSelect.value;
+  if (selectedUf === "ALL") {
+    return pick(ESTADOS);
+  }
+  return ESTADOS.find((estado) => estado.sigla === selectedUf) || pick(ESTADOS);
 }
 
 // Checagem de sanidade em desenvolvimento: garante que o próprio gerador
@@ -300,12 +330,14 @@ function gerarRG() {
   return `${digits(2)}.${digits(3)}.${digits(3)}-${randomInt(0, 9)}`;
 }
 
-function gerarTelefoneCelular() {
-  return `(${pick(DDDS)}) 9${digits(4)}-${digits(4)}`;
+function gerarTelefoneCelular(estado) {
+  const ddds = estado ? estado.ddds : DDDS;
+  return `(${pick(ddds)}) 9${digits(4)}-${digits(4)}`;
 }
 
-function gerarTelefoneFixo() {
-  return `(${pick(DDDS)}) ${digits(4)}-${digits(4)}`;
+function gerarTelefoneFixo(estado) {
+  const ddds = estado ? estado.ddds : DDDS;
+  return `(${pick(ddds)}) ${digits(4)}-${digits(4)}`;
 }
 
 // Padrão antigo (LLL-DDDD) e padrão Mercosul (LLLDLDD), vigente desde 2018.
