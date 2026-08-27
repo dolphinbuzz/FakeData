@@ -75,21 +75,27 @@ const copyJsonButton = document.querySelector("#copy-json-button");
 const personOptions = document.querySelector("#person-options");
 const companyOptions = document.querySelector("#company-options");
 const openSidepanelButton = document.querySelector("#open-sidepanel-button");
-const themeSelect = document.querySelector("#theme-select");
+const themeToggle = document.querySelector("#theme-toggle");
 
 function applyTheme(theme) {
   const selectedTheme = theme === "light" ? "light" : "dark";
   document.documentElement.dataset.theme = selectedTheme;
-  if (themeSelect) {
-    themeSelect.value = selectedTheme;
+  if (themeToggle) {
+    const isLight = selectedTheme === "light";
+    themeToggle.innerHTML = `<span aria-hidden="true">${isLight ? "☀" : "☾"}</span>`;
+    themeToggle.setAttribute("aria-label", isLight ? "Ativar tema escuro" : "Ativar tema claro");
+    themeToggle.title = isLight ? "Ativar tema escuro" : "Ativar tema claro";
   }
   localStorage.setItem("fakedata-theme", selectedTheme);
 }
 
 applyTheme(localStorage.getItem("fakedata-theme") || "dark");
 
-if (themeSelect) {
-  themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+if (themeToggle) {
+  themeToggle.addEventListener("click", () => {
+    const nextTheme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    applyTheme(nextTheme);
+  });
 }
 
 document.querySelectorAll(".type-button").forEach((button) => {

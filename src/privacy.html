@@ -15,13 +15,9 @@
           <h1>Política de Privacidade</h1>
           <p class="updated">Última atualização: 27 de agosto de 2026</p>
         </div>
-        <label class="theme-control" for="theme-select">
-          <span class="sr-only">Tema</span>
-          <select id="theme-select" aria-label="Selecionar tema">
-            <option value="dark">Escuro</option>
-            <option value="light">Claro</option>
-          </select>
-        </label>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Ativar tema claro">
+          <span aria-hidden="true">☀</span>
+        </button>
       </header>
       <section><h2>Resumo</h2><p>O FakeData é uma extensão para Chrome e Microsoft Edge que gera dados fictícios para testes de QA. A extensão foi projetada para funcionar localmente e não coleta, armazena ou compartilha dados pessoais.</p></section>
       <section><h2>Dados processados</h2><p>Os dados gerados, como nomes, documentos, e-mails, telefones e informações de empresas ou veículos, são criados aleatoriamente no navegador. Eles não representam pessoas ou organizações reais e não são enviados para servidores externos.</p></section>
@@ -30,13 +26,21 @@
       <section><h2>Alterações e contato</h2><p>Esta política poderá ser atualizada para refletir mudanças na extensão ou na legislação aplicável. Dúvidas podem ser encaminhadas pelo <a href="https://github.com/dolphinbuzz/FakeData" target="_blank" rel="noopener noreferrer">repositório do projeto no GitHub</a>.</p></section>
     </main>
     <script>
-      const themeSelect = document.querySelector("#theme-select");
+      const themeToggle = document.querySelector("#theme-toggle");
       const theme = localStorage.getItem("fakedata-theme") === "light" ? "light" : "dark";
       document.documentElement.dataset.theme = theme;
-      themeSelect.value = theme;
-      themeSelect.addEventListener("change", () => {
-        document.documentElement.dataset.theme = themeSelect.value;
-        localStorage.setItem("fakedata-theme", themeSelect.value);
+      const updateThemeToggle = () => {
+        const isLight = document.documentElement.dataset.theme === "light";
+        themeToggle.innerHTML = `<span aria-hidden="true">${isLight ? "☀" : "☾"}</span>`;
+        themeToggle.setAttribute("aria-label", isLight ? "Ativar tema escuro" : "Ativar tema claro");
+        themeToggle.title = isLight ? "Ativar tema escuro" : "Ativar tema claro";
+      };
+      updateThemeToggle();
+      themeToggle.addEventListener("click", () => {
+        const nextTheme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+        document.documentElement.dataset.theme = nextTheme;
+        localStorage.setItem("fakedata-theme", nextTheme);
+        updateThemeToggle();
       });
     </script>
   </body>

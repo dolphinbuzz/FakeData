@@ -42,34 +42,25 @@ header {
   margin-bottom: 48px;
 }
 
-.theme-control {
+.theme-toggle {
   margin-left: auto;
-}
-
-.theme-control select {
-  padding: 8px 23px 8px 9px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
   border: 1px solid var(--border);
   border-radius: 7px;
-  outline: none;
   background: var(--surface);
   color: var(--muted);
-  font: inherit;
-  font-size: 12px;
+  cursor: pointer;
+  font-size: 17px;
 }
 
-.theme-control select:focus {
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
   border-color: var(--accent);
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  color: var(--text);
+  outline: none;
 }
 
 .brand-mark {
