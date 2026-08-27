@@ -1,0 +1,11 @@
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+
+# Dependências e artefatos de build
+node_modules/
+dist/
+coverage/

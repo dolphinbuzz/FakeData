@@ -5,7 +5,12 @@
   "description": "Gere dados falsos para testes de QA de forma rápida.",
   "action": {
     "default_title": "FakeData",
-    "default_popup": "popup.html"
+    "default_popup": "src/popup.html"
   },
-  "permissions": []
+  "side_panel": {
+    "default_path": "src/popup.html"
+  },
+  "permissions": [
+    "sidePanel"
+  ]
 }
