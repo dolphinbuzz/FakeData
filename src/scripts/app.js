@@ -172,6 +172,7 @@ document.querySelectorAll(".type-button").forEach((button) => {
     generateLabel.textContent = data[selectedType].label;
     personOptions.classList.toggle("is-hidden", selectedType !== "person");
     companyOptions.classList.toggle("is-hidden", selectedType !== "company");
+    generate();
   });
 });
 
