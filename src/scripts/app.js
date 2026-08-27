@@ -163,6 +163,7 @@ ESTADOS.forEach((estado) => {
   option.textContent = `${estado.sigla} - ${estado.nome}`;
   ufSelect.appendChild(option);
 });
+ufSelect.value = localStorage.getItem("fakedata-uf") || "ALL";
 
 function applyTheme(theme) {
   const selectedTheme = theme === "light" ? "light" : "dark";
@@ -199,6 +200,9 @@ document.querySelectorAll(".type-button").forEach((button) => {
 
 generateButton.addEventListener("click", generate);
 ufSelect.addEventListener("change", generate);
+ufSelect.addEventListener("change", () => {
+  localStorage.setItem("fakedata-uf", ufSelect.value);
+});
 copyJsonButton.addEventListener("click", () => copyText(JSON.stringify(currentResult, null, 2), copyJsonButton));
 openSidepanelButton.addEventListener("click", () => {
   chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch((error) => {
