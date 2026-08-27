@@ -19,14 +19,48 @@ const data = {
         "Nascimento", "Teixeira", "Araujo", "Monteiro", "Freitas", "Pereira",
         "Alves", "Carvalho", "Mendes", "Lopes", "Correia", "Dias", "Moreira"
       ]);
-      return { nome, sobrenome };
+      const sexo = pick(["Feminino", "Masculino"]);
+      const estado = pick([
+        { sigla: "SP", nome: "São Paulo", cidades: ["São Paulo", "Campinas", "Santos", "Ribeirão Preto"] },
+        { sigla: "RJ", nome: "Rio de Janeiro", cidades: ["Rio de Janeiro", "Niterói", "Petrópolis"] },
+        { sigla: "MG", nome: "Minas Gerais", cidades: ["Belo Horizonte", "Uberlândia", "Juiz de Fora"] },
+        { sigla: "PR", nome: "Paraná", cidades: ["Curitiba", "Londrina", "Maringá"] },
+        { sigla: "RS", nome: "Rio Grande do Sul", cidades: ["Porto Alegre", "Caxias do Sul", "Pelotas"] },
+        { sigla: "BA", nome: "Bahia", cidades: ["Salvador", "Feira de Santana", "Vitória da Conquista"] },
+        { sigla: "SC", nome: "Santa Catarina", cidades: ["Florianópolis", "Joinville", "Blumenau"] },
+        { sigla: "PE", nome: "Pernambuco", cidades: ["Recife", "Olinda", "Caruaru"] },
+        { sigla: "GO", nome: "Goiás", cidades: ["Goiânia", "Anápolis", "Aparecida de Goiânia"] }
+      ]);
+      return {
+        nome,
+        sobrenome,
+        sexo,
+        mae: gerarNomeFiliacao(),
+        pai: gerarNomeFiliacao(),
+        cep: `${digits(5)}-${digits(3)}`,
+        endereco: pick(["Rua das Flores", "Avenida Brasil", "Rua das Acácias", "Avenida Central", "Rua do Comércio"]),
+        numero: String(randomInt(10, 1999)),
+        bairro: pick(["Centro", "Jardim América", "Vila Nova", "Bela Vista", "Jardim Paulista"]),
+        cidade: pick(estado.cidades),
+        estado
+      };
     },
     fields: [
       ["Nome", (ctx) => `${ctx.nome} ${ctx.sobrenome}`],
       ["CPF", () => cpf(document.querySelector("#cpf-formatted").checked)],
+      ["RG", () => gerarRG()],
+      ["Sexo", (ctx) => ctx.sexo],
       ["E-mail", (ctx) => gerarEmailPessoa(ctx.nome, ctx.sobrenome)],
       ["Telefone", () => gerarTelefoneCelular()],
       ["Data nasc.", () => `${pad(randomInt(1, 28))}/${pad(randomInt(1, 12))}/${randomInt(1970, 2003)}`],
+      ["Mãe", (ctx) => ctx.mae],
+      ["Pai", (ctx) => ctx.pai],
+      ["CEP", (ctx) => ctx.cep],
+      ["Endereço", (ctx) => ctx.endereco],
+      ["Número", (ctx) => ctx.numero],
+      ["Bairro", (ctx) => ctx.bairro],
+      ["Cidade", (ctx) => ctx.cidade],
+      ["Estado", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`],
       ["Profissão", () => pick([
         "Analista de QA", "Desenvolvedor(a)", "Designer", "Gerente de projetos",
         "Contador(a)", "Enfermeiro(a)", "Professor(a)", "Advogado(a)",
@@ -206,6 +240,19 @@ function gerarEmailPessoa(nome, sobrenome) {
 function gerarEmailEmpresa() {
   const dominios = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
   return `contato${randomInt(10, 999)}@${pick(dominios)}`;
+}
+
+function gerarNomeFiliacao() {
+  const nomes = [
+    "Maria Aparecida", "Jose Antonio", "Sandra Regina", "Roberto Carlos",
+    "Patricia Cristina", "Marcos Aurelio", "Luciana Maria", "Antonio Carlos",
+    "Claudia Regina", "Fernando Luiz", "Adriana Cristina", "Paulo Roberto"
+  ];
+  return `${pick(nomes)} ${pick(["Ferreira", "Costa", "Ribeiro", "Gomes", "Barbosa", "Moura", "Cardoso", "Teixeira", "Monteiro", "Pereira"])}`;
+}
+
+function gerarRG() {
+  return `${digits(2)}.${digits(3)}.${digits(3)}-${randomInt(0, 9)}`;
 }
 
 function gerarTelefoneCelular() {

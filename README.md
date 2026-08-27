@@ -9,7 +9,7 @@ Extensão para Chrome e Microsoft Edge que gera dados fictícios para testes de 
 3. Selecione **Carregar sem compactação** e escolha esta pasta.
 4. Clique no ícone da extensão **FakeData**.
 
-O popup oferece geradores de Pessoa, Veículo e Empresa. Em Pessoa, o CPF pode ser gerado com ou sem pontuação. Em Empresa, o CNPJ pode usar o formato numérico ou alfanumérico e também pode ser exibido com ou sem pontuação. Os e-mails usam domínios reais de provedores populares. Cada resultado pode ser copiado individualmente ou como JSON.
+O popup oferece geradores de Pessoa, Veículo e Empresa. Em Pessoa, são gerados nome, CPF, RG, sexo, e-mail, telefone, data de nascimento, profissão, renda, filiação e endereço completo (CEP, endereço, número, bairro, cidade e estado). O CPF pode ser gerado com ou sem pontuação. Em Empresa, o CNPJ pode usar o formato numérico ou alfanumérico e também pode ser exibido com ou sem pontuação. Os e-mails usam domínios reais de provedores populares. Cada resultado pode ser copiado individualmente ou como JSON.
 
 Clique em **↗ Lateral** para abrir o FakeData no painel lateral do navegador. O painel permanece aberto enquanto você navega entre páginas e abas da janela.
 
