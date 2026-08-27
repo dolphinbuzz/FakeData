@@ -25,23 +25,6 @@
       <section><h2>Serviços de terceiros</h2><p>A extensão não usa analytics, anúncios, rastreadores, APIs externas ou serviços de terceiros. Os domínios de e-mail exibidos são apenas valores fictícios para testes.</p></section>
       <section><h2>Alterações e contato</h2><p>Esta política poderá ser atualizada para refletir mudanças na extensão ou na legislação aplicável. Dúvidas podem ser encaminhadas pelo <a href="https://github.com/dolphinbuzz/FakeData" target="_blank" rel="noopener noreferrer">repositório do projeto no GitHub</a>.</p></section>
     </main>
-    <script>
-      const themeToggle = document.querySelector("#theme-toggle");
-      const theme = localStorage.getItem("fakedata-theme") === "light" ? "light" : "dark";
-      document.documentElement.dataset.theme = theme;
-      const updateThemeToggle = () => {
-        const isLight = document.documentElement.dataset.theme === "light";
-        themeToggle.innerHTML = `<span aria-hidden="true">${isLight ? "☀" : "☾"}</span>`;
-        themeToggle.setAttribute("aria-label", isLight ? "Ativar tema escuro" : "Ativar tema claro");
-        themeToggle.title = isLight ? "Ativar tema escuro" : "Ativar tema claro";
-      };
-      updateThemeToggle();
-      themeToggle.addEventListener("click", () => {
-        const nextTheme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-        document.documentElement.dataset.theme = nextTheme;
-        localStorage.setItem("fakedata-theme", nextTheme);
-        updateThemeToggle();
-      });
-    </script>
+    <script src="scripts/privacy.js"></script>
   </body>
 </html>
