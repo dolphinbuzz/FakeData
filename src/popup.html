@@ -14,9 +14,18 @@
           <h1>FakeData</h1>
           <p>Dados falsos para seus testes</p>
         </div>
-        <button id="open-sidepanel-button" class="open-sidepanel-button" type="button" title="Abrir na lateral">
-          ↗ Lateral
-        </button>
+        <div class="hero-actions">
+          <label class="theme-control" for="theme-select">
+            <span class="sr-only">Tema</span>
+            <select id="theme-select" aria-label="Selecionar tema">
+              <option value="dark">Escuro</option>
+              <option value="light">Claro</option>
+            </select>
+          </label>
+          <button id="open-sidepanel-button" class="open-sidepanel-button" type="button" title="Abrir na lateral">
+            ↗ Lateral
+          </button>
+        </div>
       </header>
 
       <section class="generator-panel" aria-labelledby="generator-title">

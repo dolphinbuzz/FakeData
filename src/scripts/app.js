@@ -75,6 +75,22 @@ const copyJsonButton = document.querySelector("#copy-json-button");
 const personOptions = document.querySelector("#person-options");
 const companyOptions = document.querySelector("#company-options");
 const openSidepanelButton = document.querySelector("#open-sidepanel-button");
+const themeSelect = document.querySelector("#theme-select");
+
+function applyTheme(theme) {
+  const selectedTheme = theme === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = selectedTheme;
+  if (themeSelect) {
+    themeSelect.value = selectedTheme;
+  }
+  localStorage.setItem("fakedata-theme", selectedTheme);
+}
+
+applyTheme(localStorage.getItem("fakedata-theme") || "dark");
+
+if (themeSelect) {
+  themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+}
 
 document.querySelectorAll(".type-button").forEach((button) => {
   button.addEventListener("click", () => {
