@@ -91,6 +91,10 @@ footer {
 }
 
 .open-sidepanel-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
   padding: 7px 9px;
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -98,6 +102,16 @@ footer {
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
+}
+
+.sidepanel-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .open-sidepanel-button:hover {
