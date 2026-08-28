@@ -4,7 +4,6 @@ const FIELD_SELECTOR = "input, select, textarea";
 const CUSTOM_FIELD_SELECTOR = "multi-select, [role='combobox'], .ui-autocomplete-multiselect";
 const SELECT2_OPTION_SELECTOR = "li.select2-results__option, li[list-select], [role='option'], .ui-menu-item";
 const IGNORED_TYPES = new Set(["hidden", "submit", "button", "reset", "image", "file"]);
-const markedFields = new Map();
 let lastPageSignature = "";
 let pageChangeTimer = null;
 
@@ -295,7 +294,10 @@ function scan() {
 function pageSignature() {
   return window.location.href + "::" + Array.from(document.querySelectorAll(`${FIELD_SELECTOR}, ${CUSTOM_FIELD_SELECTOR}`))
     .filter(visible)
-    .map((element) => selectorFor(element))
+    .map((element) => {
+      const locator = selectorFor(element);
+      return `${locator.selector}|${locator.rule}|${locator.status}`;
+    })
     .join("|");
 }
 

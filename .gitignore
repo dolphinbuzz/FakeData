@@ -1,11 +1,35 @@
 # Sistema operacional
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Editores
 .vscode/
+.idea/
 
 # Dependências e artefatos de build
 node_modules/
 dist/
 coverage/
+
+# Segredos e chaves — NUNCA versionar
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Empacotamento da extensão
+*.crx
+*.zip
+/web-ext-artifacts/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Cache de ferramentas
+.eslintcache
+.vitest/
+.nyc_output/

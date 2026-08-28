@@ -7,6 +7,7 @@
   ]);
   let selectorEngine = null;
   let actions = null;
+  const markedFields = new Map();
   modulesReady.then(([engine, messages]) => {
     selectorEngine = engine;
     actions = messages.ACTIONS;

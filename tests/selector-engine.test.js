@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
-import { inferType, scan, selectorFor } from "../src/scripts/selector-engine.js";
+import { inferType, pageSignature, scan, selectorFor } from "../src/scripts/selector-engine.js";
 
 let dom;
 
@@ -27,6 +27,14 @@ describe("selector engine", () => {
     const fields = scan();
     expect(fields).toHaveLength(2);
     expect(fields.map((field) => field.selector)).toEqual(["#email", "#uf"]);
+  });
+
+  it("inclui seletores reais na assinatura da página", () => {
+    const signature = pageSignature();
+
+    expect(signature).toContain("#email|id|stable");
+    expect(signature).toContain("#uf|id|stable");
+    expect(signature).not.toContain("[object Object]");
   });
 
   it.each([
