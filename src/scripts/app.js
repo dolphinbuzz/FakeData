@@ -149,7 +149,9 @@ if (mappingNameInput) mappingNameInput.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeMappingModal("");
 });
 
-if (pageFieldsElement) scanPageFields();
+migrateLegacyProfiles(() => {
+  if (pageFieldsElement) scanPageFields();
+});
 if (chrome.tabs && chrome.tabs.onActivated) {
   chrome.tabs.onActivated.addListener(() => {
     clearDisplayedPageFields("A aba ativa mudou. Clique em Escanear campos para ler a nova página.");
@@ -379,25 +381,42 @@ function profileId() {
   return `${activePageUrl}::${Date.now()}::${Math.random().toString(36).slice(2)}`;
 }
 
+function migrateLegacyProfiles(callback) {
+  chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
+    const stored = result["fakedata-field-mappings"] || {};
+    let migrated = false;
+    Object.keys(stored).forEach((legacyUrl) => {
+      if (!Array.isArray(stored[legacyUrl])) return;
+      const baseUrl = getBaseUrl(legacyUrl) || legacyUrl;
+      const application = stored[baseUrl] && !Array.isArray(stored[baseUrl])
+        ? stored[baseUrl]
+        : { pages: [] };
+      if (!Array.isArray(application.pages)) application.pages = [];
+      const legacyId = `${legacyUrl}::legacy`;
+      if (!application.pages.some((profile) => profile.id === legacyId)) {
+        application.pages.push({
+          id: legacyId,
+          name: "Mapeamento salvo",
+          pageUrl: legacyUrl,
+          fields: stored[legacyUrl]
+        });
+      }
+      stored[baseUrl] = application;
+      if (legacyUrl !== baseUrl) delete stored[legacyUrl];
+      migrated = true;
+    });
+    if (!migrated) {
+      callback();
+      return;
+    }
+    chrome.storage.local.set({ "fakedata-field-mappings": stored }, callback);
+  });
+}
+
 function readProfiles(baseUrl, callback) {
   chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
     const stored = result["fakedata-field-mappings"] || {};
-    let profiles = stored[baseUrl];
-    if (Array.isArray(profiles)) {
-      profiles = {
-        pages: [{ id: `${baseUrl}::legacy`, name: "Mapeamento salvo", pageUrl: baseUrl, fields: profiles }]
-      };
-    }
-    if (!profiles && activePageUrl && Array.isArray(stored[activePageUrl])) {
-      profiles = {
-        pages: [{
-          id: `${activePageUrl}::legacy`,
-          name: "Mapeamento salvo",
-          pageUrl: activePageUrl,
-          fields: stored[activePageUrl]
-        }]
-      };
-    }
+    const profiles = stored[baseUrl];
     callback(profiles && Array.isArray(profiles.pages) ? profiles.pages : []);
   });
 }
