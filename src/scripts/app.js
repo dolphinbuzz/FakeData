@@ -499,10 +499,12 @@ function scanPageFields(remapping = false) {
       return;
     }
     sendToPage({ action: ACTIONS.SCAN_FIELDS }, (response, error) => {
-      if (error || !response) {
+      if (error || !response || response.error) {
         pageFields = [];
         renderPageFields();
-        pageFieldsStatus.textContent = "Não foi possível ler esta página. Recarregue-a e tente novamente.";
+        pageFieldsStatus.textContent = response && response.error
+          ? response.error
+          : "Não foi possível ler esta página. Recarregue-a e tente novamente.";
         return;
       }
       readProfiles(activeBaseUrl, (profiles) => {

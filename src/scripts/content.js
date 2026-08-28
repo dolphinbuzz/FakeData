@@ -336,7 +336,9 @@
   }
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    modulesReady.then(() => handleMessage(message, sender, sendResponse));
+    modulesReady
+      .then(() => handleMessage(message, sender, sendResponse))
+      .catch(() => sendResponse({ error: "Não foi possível carregar o motor de mapeamento." }));
     return true;
   });
 
