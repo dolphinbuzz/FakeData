@@ -113,14 +113,44 @@
             <h2 id="page-fields-title">Mapear campos</h2>
           </div>
         </div>
-        <div class="mapping-header-actions">
-          <button id="scan-fields-button" class="copy-all-button" type="button">Escanear campos</button>
-          <button id="mark-all-button" class="copy-all-button" type="button">Marcar todos</button>
-          <button id="save-mappings-button" class="copy-all-button" type="button">Salvar seletores</button>
-          <button id="fill-all-button" class="generate-button compact-button" type="button">Preencher todos</button>
+        <div class="saved-mappings">
+          <label class="saved-mappings-label" for="saved-mappings-select">Seletores salvos</label>
+          <div class="saved-mappings-controls">
+            <select id="saved-mappings-select" aria-label="Selecionar mapeamento salvo">
+              <option value="">Nenhum mapeamento selecionado</option>
+            </select>
+            <button id="rename-mapping-button" class="copy-all-button" type="button">Renomear</button>
+            <button id="delete-mapping-button" class="copy-all-button danger-button" type="button">Excluir</button>
+          </div>
         </div>
-        <p id="page-fields-status" class="page-fields-status">Abra uma página com um formulário para começar.</p>
-        <div id="page-fields" class="page-fields"></div>
+        <div class="mapping-subtabs" role="tablist" aria-label="Modo de mapeamento">
+          <button id="automatic-mapping-tab" class="mapping-subtab active" type="button" role="tab" aria-selected="true" aria-controls="automatic-mapping-panel">Automático</button>
+          <button id="playground-mapping-tab" class="mapping-subtab" type="button" role="tab" aria-selected="false" aria-controls="playground-mapping-panel" tabindex="-1">Playground</button>
+        </div>
+        <div id="automatic-mapping-panel" class="mapping-subpanel" role="tabpanel" aria-labelledby="automatic-mapping-tab">
+          <div class="mapping-header-actions">
+            <button id="scan-fields-button" class="copy-all-button" type="button">Escanear campos</button>
+            <button id="mark-all-button" class="copy-all-button" type="button">Marcar todos</button>
+            <button id="save-mappings-button" class="copy-all-button" type="button">Salvar seletores</button>
+            <button id="remap-all-button" class="copy-all-button" type="button">Remapear todos</button>
+            <button id="copy-audit-button" class="copy-all-button" type="button">Copiar JSON</button>
+            <button id="fill-all-button" class="generate-button compact-button" type="button">Preencher todos</button>
+          </div>
+          <p id="page-fields-status" class="page-fields-status">Abra uma página com um formulário para começar.</p>
+          <div id="page-fields" class="page-fields"></div>
+        </div>
+        <div id="playground-mapping-panel" class="mapping-subpanel" role="tabpanel" aria-labelledby="playground-mapping-tab" hidden>
+        <div class="selector-playground">
+          <label class="saved-mappings-label" for="selector-playground-input">Verificar seletor CSS</label>
+          <div class="selector-playground-controls">
+            <input id="selector-playground-input" type="text" placeholder="Ex.: form input[name='email']" aria-label="Seletor CSS para verificar">
+            <button id="selector-playground-target" class="copy-all-button" type="button" title="Capturar seletor na página" aria-label="Capturar seletor na página">🎯</button>
+            <span id="selector-playground-count" class="selector-playground-count" aria-live="polite">—</span>
+          </div>
+          <button id="selector-playground-mark" class="copy-all-button selector-playground-mark" type="button" disabled>Marcar encontrados</button>
+        </div>
+        </div>
+        </div>
       </section>
       </div>
 
@@ -132,6 +162,19 @@
         <a href="privacy.html" target="_blank">Privacidade</a>
       </footer>
     </main>
+    <div id="mapping-modal" class="mapping-modal" hidden>
+      <div class="mapping-modal-backdrop" data-modal-close></div>
+      <section class="mapping-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="mapping-modal-title">
+        <h2 id="mapping-modal-title">Nome do mapeamento</h2>
+        <label for="mapping-name-input">Nome</label>
+        <input id="mapping-name-input" type="text" autocomplete="off" maxlength="80">
+        <p id="mapping-modal-error" class="mapping-modal-error" role="alert"></p>
+        <div class="mapping-modal-actions">
+          <button id="mapping-modal-cancel" class="copy-all-button" type="button">Cancelar</button>
+          <button id="mapping-modal-confirm" class="generate-button compact-button" type="button">Salvar</button>
+        </div>
+      </section>
+    </div>
     <script src="scripts/app.js"></script>
   </body>
 </html>
