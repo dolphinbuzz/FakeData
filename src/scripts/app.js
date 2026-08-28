@@ -2,6 +2,61 @@
 import { createGeneratorData, generateMappedValue as generateMappedValuePure, validarCPF, validarCNPJ, pick } from "./generators.js";
 import { DDDS, ESTADOS } from "./data/estados.js";
 
+let selectedType = "person";
+let currentResult = null;
+let activeTab = null;
+let activePageUrl = "";
+let activeBaseUrl = "";
+let savedProfiles = [];
+let selectedProfileId = "";
+let mappingModalResolver = null;
+let pageFields = [];
+let markedSelectors = new Set();
+
+import { MAPPING_TYPES } from "./data/mapping-types.js";
+
+const resultSection = document.querySelector("#result-section");
+const resultFields = document.querySelector("#result-fields");
+const resultTitle = document.querySelector("#result-title");
+const generateLabel = document.querySelector("#generate-label");
+const generateButton = document.querySelector("#generate-button");
+const copyJsonButton = document.querySelector("#copy-json-button");
+const personOptions = document.querySelector("#person-options");
+const companyOptions = document.querySelector("#company-options");
+const openSidepanelButton = document.querySelector("#open-sidepanel-button");
+const themeToggle = document.querySelector("#theme-toggle");
+const ufSelect = document.querySelector("#uf-select");
+const scanFieldsButton = document.querySelector("#scan-fields-button");
+const markAllButton = document.querySelector("#mark-all-button");
+const saveMappingsButton = document.querySelector("#save-mappings-button");
+const fillAllButton = document.querySelector("#fill-all-button");
+const remapAllButton = document.querySelector("#remap-all-button");
+const savedMappingsSelect = document.querySelector("#saved-mappings-select");
+const renameMappingButton = document.querySelector("#rename-mapping-button");
+const deleteMappingButton = document.querySelector("#delete-mapping-button");
+const selectorPlaygroundInput = document.querySelector("#selector-playground-input");
+const selectorPlaygroundTarget = document.querySelector("#selector-playground-target");
+const selectorPlaygroundCount = document.querySelector("#selector-playground-count");
+const selectorPlaygroundMark = document.querySelector("#selector-playground-mark");
+const copyAuditButton = document.querySelector("#copy-audit-button");
+const automaticMappingTab = document.querySelector("#automatic-mapping-tab");
+const playgroundMappingTab = document.querySelector("#playground-mapping-tab");
+const automaticMappingPanel = document.querySelector("#automatic-mapping-panel");
+const playgroundMappingPanel = document.querySelector("#playground-mapping-panel");
+let selectorPlaygroundMarked = false;
+let selectorPlaygroundMarkedSelector = "";
+const mappingModal = document.querySelector("#mapping-modal");
+const mappingNameInput = document.querySelector("#mapping-name-input");
+const mappingModalError = document.querySelector("#mapping-modal-error");
+const mappingModalConfirm = document.querySelector("#mapping-modal-confirm");
+const mappingModalCancel = document.querySelector("#mapping-modal-cancel");
+const pageFieldsElement = document.querySelector("#page-fields");
+const pageFieldsStatus = document.querySelector("#page-fields-status");
+const generatorTab = document.querySelector("#generator-tab");
+const mappingTab = document.querySelector("#mapping-tab");
+const generatorPanel = document.querySelector("#generator-panel");
+const mappingPanel = document.querySelector("#mapping-panel");
+
 const data = createGeneratorData({
   getState: () => gerarEstadoSelecionado(),
   ddds: DDDS,
