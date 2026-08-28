@@ -2,6 +2,7 @@
   "use strict";
 
   const FIELD_SELECTOR = "input, select, textarea";
+  const CUSTOM_FIELD_SELECTOR = "multi-select, [role='combobox'], .ui-autocomplete-multiselect";
   const IGNORED_TYPES = new Set(["hidden", "submit", "button", "reset", "image", "file"]);
 
   const normalize = (value) => String(value || "")
@@ -118,7 +119,56 @@
       const selector = create(value);
       if (document.querySelectorAll(selector).length === 1) return selector;
     }
+
+    function isCustomSelect(element) {
+      return element.matches(CUSTOM_FIELD_SELECTOR);
+    }
     return structuralSelector(element);
+  }
+
+  function fieldFromTarget(target) {
+    if (!(target instanceof Element)) return null;
+    if (target.matches(FIELD_SELECTOR)) return target;
+    if (target.matches("li[list-select], [role='option'], .ui-menu-item")) {
+      const group = target.closest("form, fieldset, .form-group, .field, .form-field, [role='group']") || target.parentElement;
+      const customSelect = group && group.querySelector(CUSTOM_FIELD_SELECTOR);
+      if (customSelect) return customSelect;
+    }
+    const label = target.closest("label");
+    if (label) {
+      if (label.control) return label.control;
+      const nested = label.querySelector(FIELD_SELECTOR);
+      if (nested) return nested;
+      const forId = label.getAttribute("for");
+      if (forId) return document.getElementById(forId);
+    }
+    const container = target.closest("form, fieldset, .form-group, .field, .form-field, [role='group']");
+    return container ? container.querySelector(FIELD_SELECTOR) : null;
+  }
+
+  function captureNextClick(sendResponse) {
+    const onClick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      document.removeEventListener("click", onClick, true);
+      const element = fieldFromTarget(event.target);
+      if (!element) {
+        sendResponse({ captured: false });
+        return;
+      }
+      sendResponse({
+        captured: true,
+        field: {
+          selector: selectorFor(element),
+          label: labelsFor(element).replace(/\s+/g, " ").trim() || element.getAttribute("name") || element.getAttribute("placeholder") || element.tagName.toLowerCase(),
+          inferredType: inferType(element),
+          tagName: element.tagName.toLowerCase(),
+          inputType: element.type || ""
+        }
+      });
+    };
+    document.addEventListener("click", onClick, true);
+    setTimeout(() => document.removeEventListener("click", onClick, true), 30000);
   }
 
   function describe(element, index) {
@@ -139,7 +189,10 @@
   }
 
   function scan() {
-    return Array.from(document.querySelectorAll(FIELD_SELECTOR))
+    const nativeFields = Array.from(document.querySelectorAll(FIELD_SELECTOR));
+    const customFields = Array.from(document.querySelectorAll(CUSTOM_FIELD_SELECTOR))
+      .filter((element) => !element.closest("multi-select") || element.tagName.toLowerCase() === "multi-select");
+    return nativeFields.concat(customFields)
       .filter((element) => !IGNORED_TYPES.has(String(element.type || "").toLowerCase()) && visible(element) && !element.disabled)
       .map(describe);
   }
@@ -165,6 +218,22 @@
   function fill(selector, value) {
     const element = find(selector);
     if (!element || element.disabled) return false;
+    if (element.type === "checkbox" || element.type === "radio") {
+      const shouldBeChecked = Boolean(value);
+      if (element.checked !== shouldBeChecked) element.click();
+      return true;
+    }
+    if (isCustomSelect(element)) {
+      const trigger = element.querySelector("input, [role='combobox'], .ui-autocomplete-multiselect") || element;
+      trigger.click();
+      const options = Array.from(document.querySelectorAll("li[list-select], [role='option'], .ui-menu-item"))
+        .filter(visible);
+      if (!options.length) return false;
+      const wanted = normalize(value);
+      const option = options.find((item) => normalize(item.textContent).includes(wanted)) || options[0];
+      option.click();
+      return true;
+    }
     if (element.tagName === "SELECT") {
       const wanted = normalize(value);
       const option = Array.from(element.options).find((item) =>
@@ -198,7 +267,7 @@
     if (!element) return false;
     element.scrollIntoView({ behavior: "smooth", block: "center" });
     const previous = element.style.outline;
-    element.style.outline = "3px solid #6d5dfc";
+    element.style.outline = "3px solid #ef4444";
     setTimeout(() => { element.style.outline = previous; }, 1400);
     return true;
   }
@@ -212,6 +281,7 @@
       sendResponse({ filled: results.filter(Boolean).length, total: results.length });
     }
     if (message.action === "HIGHLIGHT_FIELD") sendResponse({ highlighted: highlight(message.selector) });
+    if (message.action === "CAPTURE_NEXT_CLICK") captureNextClick(sendResponse);
     return true;
   });
 })();

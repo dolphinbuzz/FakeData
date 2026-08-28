@@ -15,14 +15,15 @@ Clique em **↗ Lateral** para abrir o FakeData no painel lateral do navegador. 
 
 ## Preenchimento de formulários
 
-Ao abrir o popup ou o painel lateral em uma página HTTP(S), a seção **Mapear campos** lista os inputs, selects e áreas de texto editáveis. O tipo é inferido por heurísticas gerais, usando `name`, `autocomplete`, labels associadas, `aria-label`, placeholder, tipo do input e contexto estrutural do formulário (e não apenas IDs). Cada linha permite:
+Ao abrir o popup ou o painel lateral em uma página HTTP(S), a seção **Mapear campos** lista os inputs, selects, áreas de texto e componentes de seleção customizados editáveis. O tipo é inferido por heurísticas gerais, usando `name`, `autocomplete`, labels associadas, `aria-label`, placeholder, tipo do input e contexto estrutural do formulário (e não apenas IDs). Componentes que usam elementos como `multi-select`, `role="combobox"` ou menus com opções `li` também podem ser preenchidos: uma opção visível é selecionada mesmo quando não existe um `<select>` nativo ou quando os valores não são conhecidos. Cada linha permite:
 
 - escolher ou corrigir o tipo de dado;
 - visualizar e editar o seletor CSS;
 - localizar o campo na página;
+- usar o botão 🎯 para capturar o próximo clique em um label, input ou texto e sugerir um novo seletor;
 - preencher somente aquele campo.
 
-Use **Salvar seletores** para manter os mapeamentos em `chrome.storage.local`, separados por URL, e **Preencher todos** para gerar um valor novo e preencher todos os campos mapeados de uma vez. Os eventos `input` e `change` são disparados para manter compatibilidade com frameworks como React e Vue. Campos em páginas protegidas do navegador (por exemplo, `chrome://`) não podem ser acessados.
+Use **Salvar seletores** para manter os mapeamentos em `chrome.storage.local`, separados por URL, e **Preencher todos** para gerar um valor novo e preencher todos os campos mapeados de uma vez. Checkboxes recebem marcação aleatória e grupos de radio são selecionados automaticamente. Os eventos `input` e `change` são disparados para manter compatibilidade com frameworks como React e Vue. Campos em páginas protegidas do navegador (por exemplo, `chrome://`) não podem ser acessados.
 
 ## Estrutura
 
