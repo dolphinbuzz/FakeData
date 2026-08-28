@@ -316,6 +316,17 @@ h2 {
   font-size: 11px;
 }
 
+.mapping-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.mapping-header-actions .compact-button {
+  width: auto;
+}
+
 .page-fields {
   display: grid;
   gap: 8px;
@@ -385,16 +396,6 @@ h2 {
 .page-field-actions button:hover {
   border-color: var(--accent);
   color: var(--text);
-}
-
-.mapping-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.mapping-actions > button {
-  flex: 1;
 }
 
 .compact-button {
