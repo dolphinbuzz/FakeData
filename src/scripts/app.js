@@ -148,6 +148,7 @@ let currentResult = null;
 let activeTab = null;
 let activePageUrl = "";
 let pageFields = [];
+let markedSelectors = new Set();
 
 const MAPPING_TYPES = [
   ["auto", "Inferir automaticamente"],
@@ -189,10 +190,15 @@ const openSidepanelButton = document.querySelector("#open-sidepanel-button");
 const themeToggle = document.querySelector("#theme-toggle");
 const ufSelect = document.querySelector("#uf-select");
 const scanFieldsButton = document.querySelector("#scan-fields-button");
+const markAllButton = document.querySelector("#mark-all-button");
 const saveMappingsButton = document.querySelector("#save-mappings-button");
 const fillAllButton = document.querySelector("#fill-all-button");
 const pageFieldsElement = document.querySelector("#page-fields");
 const pageFieldsStatus = document.querySelector("#page-fields-status");
+const generatorTab = document.querySelector("#generator-tab");
+const mappingTab = document.querySelector("#mapping-tab");
+const generatorPanel = document.querySelector("#generator-panel");
+const mappingPanel = document.querySelector("#mapping-panel");
 
 ESTADOS.forEach((estado) => {
   const option = document.createElement("option");
@@ -249,10 +255,27 @@ openSidepanelButton.addEventListener("click", () => {
 });
 
 if (scanFieldsButton) scanFieldsButton.addEventListener("click", scanPageFields);
+if (markAllButton) markAllButton.addEventListener("click", toggleMarkAllFields);
 if (saveMappingsButton) saveMappingsButton.addEventListener("click", savePageMappings);
 if (fillAllButton) fillAllButton.addEventListener("click", fillAllPageFields);
 
 if (pageFieldsElement) scanPageFields();
+
+function activateTab(tabName) {
+  const isGenerator = tabName === "generator";
+  if (!generatorTab || !mappingTab || !generatorPanel || !mappingPanel) return;
+  generatorTab.classList.toggle("active", isGenerator);
+  mappingTab.classList.toggle("active", !isGenerator);
+  generatorTab.setAttribute("aria-selected", String(isGenerator));
+  mappingTab.setAttribute("aria-selected", String(!isGenerator));
+  generatorTab.tabIndex = isGenerator ? 0 : -1;
+  mappingTab.tabIndex = isGenerator ? -1 : 0;
+  generatorPanel.hidden = !isGenerator;
+  mappingPanel.hidden = isGenerator;
+}
+
+if (generatorTab) generatorTab.addEventListener("click", () => activateTab("generator"));
+if (mappingTab) mappingTab.addEventListener("click", () => activateTab("mapping"));
 
 function generate() {
   const definition = data[selectedType];
@@ -293,13 +316,20 @@ function getActiveTab(callback) {
 }
 
 function sendToPage(message, callback) {
-  if (!activeTab || !activeTab.id || !chrome.tabs || !chrome.tabs.sendMessage) {
+  if (!chrome.tabs || !chrome.tabs.sendMessage) {
     callback(null, new Error("Nenhuma página ativa."));
     return;
   }
-  chrome.tabs.sendMessage(activeTab.id, message, (response) => {
-    const error = chrome.runtime.lastError;
-    callback(response, error || null);
+  getActiveTab((tab) => {
+    activeTab = tab;
+    if (!activeTab || !activeTab.id || !/^https?:/i.test(activeTab.url || "")) {
+      callback(null, new Error("Nenhuma página ativa."));
+      return;
+    }
+    chrome.tabs.sendMessage(activeTab.id, message, (response) => {
+      const error = chrome.runtime.lastError;
+      callback(response, error || null);
+    });
   });
 }
 
@@ -342,6 +372,8 @@ function scanPageFields() {
             selector: mapping && mapping.selector ? mapping.selector : field.selector
           };
         });
+        markedSelectors = new Set();
+        updateMarkAllButton();
         renderPageFields();
         pageFieldsStatus.textContent = pageFields.length
           ? `${pageFields.length} campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.`
@@ -366,7 +398,7 @@ function renderPageFields() {
         <select class="page-field-type" aria-label="Tipo para ${escapeHtml(field.label)}">${options}</select>
         <input class="page-field-selector" type="text" aria-label="Seletor para ${escapeHtml(field.label)}" value="${escapeHtml(field.selector)}">
         <div class="page-field-actions">
-          <button type="button" data-action="highlight">Localizar</button>
+          <button type="button" data-action="highlight">${markedSelectors.has(field.selector) ? "Desmarcar" : "Marcar"}</button>
           <button type="button" data-action="target" title="Capturar o próximo clique na página" aria-label="Capturar seletor do próximo clique">🎯</button>
           <button type="button" data-action="fill">Preencher</button>
         </div>
@@ -383,10 +415,58 @@ function renderPageFields() {
       pageFields[index].selector = event.target.value;
     });
     row.querySelector('[data-action="highlight"]').addEventListener("click", () => {
-      sendToPage({ action: "HIGHLIGHT_FIELD", selector: pageFields[index].selector }, () => {});
+      const selector = pageFields[index].selector;
+      const marked = markedSelectors.has(selector);
+      sendToPage({ action: marked ? "UNMARK_FIELD" : "MARK_FIELD", selector }, (response, error) => {
+        if (!pageFieldsStatus) return;
+        if (error || !response) {
+          pageFieldsStatus.textContent = "Não foi possível marcar o campo. Recarregue a página e tente novamente.";
+        } else if (!(marked ? response.unmarked : response.marked)) {
+          pageFieldsStatus.textContent = "Seletor não encontrado na página. Ajuste o seletor e tente novamente.";
+        } else {
+          if (marked) markedSelectors.delete(selector);
+          else markedSelectors.add(selector);
+          updateMarkAllButton();
+          renderPageFields();
+          pageFieldsStatus.textContent = marked ? `${pageFields[index].label} desmarcado.` : `${pageFields[index].label} marcado.`;
+        }
+      });
     });
     row.querySelector('[data-action="target"]').addEventListener("click", () => captureFieldSelector(index));
     row.querySelector('[data-action="fill"]').addEventListener("click", () => fillPageField(index));
+  });
+}
+
+function updateMarkAllButton() {
+  if (!markAllButton) return;
+  const allMarked = pageFields.length > 0 && pageFields.every((field) => markedSelectors.has(field.selector));
+  markAllButton.textContent = allMarked ? "Desmarcar todos" : "Marcar todos";
+}
+
+function toggleMarkAllFields() {
+  if (!pageFields.length) {
+    if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum campo encontrado para marcar.";
+    return;
+  }
+  const allMarked = pageFields.every((field) => markedSelectors.has(field.selector));
+  const action = allMarked ? "UNMARK_ALL_FIELDS" : "MARK_ALL_FIELDS";
+  sendToPage({ action, selectors: pageFields.map((field) => field.selector) }, (response, error) => {
+    if (error || !response) {
+      if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível atualizar as marcações.";
+      return;
+    }
+    markedSelectors = new Set(allMarked ? [] : (response.selectors || []));
+    updateMarkAllButton();
+    renderPageFields();
+    if (pageFieldsStatus) {
+      if (allMarked) {
+        pageFieldsStatus.textContent = "Todos os campos foram desmarcados.";
+      } else if (response.failed && response.failed.length) {
+        pageFieldsStatus.textContent = `${response.marked} de ${response.total} campo(s) marcado(s); ${response.failed.length} não foi(ram) localizado(s).`;
+      } else {
+        pageFieldsStatus.textContent = "Todos os campos foram marcados.";
+      }
+    }
   });
 }
 

@@ -154,6 +154,41 @@ footer {
   font-size: 12px;
 }
 
+.app-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 22px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.app-tab {
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.app-tab:hover,
+.app-tab:focus-visible {
+  color: var(--text);
+  outline: none;
+}
+
+.app-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.tab-panel {
+  min-width: 0;
+}
+
 .section-heading,
 .result-heading {
   justify-content: space-between;
