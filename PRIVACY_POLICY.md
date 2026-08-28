@@ -10,7 +10,7 @@ O FakeData é uma extensão para Google Chrome e Microsoft Edge que gera dados f
 
 Nomes, documentos, e-mails, telefones e informações de empresas ou veículos são gerados aleatoriamente no dispositivo do usuário. Esses dados são fictícios, não representam pessoas ou organizações reais e não são enviados para servidores externos.
 
-Quando o usuário solicita o mapeamento de um formulário, a extensão lê apenas os metadados dos campos editáveis da página ativa (como label, `name`, placeholder e seletor CSS). Os seletores e tipos escolhidos podem ser salvos pelo usuário em `chrome.storage.local`, associados à URL da página, para reutilização posterior. Valores já preenchidos nos formulários não são coletados nem armazenados.
+Quando o usuário solicita o mapeamento de um formulário, a extensão lê apenas os metadados dos campos editáveis da página ativa (como label, `name`, placeholder e seletor CSS). O recurso de captura por alvo observa apenas o próximo clique solicitado pelo usuário para identificar o elemento escolhido. Os seletores e tipos escolhidos podem ser salvos pelo usuário em `chrome.storage.local`, associados à URL da página, para reutilização posterior. Valores já preenchidos nos formulários não são coletados nem armazenados.
 
 ## Permissões
 

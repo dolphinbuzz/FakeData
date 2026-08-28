@@ -172,6 +172,8 @@ const MAPPING_TYPES = [
   ["company", "Empresa"],
   ["plate", "Placa"],
   ["website", "Site / URL"],
+  ["checkbox", "Checkbox"],
+  ["radio", "Radio"],
   ["text", "Texto"]
 ];
 
@@ -365,6 +367,7 @@ function renderPageFields() {
         <input class="page-field-selector" type="text" aria-label="Seletor para ${escapeHtml(field.label)}" value="${escapeHtml(field.selector)}">
         <div class="page-field-actions">
           <button type="button" data-action="highlight">Localizar</button>
+          <button type="button" data-action="target" title="Capturar o próximo clique na página" aria-label="Capturar seletor do próximo clique">🎯</button>
           <button type="button" data-action="fill">Preencher</button>
         </div>
       </div>
@@ -382,7 +385,27 @@ function renderPageFields() {
     row.querySelector('[data-action="highlight"]').addEventListener("click", () => {
       sendToPage({ action: "HIGHLIGHT_FIELD", selector: pageFields[index].selector }, () => {});
     });
+    row.querySelector('[data-action="target"]').addEventListener("click", () => captureFieldSelector(index));
     row.querySelector('[data-action="fill"]').addEventListener("click", () => fillPageField(index));
+  });
+}
+
+function captureFieldSelector(index) {
+  if (pageFieldsStatus) pageFieldsStatus.textContent = "Clique no elemento desejado da página...";
+  sendToPage({ action: "CAPTURE_NEXT_CLICK" }, (response, error) => {
+    if (error || !response || !response.captured || !response.field) {
+      if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível capturar um campo.";
+      return;
+    }
+    pageFields[index] = {
+      ...pageFields[index],
+      selector: response.field.selector,
+      label: response.field.label || pageFields[index].label,
+      inferredType: response.field.inferredType || pageFields[index].inferredType,
+      dataType: pageFields[index].dataType === "text" ? response.field.inferredType : pageFields[index].dataType
+    };
+    renderPageFields();
+    if (pageFieldsStatus) pageFieldsStatus.textContent = "Seletor capturado. Salve o mapeamento para mantê-lo.";
   });
 }
 
@@ -408,7 +431,8 @@ function savePageMappings() {
 function fillPageField(index) {
   const field = pageFields[index];
   if (!field) return;
-  const value = generateMappedValue(field.dataType === "auto" ? field.inferredType : field.dataType);
+  const type = field.dataType === "auto" ? field.inferredType : field.dataType;
+  const value = generateMappedValue(type, data.person.context(), field.inputType);
   sendToPage({ action: "FILL_FIELD", selector: field.selector, value }, (response, error) => {
     if (pageFieldsStatus) {
       pageFieldsStatus.textContent = error || !response || !response.filled
@@ -426,7 +450,7 @@ function fillAllPageFields() {
   const context = data.person.context();
   const fields = pageFields.map((field) => ({
     selector: field.selector,
-    value: generateMappedValue(field.dataType === "auto" ? field.inferredType : field.dataType, context)
+    value: generateMappedValue(field.dataType === "auto" ? field.inferredType : field.dataType, context, field.inputType)
   }));
   sendToPage({ action: "FILL_ALL", fields }, (response, error) => {
     if (pageFieldsStatus) {
@@ -437,7 +461,9 @@ function fillAllPageFields() {
   });
 }
 
-function generateMappedValue(type, context = data.person.context()) {
+function generateMappedValue(type, context = data.person.context(), inputType = "") {
+  if (inputType === "checkbox") return Math.random() >= 0.35;
+  if (inputType === "radio") return true;
   const personValues = {
     name: `${context.nome} ${context.sobrenome}`,
     cpf: cpf(document.querySelector("#cpf-formatted") ? document.querySelector("#cpf-formatted").checked : true),

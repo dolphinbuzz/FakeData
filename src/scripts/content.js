@@ -121,6 +121,46 @@
     return structuralSelector(element);
   }
 
+  function fieldFromTarget(target) {
+    if (!(target instanceof Element)) return null;
+    if (target.matches(FIELD_SELECTOR)) return target;
+    const label = target.closest("label");
+    if (label) {
+      if (label.control) return label.control;
+      const nested = label.querySelector(FIELD_SELECTOR);
+      if (nested) return nested;
+      const forId = label.getAttribute("for");
+      if (forId) return document.getElementById(forId);
+    }
+    const container = target.closest("form, fieldset, .form-group, .field, .form-field, [role='group']");
+    return container ? container.querySelector(FIELD_SELECTOR) : null;
+  }
+
+  function captureNextClick(sendResponse) {
+    const onClick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      document.removeEventListener("click", onClick, true);
+      const element = fieldFromTarget(event.target);
+      if (!element) {
+        sendResponse({ captured: false });
+        return;
+      }
+      sendResponse({
+        captured: true,
+        field: {
+          selector: selectorFor(element),
+          label: labelsFor(element).replace(/\s+/g, " ").trim() || element.getAttribute("name") || element.getAttribute("placeholder") || element.tagName.toLowerCase(),
+          inferredType: inferType(element),
+          tagName: element.tagName.toLowerCase(),
+          inputType: element.type || ""
+        }
+      });
+    };
+    document.addEventListener("click", onClick, true);
+    setTimeout(() => document.removeEventListener("click", onClick, true), 30000);
+  }
+
   function describe(element, index) {
     const selector = selectorFor(element);
     const label = labelsFor(element).replace(/\s+/g, " ").trim() ||
@@ -165,6 +205,12 @@
   function fill(selector, value) {
     const element = find(selector);
     if (!element || element.disabled) return false;
+    if (element.type === "checkbox" || element.type === "radio") {
+      element.checked = Boolean(value);
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    }
     if (element.tagName === "SELECT") {
       const wanted = normalize(value);
       const option = Array.from(element.options).find((item) =>
@@ -198,7 +244,7 @@
     if (!element) return false;
     element.scrollIntoView({ behavior: "smooth", block: "center" });
     const previous = element.style.outline;
-    element.style.outline = "3px solid #6d5dfc";
+    element.style.outline = "3px solid #ef4444";
     setTimeout(() => { element.style.outline = previous; }, 1400);
     return true;
   }
@@ -212,6 +258,7 @@
       sendResponse({ filled: results.filter(Boolean).length, total: results.length });
     }
     if (message.action === "HIGHLIGHT_FIELD") sendResponse({ highlighted: highlight(message.selector) });
+    if (message.action === "CAPTURE_NEXT_CLICK") captureNextClick(sendResponse);
     return true;
   });
 })();

@@ -20,9 +20,10 @@ Ao abrir o popup ou o painel lateral em uma página HTTP(S), a seção **Mapear 
 - escolher ou corrigir o tipo de dado;
 - visualizar e editar o seletor CSS;
 - localizar o campo na página;
+- usar o botão 🎯 para capturar o próximo clique em um label, input ou texto e sugerir um novo seletor;
 - preencher somente aquele campo.
 
-Use **Salvar seletores** para manter os mapeamentos em `chrome.storage.local`, separados por URL, e **Preencher todos** para gerar um valor novo e preencher todos os campos mapeados de uma vez. Os eventos `input` e `change` são disparados para manter compatibilidade com frameworks como React e Vue. Campos em páginas protegidas do navegador (por exemplo, `chrome://`) não podem ser acessados.
+Use **Salvar seletores** para manter os mapeamentos em `chrome.storage.local`, separados por URL, e **Preencher todos** para gerar um valor novo e preencher todos os campos mapeados de uma vez. Checkboxes recebem marcação aleatória e grupos de radio são selecionados automaticamente. Os eventos `input` e `change` são disparados para manter compatibilidade com frameworks como React e Vue. Campos em páginas protegidas do navegador (por exemplo, `chrome://`) não podem ser acessados.
 
 ## Estrutura
 
