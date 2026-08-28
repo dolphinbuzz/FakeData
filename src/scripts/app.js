@@ -1,6 +1,7 @@
 // Interface e regras do gerador da extensão.
 import { createGeneratorData, generateMappedValue as generateMappedValuePure, validarCPF, validarCNPJ, pick } from "./generators.js";
 import { DDDS, ESTADOS } from "./data/estados.js";
+import { ACTIONS } from "./messages.js";
 
 let selectedType = "person";
 let currentResult = null;
@@ -159,7 +160,7 @@ if (chrome.tabs && chrome.tabs.onActivated) {
 }
 if (chrome.runtime && chrome.runtime.onMessage) {
   chrome.runtime.onMessage.addListener((message, sender) => {
-    if (!message || message.action !== "PAGE_CONTENT_CHANGED") return;
+    if (!message || message.action !== ACTIONS.PAGE_CONTENT_CHANGED) return;
     if (!activeTab || sender.tab && sender.tab.id !== activeTab.id) return;
     clearDisplayedPageFields("A página mudou. Clique em Escanear campos para atualizar os campos.");
   });
@@ -295,7 +296,7 @@ function sendMessageToTab(tabId, message, callback, allowInjection) {
 function checkSelectorMatches() {
   const selector = selectorPlaygroundInput ? selectorPlaygroundInput.value.trim() : "";
   if (selectorPlaygroundMarked && selector !== selectorPlaygroundMarkedSelector) {
-    sendToPage({ action: "UNMARK_SELECTOR_MATCHES", selector: selectorPlaygroundMarkedSelector }, () => {});
+    sendToPage({ action: ACTIONS.UNMARK_SELECTOR_MATCHES, selector: selectorPlaygroundMarkedSelector }, () => {});
     selectorPlaygroundMarked = false;
     selectorPlaygroundMarkedSelector = "";
   }
@@ -305,7 +306,7 @@ function checkSelectorMatches() {
     updateSelectorMarkButton(0);
     return;
   }
-  sendToPage({ action: "COUNT_SELECTOR_MATCHES", selector }, (response, error) => {
+  sendToPage({ action: ACTIONS.COUNT_SELECTOR_MATCHES, selector }, (response, error) => {
     if (!selectorPlaygroundCount) return;
     const valid = !error && response && !response.invalid;
     selectorPlaygroundCount.textContent = !valid
@@ -325,7 +326,7 @@ function updateSelectorMarkButton(count) {
 function toggleSelectorMatches() {
   const selector = selectorPlaygroundInput ? selectorPlaygroundInput.value.trim() : "";
   if (!selector) return;
-  const action = selectorPlaygroundMarked ? "UNMARK_SELECTOR_MATCHES" : "MARK_SELECTOR_MATCHES";
+  const action = selectorPlaygroundMarked ? ACTIONS.UNMARK_SELECTOR_MATCHES : ACTIONS.MARK_SELECTOR_MATCHES;
   sendToPage({ action, selector }, (response, error) => {
     if (error || !response) {
       if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível atualizar as marcações do seletor.";
@@ -344,7 +345,7 @@ function toggleSelectorMatches() {
 
 function capturePlaygroundSelector() {
   if (selectorPlaygroundCount) selectorPlaygroundCount.textContent = "...";
-  sendToPage({ action: "CAPTURE_NEXT_CLICK" }, (response, error) => {
+  sendToPage({ action: ACTIONS.CAPTURE_NEXT_CLICK }, (response, error) => {
     if (error || !response || !response.captured || !response.field) {
       if (selectorPlaygroundCount) selectorPlaygroundCount.textContent = "Não capturado";
       return;
@@ -479,7 +480,7 @@ function scanPageFields(remapping = false) {
       pageFieldsStatus.textContent = "A página ativa não permite acesso a formulários.";
       return;
     }
-    sendToPage({ action: "SCAN_FIELDS" }, (response, error) => {
+    sendToPage({ action: ACTIONS.SCAN_FIELDS }, (response, error) => {
       if (error || !response) {
         pageFields = [];
         renderPageFields();
@@ -555,7 +556,7 @@ function renderPageFields() {
     row.querySelector('[data-action="highlight"]').addEventListener("click", () => {
       const selector = pageFields[index].selector;
       const marked = markedSelectors.has(selector);
-      sendToPage({ action: marked ? "UNMARK_FIELD" : "MARK_FIELD", selector }, (response, error) => {
+      sendToPage({ action: marked ? ACTIONS.UNMARK_FIELD : ACTIONS.MARK_FIELD, selector }, (response, error) => {
         if (!pageFieldsStatus) return;
         if (error || !response) {
           pageFieldsStatus.textContent = "Não foi possível marcar o campo. Recarregue a página e tente novamente.";
@@ -618,7 +619,7 @@ function toggleMarkAllFields() {
     return;
   }
   const allMarked = markableFields.every((field) => markedSelectors.has(field.selector));
-  const action = allMarked ? "UNMARK_ALL_FIELDS" : "MARK_ALL_FIELDS";
+  const action = allMarked ? ACTIONS.UNMARK_ALL_FIELDS : ACTIONS.MARK_ALL_FIELDS;
   sendToPage({ action, selectors: markableFields.map((field) => field.selector) }, (response, error) => {
     if (error || !response) {
       if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível atualizar as marcações.";
@@ -641,7 +642,7 @@ function toggleMarkAllFields() {
 
 function captureFieldSelector(index) {
   if (pageFieldsStatus) pageFieldsStatus.textContent = "Clique no elemento desejado da página...";
-  sendToPage({ action: "CAPTURE_NEXT_CLICK" }, (response, error) => {
+  sendToPage({ action: ACTIONS.CAPTURE_NEXT_CLICK }, (response, error) => {
     if (error || !response || !response.captured || !response.field) {
       if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível capturar um campo.";
       return;
@@ -736,7 +737,7 @@ function fillPageField(index) {
   if (!field) return;
   const type = field.dataType === "auto" ? field.inferredType : field.dataType;
   const value = field.fixed ? field.fixedValue : generateMappedValuePure(type, data.person.context(), field.inputType, generatorOptions);
-  sendToPage({ action: "FILL_FIELD", selector: field.selector, value }, (response, error) => {
+  sendToPage({ action: ACTIONS.FILL_FIELD, selector: field.selector, value }, (response, error) => {
     if (pageFieldsStatus) {
       pageFieldsStatus.textContent = error || !response || !response.filled
         ? "Não foi possível preencher esse campo. Verifique o seletor."
@@ -755,7 +756,7 @@ function fillAllPageFields() {
     selector: field.selector,
     value: field.fixed ? field.fixedValue : generateMappedValuePure(field.dataType === "auto" ? field.inferredType : field.dataType, context, field.inputType, generatorOptions)
   }));
-  sendToPage({ action: "FILL_ALL", fields }, (response, error) => {
+  sendToPage({ action: ACTIONS.FILL_ALL, fields }, (response, error) => {
     if (pageFieldsStatus) {
       pageFieldsStatus.textContent = error || !response
         ? "Não foi possível preencher os campos desta página."

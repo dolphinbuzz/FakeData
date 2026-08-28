@@ -7,6 +7,7 @@ import {
   SELECT2_OPTION_SELECTOR,
   visible
 } from "./selector-engine.js";
+import { ACTIONS } from "./messages.js";
 
 (() => {
   "use strict";
@@ -281,14 +282,14 @@ import {
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || !message.action) return;
-    if (message.action === "SCAN_FIELDS") {
+    if (message.action === ACTIONS.SCAN_FIELDS) {
       clearMarks();
       sendResponse({ fields: scan() });
     }
-    if (message.action === "FILL_FIELD") {
+    if (message.action === ACTIONS.FILL_FIELD) {
       fill(message.selector, message.value).then((filled) => sendResponse({ filled }));
     }
-    if (message.action === "FILL_ALL") {
+    if (message.action === ACTIONS.FILL_ALL) {
       const fields = message.fields || [];
       fields.reduce((chain, item) => chain.then(async (results) => {
         results.push(await fill(item.selector, item.value));
@@ -298,10 +299,10 @@ import {
         sendResponse({ filled: results.filter(Boolean).length, total: results.length });
       });
     }
-    if (message.action === "HIGHLIGHT_FIELD") sendResponse({ highlighted: highlight(message.selector) });
-    if (message.action === "MARK_FIELD") sendResponse({ marked: mark(message.selector) });
-    if (message.action === "UNMARK_FIELD") sendResponse({ unmarked: unmark(message.selector) });
-    if (message.action === "MARK_ALL_FIELDS") {
+    if (message.action === ACTIONS.HIGHLIGHT_FIELD) sendResponse({ highlighted: highlight(message.selector) });
+    if (message.action === ACTIONS.MARK_FIELD) sendResponse({ marked: mark(message.selector) });
+    if (message.action === ACTIONS.UNMARK_FIELD) sendResponse({ unmarked: unmark(message.selector) });
+    if (message.action === ACTIONS.MARK_ALL_FIELDS) {
       const selectors = Array.isArray(message.selectors) ? message.selectors : [];
       const failed = selectors.filter((selector) => !mark(selector));
       sendResponse({
@@ -311,22 +312,22 @@ import {
         failed
       });
     }
-    if (message.action === "UNMARK_ALL_FIELDS") {
+    if (message.action === ACTIONS.UNMARK_ALL_FIELDS) {
       const selectors = Array.isArray(message.selectors) ? message.selectors : [];
       const total = Math.max(selectors.length, markedFields.size);
       clearMarks();
       sendResponse({ unmarked: total, total });
     }
-    if (message.action === "COUNT_SELECTOR_MATCHES") {
+    if (message.action === ACTIONS.COUNT_SELECTOR_MATCHES) {
       try {
         sendResponse({ count: document.querySelectorAll(message.selector || "").length });
       } catch (error) {
         sendResponse({ invalid: true, count: 0 });
       }
     }
-    if (message.action === "MARK_SELECTOR_MATCHES") sendResponse(markSelectorMatches(message.selector || ""));
-    if (message.action === "UNMARK_SELECTOR_MATCHES") sendResponse(unmarkSelectorMatches(message.selector || ""));
-    if (message.action === "CAPTURE_NEXT_CLICK") captureNextClick(sendResponse);
+    if (message.action === ACTIONS.MARK_SELECTOR_MATCHES) sendResponse(markSelectorMatches(message.selector || ""));
+    if (message.action === ACTIONS.UNMARK_SELECTOR_MATCHES) sendResponse(unmarkSelectorMatches(message.selector || ""));
+    if (message.action === ACTIONS.CAPTURE_NEXT_CLICK) captureNextClick(sendResponse);
     return true;
   });
 
