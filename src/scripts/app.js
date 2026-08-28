@@ -147,6 +147,10 @@ let selectedType = "person";
 let currentResult = null;
 let activeTab = null;
 let activePageUrl = "";
+let activeBaseUrl = "";
+let savedProfiles = [];
+let selectedProfileId = "";
+let mappingModalResolver = null;
 let pageFields = [];
 let markedSelectors = new Set();
 
@@ -193,6 +197,26 @@ const scanFieldsButton = document.querySelector("#scan-fields-button");
 const markAllButton = document.querySelector("#mark-all-button");
 const saveMappingsButton = document.querySelector("#save-mappings-button");
 const fillAllButton = document.querySelector("#fill-all-button");
+const remapAllButton = document.querySelector("#remap-all-button");
+const savedMappingsSelect = document.querySelector("#saved-mappings-select");
+const renameMappingButton = document.querySelector("#rename-mapping-button");
+const deleteMappingButton = document.querySelector("#delete-mapping-button");
+const selectorPlaygroundInput = document.querySelector("#selector-playground-input");
+const selectorPlaygroundTarget = document.querySelector("#selector-playground-target");
+const selectorPlaygroundCount = document.querySelector("#selector-playground-count");
+const selectorPlaygroundMark = document.querySelector("#selector-playground-mark");
+const copyAuditButton = document.querySelector("#copy-audit-button");
+const automaticMappingTab = document.querySelector("#automatic-mapping-tab");
+const playgroundMappingTab = document.querySelector("#playground-mapping-tab");
+const automaticMappingPanel = document.querySelector("#automatic-mapping-panel");
+const playgroundMappingPanel = document.querySelector("#playground-mapping-panel");
+let selectorPlaygroundMarked = false;
+let selectorPlaygroundMarkedSelector = "";
+const mappingModal = document.querySelector("#mapping-modal");
+const mappingNameInput = document.querySelector("#mapping-name-input");
+const mappingModalError = document.querySelector("#mapping-modal-error");
+const mappingModalConfirm = document.querySelector("#mapping-modal-confirm");
+const mappingModalCancel = document.querySelector("#mapping-modal-cancel");
 const pageFieldsElement = document.querySelector("#page-fields");
 const pageFieldsStatus = document.querySelector("#page-fields-status");
 const generatorTab = document.querySelector("#generator-tab");
@@ -258,8 +282,40 @@ if (scanFieldsButton) scanFieldsButton.addEventListener("click", scanPageFields)
 if (markAllButton) markAllButton.addEventListener("click", toggleMarkAllFields);
 if (saveMappingsButton) saveMappingsButton.addEventListener("click", savePageMappings);
 if (fillAllButton) fillAllButton.addEventListener("click", fillAllPageFields);
+if (remapAllButton) remapAllButton.addEventListener("click", remapAllFields);
+if (savedMappingsSelect) savedMappingsSelect.addEventListener("change", () => loadSavedProfile(savedMappingsSelect.value));
+if (renameMappingButton) renameMappingButton.addEventListener("click", renameSavedProfile);
+if (deleteMappingButton) deleteMappingButton.addEventListener("click", deleteSavedProfile);
+if (selectorPlaygroundInput) selectorPlaygroundInput.addEventListener("input", checkSelectorMatches);
+if (selectorPlaygroundTarget) selectorPlaygroundTarget.addEventListener("click", capturePlaygroundSelector);
+if (selectorPlaygroundMark) selectorPlaygroundMark.addEventListener("click", toggleSelectorMatches);
+if (copyAuditButton) copyAuditButton.addEventListener("click", copyMappingAudit);
+if (automaticMappingTab) automaticMappingTab.addEventListener("click", () => activateMappingSubtab("automatic"));
+if (playgroundMappingTab) playgroundMappingTab.addEventListener("click", () => activateMappingSubtab("playground"));
+if (mappingModalConfirm) mappingModalConfirm.addEventListener("click", confirmMappingModal);
+if (mappingModalCancel) mappingModalCancel.addEventListener("click", () => closeMappingModal(""));
+if (mappingModal) mappingModal.querySelector("[data-modal-close]").addEventListener("click", () => closeMappingModal(""));
+if (mappingNameInput) mappingNameInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") confirmMappingModal();
+  if (event.key === "Escape") closeMappingModal("");
+});
 
 if (pageFieldsElement) scanPageFields();
+if (chrome.tabs && chrome.tabs.onActivated) {
+  chrome.tabs.onActivated.addListener(() => {
+    clearDisplayedPageFields("A aba ativa mudou. Clique em Escanear campos para ler a nova página.");
+    activeTab = null;
+    activePageUrl = "";
+    activeBaseUrl = "";
+  });
+}
+if (chrome.runtime && chrome.runtime.onMessage) {
+  chrome.runtime.onMessage.addListener((message, sender) => {
+    if (!message || message.action !== "PAGE_CONTENT_CHANGED") return;
+    if (!activeTab || sender.tab && sender.tab.id !== activeTab.id) return;
+    clearDisplayedPageFields("A página mudou. Clique em Escanear campos para atualizar os campos.");
+  });
+}
 
 function activateTab(tabName) {
   const isGenerator = tabName === "generator";
@@ -272,6 +328,19 @@ function activateTab(tabName) {
   mappingTab.tabIndex = isGenerator ? -1 : 0;
   generatorPanel.hidden = !isGenerator;
   mappingPanel.hidden = isGenerator;
+}
+
+function activateMappingSubtab(tabName) {
+  const automatic = tabName === "automatic";
+  if (!automaticMappingTab || !playgroundMappingTab || !automaticMappingPanel || !playgroundMappingPanel) return;
+  automaticMappingTab.classList.toggle("active", automatic);
+  playgroundMappingTab.classList.toggle("active", !automatic);
+  automaticMappingTab.setAttribute("aria-selected", String(automatic));
+  playgroundMappingTab.setAttribute("aria-selected", String(!automatic));
+  automaticMappingTab.tabIndex = automatic ? 0 : -1;
+  playgroundMappingTab.tabIndex = automatic ? -1 : 0;
+  automaticMappingPanel.hidden = !automatic;
+  playgroundMappingPanel.hidden = automatic;
 }
 
 if (generatorTab) generatorTab.addEventListener("click", () => activateTab("generator"));
@@ -296,6 +365,25 @@ function generate() {
     button.addEventListener("click", () => copyText(button.dataset.value, button));
   });
   resultSection.classList.remove("is-hidden");
+}
+
+function clearDisplayedPageFields(statusMessage) {
+  pageFields = [];
+  markedSelectors = new Set();
+  selectedProfileId = "";
+  savedProfiles = [];
+  if (savedMappingsSelect) {
+    savedMappingsSelect.innerHTML = '<option value="">Nenhum mapeamento selecionado</option>';
+    savedMappingsSelect.value = "";
+  }
+  updateMarkAllButton();
+  renderPageFields();
+  if (selectorPlaygroundInput) selectorPlaygroundInput.value = "";
+  if (selectorPlaygroundCount) selectorPlaygroundCount.textContent = "—";
+  selectorPlaygroundMarked = false;
+  selectorPlaygroundMarkedSelector = "";
+  updateSelectorMarkButton(0);
+  if (pageFieldsStatus) pageFieldsStatus.textContent = statusMessage;
 }
 
 function escapeHtml(value) {
@@ -326,30 +414,217 @@ function sendToPage(message, callback) {
       callback(null, new Error("Nenhuma página ativa."));
       return;
     }
-    chrome.tabs.sendMessage(activeTab.id, message, (response) => {
-      const error = chrome.runtime.lastError;
-      callback(response, error || null);
+    sendMessageToTab(activeTab.id, message, callback, true);
+  });
+}
+
+function sendMessageToTab(tabId, message, callback, allowInjection) {
+  chrome.tabs.sendMessage(tabId, message, (response) => {
+    const error = chrome.runtime.lastError;
+    if (!error) {
+      callback(response, null);
+      return;
+    }
+
+    if (!allowInjection || !chrome.scripting || !chrome.scripting.executeScript) {
+      callback(null, error);
+      return;
+    }
+    chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["src/scripts/content.js"]
+    }, () => {
+      const injectionError = chrome.runtime.lastError;
+      if (injectionError) {
+        callback(null, injectionError);
+        return;
+      }
+      sendMessageToTab(tabId, message, callback, false);
     });
   });
 }
 
-function readMappings(url, callback) {
-  chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
-    const stored = result["fakedata-field-mappings"] || {};
-    let mappings = stored[url] || [];
-    if (typeof mappings === "string") {
-      try { mappings = JSON.parse(mappings); } catch (error) { mappings = []; }
-    }
-    callback(Array.isArray(mappings) ? mappings : []);
+function checkSelectorMatches() {
+  const selector = selectorPlaygroundInput ? selectorPlaygroundInput.value.trim() : "";
+  if (selectorPlaygroundMarked && selector !== selectorPlaygroundMarkedSelector) {
+    sendToPage({ action: "UNMARK_SELECTOR_MATCHES", selector: selectorPlaygroundMarkedSelector }, () => {});
+    selectorPlaygroundMarked = false;
+    selectorPlaygroundMarkedSelector = "";
+  }
+  if (!selector) {
+    if (selectorPlaygroundCount) selectorPlaygroundCount.textContent = "—";
+    selectorPlaygroundMarked = false;
+    updateSelectorMarkButton(0);
+    return;
+  }
+  sendToPage({ action: "COUNT_SELECTOR_MATCHES", selector }, (response, error) => {
+    if (!selectorPlaygroundCount) return;
+    const valid = !error && response && !response.invalid;
+    selectorPlaygroundCount.textContent = !valid
+      ? "Inválido"
+      : `${response.count} encontrado(s)`;
+    if (!valid || response.count === 0) selectorPlaygroundMarked = false;
+    updateSelectorMarkButton(valid ? response.count : 0);
   });
 }
 
-function scanPageFields() {
+function updateSelectorMarkButton(count) {
+  if (!selectorPlaygroundMark) return;
+  selectorPlaygroundMark.disabled = count === 0;
+  selectorPlaygroundMark.textContent = selectorPlaygroundMarked ? "Desmarcar encontrados" : "Marcar encontrados";
+}
+
+function toggleSelectorMatches() {
+  const selector = selectorPlaygroundInput ? selectorPlaygroundInput.value.trim() : "";
+  if (!selector) return;
+  const action = selectorPlaygroundMarked ? "UNMARK_SELECTOR_MATCHES" : "MARK_SELECTOR_MATCHES";
+  sendToPage({ action, selector }, (response, error) => {
+    if (error || !response) {
+      if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível atualizar as marcações do seletor.";
+      return;
+    }
+    selectorPlaygroundMarked = !selectorPlaygroundMarked;
+    selectorPlaygroundMarkedSelector = selectorPlaygroundMarked ? selector : "";
+    updateSelectorMarkButton(response.count || 0);
+    if (pageFieldsStatus) {
+      pageFieldsStatus.textContent = selectorPlaygroundMarked
+        ? `${response.count} elemento(s) encontrado(s) marcado(s).`
+        : "Marcações do seletor removidas.";
+    }
+  });
+}
+
+function capturePlaygroundSelector() {
+  if (selectorPlaygroundCount) selectorPlaygroundCount.textContent = "...";
+  sendToPage({ action: "CAPTURE_NEXT_CLICK" }, (response, error) => {
+    if (error || !response || !response.captured || !response.field) {
+      if (selectorPlaygroundCount) selectorPlaygroundCount.textContent = "Não capturado";
+      return;
+    }
+    if (selectorPlaygroundInput) selectorPlaygroundInput.value = response.field.selector;
+    checkSelectorMatches();
+  });
+}
+
+function normalizePageUrl(url) {
+  try {
+    const parsed = new URL(url);
+    parsed.hash = "";
+    parsed.search = "";
+    return parsed.toString();
+  } catch (error) {
+    return url;
+  }
+}
+
+function getBaseUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.origin;
+  } catch (error) {
+    return "";
+  }
+}
+
+function profileId() {
+  return `${activePageUrl}::${Date.now()}::${Math.random().toString(36).slice(2)}`;
+}
+
+function readProfiles(baseUrl, callback) {
+  chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
+    const stored = result["fakedata-field-mappings"] || {};
+    let profiles = stored[baseUrl];
+    if (Array.isArray(profiles)) {
+      profiles = {
+        pages: [{ id: `${baseUrl}::legacy`, name: "Mapeamento salvo", pageUrl: baseUrl, fields: profiles }]
+      };
+    }
+    if (!profiles && activePageUrl && Array.isArray(stored[activePageUrl])) {
+      profiles = {
+        pages: [{
+          id: `${activePageUrl}::legacy`,
+          name: "Mapeamento salvo",
+          pageUrl: activePageUrl,
+          fields: stored[activePageUrl]
+        }]
+      };
+    }
+    callback(profiles && Array.isArray(profiles.pages) ? profiles.pages : []);
+  });
+}
+
+function writeProfiles(baseUrl, profiles, callback) {
+  chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
+    const stored = result["fakedata-field-mappings"] || {};
+    stored[baseUrl] = { pages: profiles };
+    chrome.storage.local.set({ "fakedata-field-mappings": stored }, callback);
+  });
+}
+
+function updateSavedProfiles(profiles) {
+  savedProfiles = profiles.filter((profile) => normalizePageUrl(profile.pageUrl) === activePageUrl);
+  if (!savedMappingsSelect) return;
+  savedMappingsSelect.innerHTML = '<option value="">Nenhum mapeamento selecionado</option>' +
+    savedProfiles.map((profile) => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name)} (${escapeHtml(profile.pageUrl)})</option>`).join("");
+  savedMappingsSelect.value = selectedProfileId;
+}
+
+function loadSavedProfile(id) {
+  const profile = savedProfiles.find((item) => item.id === id);
+  if (!profile) return;
+  selectedProfileId = id;
+  pageFields = profile.fields.map((field) => ({ ...field, fixed: Boolean(field.fixed), fixedValue: field.fixedValue || "" }));
+  renderPageFields();
+  if (pageFieldsStatus) pageFieldsStatus.textContent = `Mapeamento "${profile.name}" carregado.`;
+}
+
+function getCurrentProfile(profiles) {
+  return profiles.find((profile) => profile.id === selectedProfileId);
+}
+
+function openMappingModal(initialName, title) {
+  if (!mappingModal || !mappingNameInput) return Promise.resolve("");
+  mappingModal.querySelector("#mapping-modal-title").textContent = title;
+  mappingNameInput.value = initialName || "";
+  mappingModalError.textContent = "";
+  mappingModal.hidden = false;
+  mappingNameInput.focus();
+  mappingNameInput.select();
+  return new Promise((resolve) => {
+    mappingModalResolver = resolve;
+  });
+}
+
+function closeMappingModal(value) {
+  if (!mappingModal || !mappingModalResolver) return;
+  mappingModal.hidden = true;
+  const resolve = mappingModalResolver;
+  mappingModalResolver = null;
+  resolve(value);
+}
+
+function confirmMappingModal() {
+  const name = mappingNameInput ? mappingNameInput.value.trim() : "";
+  if (!name) {
+    if (mappingModalError) mappingModalError.textContent = "Informe um nome para continuar.";
+    if (mappingNameInput) mappingNameInput.focus();
+    return;
+  }
+  closeMappingModal(name);
+}
+
+function remapAllFields() {
+  if (!pageFields.length) return;
+  scanPageFields(true);
+}
+
+function scanPageFields(remapping = false) {
   if (!pageFieldsStatus) return;
-  pageFieldsStatus.textContent = "Lendo campos da página...";
+  pageFieldsStatus.textContent = remapping ? "Remapeando campos automaticamente..." : "Lendo campos da página...";
   getActiveTab((tab) => {
     activeTab = tab;
-    activePageUrl = tab && tab.url ? tab.url : "";
+    activePageUrl = normalizePageUrl(tab && tab.url ? tab.url : "");
+    activeBaseUrl = getBaseUrl(activePageUrl);
     if (!activeTab || !activeTab.id || !/^https?:/i.test(activePageUrl)) {
       pageFields = [];
       renderPageFields();
@@ -363,13 +638,18 @@ function scanPageFields() {
         pageFieldsStatus.textContent = "Não foi possível ler esta página. Recarregue-a e tente novamente.";
         return;
       }
-      readMappings(activePageUrl, (saved) => {
+      readProfiles(activeBaseUrl, (profiles) => {
+        updateSavedProfiles(profiles);
+        const selected = getCurrentProfile(profiles);
+        const saved = selected && selected.fields ? selected.fields : [];
         pageFields = (response.fields || []).map((field) => {
           const mapping = saved.find((item) => item.key === field.key || item.selector === field.selector);
           return {
             ...field,
             dataType: mapping && mapping.dataType ? mapping.dataType : field.inferredType || "text",
-            selector: mapping && mapping.selector ? mapping.selector : field.selector
+            selector: remapping ? field.selector : (mapping && mapping.selector ? mapping.selector : field.selector),
+            fixed: Boolean(mapping && mapping.fixed),
+            fixedValue: mapping && mapping.fixedValue ? mapping.fixedValue : ""
           };
         });
         markedSelectors = new Set();
@@ -393,10 +673,13 @@ function renderPageFields() {
       <div class="page-field" data-index="${index}">
         <div class="page-field-heading">
           <span class="page-field-label" title="${escapeHtml(field.label)}">${escapeHtml(field.label)}</span>
+          ${field.selectorStatus !== "stable" || field.selectorSuggestion ? `<span class="field-warning" title="${escapeHtml(field.selectorSuggestion || "Este campo possui um problema no mapeamento.")}" aria-label="${escapeHtml(field.selectorSuggestion || "Este campo possui um problema no mapeamento.")}">!</span>` : ""}
           <span class="muted">${escapeHtml(field.inputType || field.tagName)}</span>
         </div>
         <select class="page-field-type" aria-label="Tipo para ${escapeHtml(field.label)}">${options}</select>
         <input class="page-field-selector" type="text" aria-label="Seletor para ${escapeHtml(field.label)}" value="${escapeHtml(field.selector)}">
+        <label class="page-field-fixed"><input class="page-field-fixed-toggle" type="checkbox" ${field.fixed ? "checked" : ""}> Fixar valor</label>
+        <input class="page-field-fixed-value" type="text" aria-label="Valor fixo para ${escapeHtml(field.label)}" placeholder="Valor usado sempre" value="${escapeHtml(field.fixedValue || "")}" ${field.fixed ? "" : "disabled"}>
         <div class="page-field-actions">
           <button type="button" data-action="highlight">${markedSelectors.has(field.selector) ? "Desmarcar" : "Marcar"}</button>
           <button type="button" data-action="target" title="Capturar o próximo clique na página" aria-label="Capturar seletor do próximo clique">🎯</button>
@@ -413,6 +696,13 @@ function renderPageFields() {
     });
     row.querySelector(".page-field-selector").addEventListener("input", (event) => {
       pageFields[index].selector = event.target.value;
+    });
+    row.querySelector(".page-field-fixed-toggle").addEventListener("change", (event) => {
+      pageFields[index].fixed = event.target.checked;
+      row.querySelector(".page-field-fixed-value").disabled = !event.target.checked;
+    });
+    row.querySelector(".page-field-fixed-value").addEventListener("input", (event) => {
+      pageFields[index].fixedValue = event.target.value;
     });
     row.querySelector('[data-action="highlight"]').addEventListener("click", () => {
       const selector = pageFields[index].selector;
@@ -437,6 +727,32 @@ function renderPageFields() {
   });
 }
 
+function getMappingAudit() {
+  const locators = new Set();
+  return pageFields.map((field) => {
+    const duplicateLocator = field.locatorName && locators.has(field.locatorName);
+    if (field.locatorName) locators.add(field.locatorName);
+    return {
+    elemento: field.label,
+    seletorGerado: field.selector,
+    locator: field.locatorName || "",
+    regraAplicada: field.selectorRule || "desconhecida",
+    status: field.selectorStatus === "stable" && !duplicateLocator ? "estável" : "frágil — requer atenção manual",
+    sugestao: duplicateLocator ? "Renomear o locator para eliminar a colisão." : (field.selectorSuggestion || "")
+    };
+  });
+}
+
+function auditJson() {
+  return JSON.stringify(Object.fromEntries(pageFields
+    .filter((field) => field.selector && field.locatorName)
+    .map((field) => [field.locatorName, field.selector])), null, 2);
+}
+
+function copyMappingAudit() {
+  copyText(auditJson(), copyAuditButton);
+}
+
 function updateMarkAllButton() {
   if (!markAllButton) return;
   const allMarked = pageFields.length > 0 && pageFields.every((field) => markedSelectors.has(field.selector));
@@ -448,9 +764,14 @@ function toggleMarkAllFields() {
     if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum campo encontrado para marcar.";
     return;
   }
-  const allMarked = pageFields.every((field) => markedSelectors.has(field.selector));
+  const markableFields = pageFields.filter((field) => field.selector);
+  if (!markableFields.length) {
+    if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum campo possui seletor utilizável para marcar.";
+    return;
+  }
+  const allMarked = markableFields.every((field) => markedSelectors.has(field.selector));
   const action = allMarked ? "UNMARK_ALL_FIELDS" : "MARK_ALL_FIELDS";
-  sendToPage({ action, selectors: pageFields.map((field) => field.selector) }, (response, error) => {
+  sendToPage({ action, selectors: markableFields.map((field) => field.selector) }, (response, error) => {
     if (error || !response) {
       if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível atualizar as marcações.";
       return;
@@ -494,16 +815,70 @@ function savePageMappings() {
     if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum mapeamento para salvar.";
     return;
   }
+  const selectedProfile = getCurrentProfile(savedProfiles);
+  if (selectedProfile) {
+    persistPageMapping(selectedProfile.name, selectedProfile.id);
+    return;
+  }
+  openMappingModal("", "Salvar novo mapeamento").then((name) => {
+    if (name) persistPageMapping(name, null);
+  });
+}
+
+function persistPageMapping(name, existingId) {
   const mappings = pageFields.map((field) => ({
     key: field.key,
     selector: field.selector,
-    dataType: field.dataType
+    dataType: field.dataType,
+    fixed: Boolean(field.fixed),
+    fixedValue: field.fixed ? field.fixedValue : "",
+    selectorRule: field.selectorRule || "",
+    selectorStatus: field.selectorStatus || "stable",
+    selectorSuggestion: field.selectorSuggestion || "",
+    locatorName: field.locatorName || ""
   }));
   chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
     const stored = result["fakedata-field-mappings"] || {};
-    stored[activePageUrl] = mappings;
+    let application = stored[activeBaseUrl];
+    if (Array.isArray(application)) application = { pages: [] };
+    if (!application || !Array.isArray(application.pages)) application = { pages: [] };
+    const existing = application.pages.find((profile) => profile.id === existingId);
+    const profile = { id: existing ? existing.id : profileId(), name: name.trim(), pageUrl: activePageUrl, fields: mappings, audit: getMappingAudit() };
+    application.pages = existing
+      ? application.pages.map((item) => item.id === profile.id ? profile : item)
+      : application.pages.concat(profile);
+    stored[activeBaseUrl] = application;
     chrome.storage.local.set({ "fakedata-field-mappings": stored }, () => {
-      if (pageFieldsStatus) pageFieldsStatus.textContent = "Mapeamentos salvos para esta URL.";
+      selectedProfileId = profile.id;
+      updateSavedProfiles(application.pages);
+      if (pageFieldsStatus) pageFieldsStatus.textContent = `Mapeamento "${profile.name}" salvo.`;
+    });
+  });
+}
+
+function renameSavedProfile() {
+  const profile = savedProfiles.find((item) => item.id === selectedProfileId);
+  if (!profile) return;
+  openMappingModal(profile.name, "Renomear mapeamento").then((name) => {
+    if (!name) return;
+    readProfiles(activeBaseUrl, (profiles) => {
+      const updated = profiles.map((item) => item.id === profile.id ? { ...item, name } : item);
+      writeProfiles(activeBaseUrl, updated, () => {
+        updateSavedProfiles(updated);
+        if (pageFieldsStatus) pageFieldsStatus.textContent = "Nome atualizado.";
+      });
+    });
+  });
+}
+
+function deleteSavedProfile() {
+  const profile = savedProfiles.find((item) => item.id === selectedProfileId);
+  if (!profile || !window.confirm(`Excluir "${profile.name}"?`)) return;
+  readProfiles(activeBaseUrl, (profiles) => {
+    writeProfiles(activeBaseUrl, profiles.filter((item) => item.id !== profile.id), () => {
+      selectedProfileId = "";
+      updateSavedProfiles(profiles.filter((item) => item.id !== profile.id));
+      if (pageFieldsStatus) pageFieldsStatus.textContent = "Mapeamento excluído.";
     });
   });
 }
@@ -512,7 +887,7 @@ function fillPageField(index) {
   const field = pageFields[index];
   if (!field) return;
   const type = field.dataType === "auto" ? field.inferredType : field.dataType;
-  const value = generateMappedValue(type, data.person.context(), field.inputType);
+  const value = field.fixed ? field.fixedValue : generateMappedValue(type, data.person.context(), field.inputType);
   sendToPage({ action: "FILL_FIELD", selector: field.selector, value }, (response, error) => {
     if (pageFieldsStatus) {
       pageFieldsStatus.textContent = error || !response || !response.filled
@@ -530,7 +905,7 @@ function fillAllPageFields() {
   const context = data.person.context();
   const fields = pageFields.map((field) => ({
     selector: field.selector,
-    value: generateMappedValue(field.dataType === "auto" ? field.inferredType : field.dataType, context, field.inputType)
+    value: field.fixed ? field.fixedValue : generateMappedValue(field.dataType === "auto" ? field.inferredType : field.dataType, context, field.inputType)
   }));
   sendToPage({ action: "FILL_ALL", fields }, (response, error) => {
     if (pageFieldsStatus) {

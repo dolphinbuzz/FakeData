@@ -6,6 +6,8 @@
   const SELECT2_OPTION_SELECTOR = "li.select2-results__option, li[list-select], [role='option'], .ui-menu-item";
   const IGNORED_TYPES = new Set(["hidden", "submit", "button", "reset", "image", "file"]);
   const markedFields = new Map();
+  let lastPageSignature = "";
+  let pageChangeTimer = null;
 
   const normalize = (value) => String(value || "")
     .normalize("NFD")
@@ -16,6 +18,9 @@
     .trim();
 
   const escapeAttribute = (value) => String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const escapeCssIdentifier = (value) => window.CSS && typeof window.CSS.escape === "function"
+    ? window.CSS.escape(String(value))
+    : String(value).replace(/([^\w-])/g, "\\$1");
 
   function visible(element) {
     const style = window.getComputedStyle(element);
@@ -96,37 +101,97 @@
     return "text";
   }
 
-  function structuralSelector(element) {
-    const parts = [];
-    let node = element;
-    while (node && node.nodeType === Node.ELEMENT_NODE && node !== document.body) {
-      let part = node.tagName.toLowerCase();
-      const siblings = node.parentElement ? Array.from(node.parentElement.children).filter((child) => child.tagName === node.tagName) : [];
-      if (siblings.length > 1) part += `:nth-of-type(${siblings.indexOf(node) + 1})`;
-      parts.unshift(part);
-      const selector = parts.join(" > ");
-      if (document.querySelectorAll(selector).length === 1) return selector;
-      node = node.parentElement;
+  function isDynamicId(value) {
+    return !value || /(^|[-_])[a-f0-9]{6,}($|[-_])|(^|[-_])\d{3,}($|[-_])|^(r|component|ember|headlessui)[-_]/i.test(value);
+  }
+
+  function uniqueCandidate(element, selector) {
+    try {
+      return document.querySelectorAll(selector).length === 1 && document.querySelector(selector) === element;
+    } catch (error) {
+      return false;
     }
-    return parts.join(" > ");
+  }
+
+  function staticText(element) {
+    const text = (element.textContent || "").replace(/\s+/g, " ").trim();
+    if (!text || text.length > 80 || /\{\{|\$\{|<%|%>/.test(text)) return "";
+    return text;
   }
 
   function selectorFor(element) {
+    const tag = element.tagName.toLowerCase();
+    const attributeValue = element.getAttribute("value");
+    const supportsValueSelector = ["INPUT", "SELECT", "TEXTAREA"].includes(element.tagName);
     const candidates = [
-      ["name", element.getAttribute("name"), (value) => `[name="${escapeAttribute(value)}"]`],
-      ["autocomplete", element.getAttribute("autocomplete"), (value) => `[autocomplete="${escapeAttribute(value)}"]`],
-      ["aria-label", element.getAttribute("aria-label"), (value) => `[aria-label="${escapeAttribute(value)}"]`],
-      ["placeholder", element.getAttribute("placeholder"), (value) => `[placeholder="${escapeAttribute(value)}"]`],
-      ["type", element.type, (value) => `${element.tagName.toLowerCase()}[type="${escapeAttribute(value)}"]`],
-      ["id", element.id, (value) => `[id="${escapeAttribute(value)}"]`]
+      ["id", element.id, (value) => `#${escapeCssIdentifier(value)}`, 1],
+      ["data-cy", element.getAttribute("data-cy"), (value) => `[data-cy="${escapeAttribute(value)}"]`, 1],
+      ["data-test", element.getAttribute("data-test"), (value) => `[data-test="${escapeAttribute(value)}"]`, 1],
+      ["data-testid", element.getAttribute("data-testid"), (value) => `[data-testid="${escapeAttribute(value)}"]`, 1],
+      ["role", element.getAttribute("role"), (value) => `${tag}[role="${escapeAttribute(value)}"]`, 2],
+      ["aria-label", element.getAttribute("aria-label"), (value) => `${tag}[aria-label="${escapeAttribute(value)}"]`, 2],
+      ["aria-labelledby", element.getAttribute("aria-labelledby"), (value) => `${tag}[aria-labelledby="${escapeAttribute(value)}"]`, 2],
+      ["value", supportsValueSelector && attributeValue, (value) => `${tag}[value="${escapeAttribute(value)}"]`, 3],
+      ["value parcial", supportsValueSelector && attributeValue, (value) => `${tag}[value*="${escapeAttribute(value)}"]`, 3],
+      ["ng-model", element.getAttribute("ng-model"), (value) => `${tag}[ng-model="${escapeAttribute(value)}"]`, 3],
+      ["name", element.getAttribute("name"), (value) => `${tag}[name="${escapeAttribute(value)}"]`, 3],
+      ["type", element.getAttribute("type"), (value) => `${tag}[type="${escapeAttribute(value)}"]`, 3]
     ];
-    for (const [, value, create] of candidates) {
+    for (const [rule, value, create, priority] of candidates) {
       if (!value) continue;
       const selector = create(value);
-      if (document.querySelectorAll(selector).length === 1) return selector;
+      if (uniqueCandidate(element, selector)) return { selector, rule, priority, status: "stable" };
+    }
+    const combinations = [
+      ["ng-model + name + type + value", element.getAttribute("ng-model") && element.getAttribute("name") && element.getAttribute("type") && attributeValue, () => `${tag}[ng-model="${escapeAttribute(element.getAttribute("ng-model"))}"][name="${escapeAttribute(element.getAttribute("name"))}"][type="${escapeAttribute(element.getAttribute("type"))}"][value="${escapeAttribute(attributeValue)}"]`],
+      ["ng-model + name + type", element.getAttribute("ng-model") && element.getAttribute("name") && element.getAttribute("type"), () => `${tag}[ng-model="${escapeAttribute(element.getAttribute("ng-model"))}"][name="${escapeAttribute(element.getAttribute("name"))}"][type="${escapeAttribute(element.getAttribute("type"))}"]`],
+      ["ng-model + value", element.getAttribute("ng-model") && attributeValue, () => `${tag}[ng-model="${escapeAttribute(element.getAttribute("ng-model"))}"][value="${escapeAttribute(attributeValue)}"]`],
+      ["ng-model + name", element.getAttribute("ng-model") && element.getAttribute("name"), () => `${tag}[ng-model="${escapeAttribute(element.getAttribute("ng-model"))}"][name="${escapeAttribute(element.getAttribute("name"))}"]`],
+      ["ng-model + type", element.getAttribute("ng-model") && element.getAttribute("type"), () => `${tag}[ng-model="${escapeAttribute(element.getAttribute("ng-model"))}"][type="${escapeAttribute(element.getAttribute("type"))}"]`],
+      ["name + type + value", supportsValueSelector && element.getAttribute("name") && element.getAttribute("type") && attributeValue, () => `${tag}[name="${escapeAttribute(element.getAttribute("name"))}"][type="${escapeAttribute(element.getAttribute("type"))}"][value="${escapeAttribute(attributeValue)}"]`],
+      ["type + value", supportsValueSelector && element.getAttribute("type") && attributeValue, () => `${tag}[type="${escapeAttribute(element.getAttribute("type"))}"][value="${escapeAttribute(attributeValue)}"]`],
+      ["name + value", supportsValueSelector && element.getAttribute("name") && attributeValue, () => `${tag}[name="${escapeAttribute(element.getAttribute("name"))}"][value="${escapeAttribute(attributeValue)}"]`],
+      ["name + type", element.getAttribute("name") && element.getAttribute("type"), () => `${tag}[name="${escapeAttribute(element.getAttribute("name"))}"][type="${escapeAttribute(element.getAttribute("type"))}"]`],
+      ["role + aria-label", element.getAttribute("role") && element.getAttribute("aria-label"), () => `${tag}[role="${escapeAttribute(element.getAttribute("role"))}"][aria-label="${escapeAttribute(element.getAttribute("aria-label"))}"]`],
+      ["aria-labelledby + role", element.getAttribute("aria-labelledby") && element.getAttribute("role"), () => `${tag}[aria-labelledby="${escapeAttribute(element.getAttribute("aria-labelledby"))}"][role="${escapeAttribute(element.getAttribute("role"))}"]`]
+    ];
+    for (const [rule, value, create] of combinations) {
+      if (value && uniqueCandidate(element, create())) return { selector: create(), rule, priority: 3, status: "stable" };
     }
 
-    return structuralSelector(element);
+    const text = staticText(element);
+    if (text && !candidates.some(([, value]) => value)) {
+      return {
+        selector: fallbackSelector(element),
+        rule: "texto visível estático",
+        priority: 4,
+        status: "fragile",
+        suggestion: `Adicionar data-cy estável para o elemento "${text.slice(0, 50)}".`
+      };
+    }
+    return {
+      selector: fallbackSelector(element),
+      rule: "fallback proibido",
+      priority: 5,
+      status: "fragile",
+      suggestion: `Adicionar data-cy estável para ${tag}${element.getAttribute("name") ? ` ${element.getAttribute("name")}` : ""}.`
+    };
+  }
+
+  function fallbackSelector(element) {
+    const parts = [];
+    let node = element;
+    while (node && node.nodeType === Node.ELEMENT_NODE && node !== document.body) {
+      const siblings = node.parentElement
+        ? Array.from(node.parentElement.children).filter((child) => child.tagName === node.tagName)
+        : [];
+      const index = siblings.indexOf(node);
+      parts.unshift(`${node.tagName.toLowerCase()}${siblings.length > 1 ? `:nth-of-type(${index + 1})` : ""}`);
+      const selector = parts.join(" > ");
+      if (uniqueCandidate(element, selector)) return selector;
+      node = node.parentElement;
+    }
+    return parts.join(" > ");
   }
 
   function fieldFromTarget(target) {
@@ -154,7 +219,8 @@
       event.preventDefault();
       event.stopPropagation();
       document.removeEventListener("click", onClick, true);
-      const element = fieldFromTarget(event.target);
+      const element = fieldFromTarget(event.target) ||
+        (event.target instanceof Element && event.target.closest("button, a[href], [role='button'], [role='link']"));
       if (!element) {
         sendResponse({ captured: false });
         return;
@@ -162,7 +228,7 @@
       sendResponse({
         captured: true,
         field: {
-          selector: selectorFor(element),
+          ...describe(element, 0),
           label: labelsFor(element).replace(/\s+/g, " ").trim() || element.getAttribute("name") || element.getAttribute("placeholder") || element.tagName.toLowerCase(),
           inferredType: inferType(element),
           tagName: element.tagName.toLowerCase(),
@@ -175,29 +241,102 @@
   }
 
   function describe(element, index) {
-    const selector = selectorFor(element);
+    const locator = selectorFor(element);
     const label = labelsFor(element).replace(/\s+/g, " ").trim() ||
       element.getAttribute("name") || element.getAttribute("placeholder") || `${element.tagName.toLowerCase()} ${index + 1}`;
     return {
-      key: `${selector}::${index}`,
-      selector,
+      key: `${locator.selector || locator.rule}::${index}`,
+      selector: locator.selector,
       label: label.slice(0, 120),
       inferredType: inferType(element),
       tagName: element.tagName.toLowerCase(),
       inputType: element.type || "",
       value: element.value || "",
       required: Boolean(element.required),
-      disabled: Boolean(element.disabled)
+      disabled: Boolean(element.disabled),
+      selectorRule: locator.rule,
+      selectorStatus: locator.status,
+      selectorSuggestion: locator.suggestion || "",
+      locatorName: locatorName(element, label)
     };
+  }
+
+  function locatorName(element, label) {
+    const route = (window.location.pathname.split("/").filter(Boolean).pop() || "pagina")
+      .replace(/\.[^.]+$/, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    const context = (label || element.getAttribute("name") || element.tagName).replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    return `${route}-${context}-${(element.getAttribute("type") || element.tagName).toLowerCase()}`.replace(/-+/g, "-");
   }
 
   function scan() {
     const nativeFields = Array.from(document.querySelectorAll(FIELD_SELECTOR));
     const customFields = Array.from(document.querySelectorAll(CUSTOM_FIELD_SELECTOR))
       .filter((element) => !element.closest("multi-select") || element.tagName.toLowerCase() === "multi-select");
-    return nativeFields.concat(customFields)
-      .filter((element) => !IGNORED_TYPES.has(String(element.type || "").toLowerCase()) && visible(element) && !element.disabled)
+    const elements = nativeFields.concat(customFields)
+      .filter((element, index, fields) => {
+        return !IGNORED_TYPES.has(String(element.type || "").toLowerCase()) &&
+          visible(element) && !element.disabled && fields.indexOf(element) === index;
+      })
       .map(describe);
+    const selectors = new Map();
+    elements.forEach((item) => {
+      if (!item.selector) return;
+      selectors.set(item.selector, (selectors.get(item.selector) || 0) + 1);
+    });
+    return elements.map((item) => item.selector && selectors.get(item.selector) > 1
+      ? {
+        ...item,
+        selectorRule: "colisão após fallback",
+        selectorStatus: "fragile",
+        selectorSuggestion: "Adicionar data-cy único ao elemento para eliminar a colisão."
+      }
+      : item);
+  }
+
+  function pageSignature() {
+    return window.location.href + "::" + Array.from(document.querySelectorAll(`${FIELD_SELECTOR}, ${CUSTOM_FIELD_SELECTOR}`))
+      .filter(visible)
+      .map((element) => selectorFor(element))
+      .join("|");
+  }
+
+  function notifyPageChanged() {
+    const signature = pageSignature();
+    if (signature === lastPageSignature) return;
+    lastPageSignature = signature;
+    chrome.runtime.sendMessage({
+      action: "PAGE_CONTENT_CHANGED",
+      url: window.location.href
+    });
+  }
+
+  function schedulePageChangeNotification() {
+    clearTimeout(pageChangeTimer);
+    pageChangeTimer = setTimeout(notifyPageChanged, 250);
+  }
+
+  function installNavigationObserver() {
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+    history.pushState = function (...args) {
+      const result = originalPushState.apply(this, args);
+      schedulePageChangeNotification();
+      return result;
+    };
+    history.replaceState = function (...args) {
+      const result = originalReplaceState.apply(this, args);
+      schedulePageChangeNotification();
+      return result;
+    };
+    window.addEventListener("popstate", schedulePageChangeNotification);
+    window.addEventListener("hashchange", schedulePageChangeNotification);
+    if (document.body) {
+      new MutationObserver(schedulePageChangeNotification).observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    }
+    lastPageSignature = pageSignature();
   }
 
   function find(selector) {
@@ -386,12 +525,16 @@
   function mark(selector) {
     const element = find(selector);
     if (!element) return false;
-    if (markedFields.has(selector)) return true;
+    return markElement(element, selector);
+  }
+
+  function markElement(element, key) {
+    if (markedFields.has(key)) return true;
     const target = visualTarget(element);
     if (!target) return false;
     const existing = Array.from(markedFields.values()).find((marked) => marked.target === target);
     if (existing) {
-      markedFields.set(selector, existing);
+      markedFields.set(key, existing);
       return true;
     }
     const previousOutline = target.style.outline;
@@ -400,7 +543,7 @@
     const previousOffsetPriority = target.style.getPropertyPriority("outline-offset");
     target.style.setProperty("outline", "3px solid #ef4444", "important");
     target.style.setProperty("outline-offset", "2px", "important");
-    markedFields.set(selector, {
+    markedFields.set(key, {
       target,
       previousOutline,
       previousOffset,
@@ -408,6 +551,30 @@
       previousOffsetPriority
     });
     return true;
+  }
+
+  function selectorMatches(selector, keyPrefix) {
+    let elements;
+    try {
+      elements = Array.from(document.querySelectorAll(selector));
+    } catch (error) {
+      return null;
+    }
+    return elements.map((element, index) => ({ element, key: `${keyPrefix}${index}` }));
+  }
+
+  function markSelectorMatches(selector) {
+    const matches = selectorMatches(selector, `__playground__${selector}::`);
+    if (!matches) return { invalid: true, count: 0 };
+    const marked = matches.filter(({ element, key }) => markElement(element, key)).length;
+    return { count: marked };
+  }
+
+  function unmarkSelectorMatches(selector) {
+    const prefix = `__playground__${selector}::`;
+    const keys = Array.from(markedFields.keys()).filter((key) => key.startsWith(prefix));
+    keys.forEach((key) => unmark(key));
+    return { count: keys.length };
   }
 
   function unmark(selector) {
@@ -477,7 +644,18 @@
       clearMarks();
       sendResponse({ unmarked: total, total });
     }
+    if (message.action === "COUNT_SELECTOR_MATCHES") {
+      try {
+        sendResponse({ count: document.querySelectorAll(message.selector || "").length });
+      } catch (error) {
+        sendResponse({ invalid: true, count: 0 });
+      }
+    }
+    if (message.action === "MARK_SELECTOR_MATCHES") sendResponse(markSelectorMatches(message.selector || ""));
+    if (message.action === "UNMARK_SELECTOR_MATCHES") sendResponse(unmarkSelectorMatches(message.selector || ""));
     if (message.action === "CAPTURE_NEXT_CLICK") captureNextClick(sendResponse);
     return true;
   });
+
+  installNavigationObserver();
 })();
