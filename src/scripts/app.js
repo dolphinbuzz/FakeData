@@ -195,6 +195,10 @@ const saveMappingsButton = document.querySelector("#save-mappings-button");
 const fillAllButton = document.querySelector("#fill-all-button");
 const pageFieldsElement = document.querySelector("#page-fields");
 const pageFieldsStatus = document.querySelector("#page-fields-status");
+const generatorTab = document.querySelector("#generator-tab");
+const mappingTab = document.querySelector("#mapping-tab");
+const generatorPanel = document.querySelector("#generator-panel");
+const mappingPanel = document.querySelector("#mapping-panel");
 
 ESTADOS.forEach((estado) => {
   const option = document.createElement("option");
@@ -256,6 +260,22 @@ if (saveMappingsButton) saveMappingsButton.addEventListener("click", savePageMap
 if (fillAllButton) fillAllButton.addEventListener("click", fillAllPageFields);
 
 if (pageFieldsElement) scanPageFields();
+
+function activateTab(tabName) {
+  const isGenerator = tabName === "generator";
+  if (!generatorTab || !mappingTab || !generatorPanel || !mappingPanel) return;
+  generatorTab.classList.toggle("active", isGenerator);
+  mappingTab.classList.toggle("active", !isGenerator);
+  generatorTab.setAttribute("aria-selected", String(isGenerator));
+  mappingTab.setAttribute("aria-selected", String(!isGenerator));
+  generatorTab.tabIndex = isGenerator ? 0 : -1;
+  mappingTab.tabIndex = isGenerator ? -1 : 0;
+  generatorPanel.hidden = !isGenerator;
+  mappingPanel.hidden = isGenerator;
+}
+
+if (generatorTab) generatorTab.addEventListener("click", () => activateTab("generator"));
+if (mappingTab) mappingTab.addEventListener("click", () => activateTab("mapping"));
 
 function generate() {
   const definition = data[selectedType];

@@ -27,13 +27,22 @@
         </div>
       </header>
 
+      <nav class="app-tabs" role="tablist" aria-label="Funções da extensão">
+        <button id="generator-tab" class="app-tab active" type="button" role="tab" aria-selected="true" aria-controls="generator-panel">
+          Gerar dados
+        </button>
+        <button id="mapping-tab" class="app-tab" type="button" role="tab" aria-selected="false" aria-controls="mapping-panel" tabindex="-1">
+          Mapear campos
+        </button>
+      </nav>
+
+      <div id="generator-panel" class="tab-panel active" role="tabpanel" aria-labelledby="generator-tab">
       <section class="generator-panel" aria-labelledby="generator-title">
         <div class="section-heading">
           <div>
             <span class="eyebrow">Gerador</span>
             <h2 id="generator-title">Escolha o tipo de dado</h2>
           </div>
-          <span class="qa-badge">QA</span>
         </div>
 
         <div class="type-grid" role="group" aria-label="Tipo de dado">
@@ -94,7 +103,9 @@
         </div>
         <div id="result-fields" class="result-fields"></div>
       </section>
+      </div>
 
+      <div id="mapping-panel" class="tab-panel" role="tabpanel" aria-labelledby="mapping-tab" hidden>
       <section id="page-fields-section" class="page-fields-section" aria-labelledby="page-fields-title">
         <div class="result-heading">
           <div>
@@ -111,6 +122,7 @@
         <p id="page-fields-status" class="page-fields-status">Abra uma página com um formulário para começar.</p>
         <div id="page-fields" class="page-fields"></div>
       </section>
+      </div>
 
       <footer>
         <span>Feito para QAs</span>
