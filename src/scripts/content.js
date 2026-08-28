@@ -1,16 +1,16 @@
-import {
-  captureNextClick,
-  installNavigationObserver,
-  isCustomSelect,
-  normalize,
-  scan,
-  SELECT2_OPTION_SELECTOR,
-  visible
-} from "./selector-engine.js";
-import { ACTIONS } from "./messages.js";
-
 (() => {
   "use strict";
+
+  const modulesReady = Promise.all([
+    import(chrome.runtime.getURL("src/scripts/selector-engine.js")),
+    import(chrome.runtime.getURL("src/scripts/messages.js"))
+  ]);
+  let selectorEngine = null;
+  let actions = null;
+  modulesReady.then(([engine, messages]) => {
+    selectorEngine = engine;
+    actions = messages.ACTIONS;
+  });
 
   // Selector discovery and inference live in selector-engine.js.
   function find(selector) {
@@ -53,19 +53,19 @@ import { ACTIONS } from "./messages.js";
     if (element.matches("select.select2-hidden-accessible")) {
       const container = document.getElementById(`select2-${element.id}-container`);
       const selection = container && container.closest(".select2-selection");
-      if (selection && visible(selection)) return selection;
+      if (selection && selectorEngine.visible(selection)) return selection;
       const select2Container = element.nextElementSibling;
-      if (select2Container && select2Container.matches(".select2-container") && visible(select2Container)) {
+      if (select2Container && select2Container.matches(".select2-container") && selectorEngine.visible(select2Container)) {
         return select2Container;
       }
     }
-    if (isCustomSelect(element)) {
+    if (selectorEngine.isCustomSelect(element)) {
       const customTarget = element.querySelector("input, [role='combobox'], .ui-autocomplete-multiselect") || element;
-      if (visible(customTarget)) return customTarget;
+      if (selectorEngine.visible(customTarget)) return customTarget;
     }
-    if (visible(element)) return element;
+    if (selectorEngine.visible(element)) return element;
     const container = element.closest(".form-group, fieldset, [role='group']");
-    return container && visible(container) ? container : null;
+    return container && selectorEngine.visible(container) ? container : null;
   }
 
   function waitForSelectOptions(element, timeout = 700) {
@@ -89,10 +89,10 @@ import { ACTIONS } from "./messages.js";
     return waitForSelectOptions(element).then((options) => {
       if (!options.length) return false;
 
-      const wanted = normalize(value);
+      const wanted = selectorEngine.normalize(value);
       const matchingOption = options.find((option) =>
-        normalize(option.value) === wanted || normalize(option.textContent) === wanted ||
-        normalize(option.textContent).includes(wanted) || wanted.includes(normalize(option.textContent))
+        selectorEngine.normalize(option.value) === wanted || selectorEngine.normalize(option.textContent) === wanted ||
+        selectorEngine.normalize(option.textContent).includes(wanted) || wanted.includes(selectorEngine.normalize(option.textContent))
       );
       const option = matchingOption || options[Math.floor(Math.random() * options.length)];
       element.value = option.value;
@@ -122,15 +122,15 @@ import { ACTIONS } from "./messages.js";
   function fillCustomSelect(element, value) {
     const trigger = element.querySelector("input, [role='combobox'], .ui-autocomplete-multiselect") || element;
     trigger.click();
-    const localOptions = Array.from(element.querySelectorAll(SELECT2_OPTION_SELECTOR));
-    const options = (localOptions.length ? localOptions : Array.from(document.querySelectorAll(SELECT2_OPTION_SELECTOR)))
-      .filter(visible);
+    const localOptions = Array.from(element.querySelectorAll(selectorEngine.SELECT2_OPTION_SELECTOR));
+    const options = (localOptions.length ? localOptions : Array.from(document.querySelectorAll(selectorEngine.SELECT2_OPTION_SELECTOR)))
+      .filter(selectorEngine.visible);
     if (!options.length) {
       closeCustomMenu(element);
       return false;
     }
-    const wanted = normalize(value);
-    const option = options.find((item) => normalize(item.textContent).includes(wanted)) ||
+    const wanted = selectorEngine.normalize(value);
+    const option = options.find((item) => selectorEngine.normalize(item.textContent).includes(wanted)) ||
       options[Math.floor(Math.random() * options.length)];
     option.click();
     closeCustomMenu(element);
@@ -156,7 +156,7 @@ import { ACTIONS } from "./messages.js";
       if (element.checked !== shouldBeChecked) element.click();
       return true;
     }
-    if (isCustomSelect(element)) {
+    if (selectorEngine.isCustomSelect(element)) {
       return fillCustomSelect(element, value);
     }
     if (element.tagName === "SELECT") {
@@ -181,7 +181,7 @@ import { ACTIONS } from "./messages.js";
   function highlight(selector) {
     const element = find(selector);
     if (!element) return false;
-    const target = isCustomSelect(element)
+    const target = selectorEngine.isCustomSelect(element)
       ? (element.querySelector("input, [role='combobox'], .ui-autocomplete-multiselect") || element)
       : element;
     target.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -280,16 +280,17 @@ import { ACTIONS } from "./messages.js";
     markedFields.clear();
   }
 
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  function handleMessage(message, sender, sendResponse) {
     if (!message || !message.action) return;
-    if (message.action === ACTIONS.SCAN_FIELDS) {
+    if (message.action === actions.SCAN_FIELDS) {
       clearMarks();
-      sendResponse({ fields: scan() });
+      modulesReady.then(() => sendResponse({ fields: selectorEngine.scan() }));
+      return true;
     }
-    if (message.action === ACTIONS.FILL_FIELD) {
+    if (message.action === actions.FILL_FIELD) {
       fill(message.selector, message.value).then((filled) => sendResponse({ filled }));
     }
-    if (message.action === ACTIONS.FILL_ALL) {
+    if (message.action === actions.FILL_ALL) {
       const fields = message.fields || [];
       fields.reduce((chain, item) => chain.then(async (results) => {
         results.push(await fill(item.selector, item.value));
@@ -299,10 +300,10 @@ import { ACTIONS } from "./messages.js";
         sendResponse({ filled: results.filter(Boolean).length, total: results.length });
       });
     }
-    if (message.action === ACTIONS.HIGHLIGHT_FIELD) sendResponse({ highlighted: highlight(message.selector) });
-    if (message.action === ACTIONS.MARK_FIELD) sendResponse({ marked: mark(message.selector) });
-    if (message.action === ACTIONS.UNMARK_FIELD) sendResponse({ unmarked: unmark(message.selector) });
-    if (message.action === ACTIONS.MARK_ALL_FIELDS) {
+    if (message.action === actions.HIGHLIGHT_FIELD) sendResponse({ highlighted: highlight(message.selector) });
+    if (message.action === actions.MARK_FIELD) sendResponse({ marked: mark(message.selector) });
+    if (message.action === actions.UNMARK_FIELD) sendResponse({ unmarked: unmark(message.selector) });
+    if (message.action === actions.MARK_ALL_FIELDS) {
       const selectors = Array.isArray(message.selectors) ? message.selectors : [];
       const failed = selectors.filter((selector) => !mark(selector));
       sendResponse({
@@ -312,24 +313,32 @@ import { ACTIONS } from "./messages.js";
         failed
       });
     }
-    if (message.action === ACTIONS.UNMARK_ALL_FIELDS) {
+    if (message.action === actions.UNMARK_ALL_FIELDS) {
       const selectors = Array.isArray(message.selectors) ? message.selectors : [];
       const total = Math.max(selectors.length, markedFields.size);
       clearMarks();
       sendResponse({ unmarked: total, total });
     }
-    if (message.action === ACTIONS.COUNT_SELECTOR_MATCHES) {
+    if (message.action === actions.COUNT_SELECTOR_MATCHES) {
       try {
         sendResponse({ count: document.querySelectorAll(message.selector || "").length });
       } catch (error) {
         sendResponse({ invalid: true, count: 0 });
       }
     }
-    if (message.action === ACTIONS.MARK_SELECTOR_MATCHES) sendResponse(markSelectorMatches(message.selector || ""));
-    if (message.action === ACTIONS.UNMARK_SELECTOR_MATCHES) sendResponse(unmarkSelectorMatches(message.selector || ""));
-    if (message.action === ACTIONS.CAPTURE_NEXT_CLICK) captureNextClick(sendResponse);
+    if (message.action === actions.MARK_SELECTOR_MATCHES) sendResponse(markSelectorMatches(message.selector || ""));
+    if (message.action === actions.UNMARK_SELECTOR_MATCHES) sendResponse(unmarkSelectorMatches(message.selector || ""));
+    if (message.action === actions.CAPTURE_NEXT_CLICK) {
+      modulesReady.then(() => selectorEngine.captureNextClick(sendResponse));
+      return true;
+    }
+    return true;
+  }
+
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    modulesReady.then(() => handleMessage(message, sender, sendResponse));
     return true;
   });
 
-  installNavigationObserver();
+  modulesReady.then(() => selectorEngine.installNavigationObserver());
 })();
