@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
-import { inferType, scan } from "../src/scripts/selector-engine.js";
+import { inferType, scan, selectorFor } from "../src/scripts/selector-engine.js";
 
 let dom;
 
@@ -27,5 +27,45 @@ describe("selector engine", () => {
     const fields = scan();
     expect(fields).toHaveLength(2);
     expect(fields.map((field) => field.selector)).toEqual(["#email", "#uf"]);
+  });
+
+  it.each([
+    ["id único", '<input id="stable-field">', "#stable-field", "id"],
+    ["data-cy", '<input data-cy="email-field">', '[data-cy="email-field"]', "data-cy"],
+    ["ng-model", '<select ng-model="monthbox"><option>January</option></select>', 'select[ng-model="monthbox"]', "ng-model"]
+  ])("prioriza %s", (_, markup, expectedSelector, expectedRule) => {
+    document.body.innerHTML = markup;
+    const element = document.body.firstElementChild;
+    const result = selectorFor(element);
+
+    expect(result.selector).toBe(expectedSelector);
+    expect(result.rule).toBe(expectedRule);
+    expect(result.status).toBe("stable");
+  });
+
+  it("marca como frágil um campo sem atributo estável", () => {
+    document.body.innerHTML = '<form><div><input></div><div><input></div></form>';
+    const result = selectorFor(document.querySelector("input"));
+
+    expect(result.selector).toContain(":nth-of-type");
+    expect(result.status).toBe("fragile");
+  });
+
+  it("infere categorias de formulário", () => {
+    document.body.innerHTML = `
+      <input id="cpf" name="cpf">
+      <input id="cnpj" name="cnpj">
+      <input id="cep" placeholder="CEP">
+      <input id="phone" type="tel">
+      <input id="birth" name="birthDate">
+      <select id="state"><option>SP</option><option>RJ</option></select>
+    `;
+
+    expect(inferType(document.querySelector("#cpf"))).toBe("cpf");
+    expect(inferType(document.querySelector("#cnpj"))).toBe("cnpj");
+    expect(inferType(document.querySelector("#cep"))).toBe("cep");
+    expect(inferType(document.querySelector("#phone"))).toBe("phone");
+    expect(inferType(document.querySelector("#birth"))).toBe("birthDate");
+    expect(inferType(document.querySelector("#state"))).toBe("state");
   });
 });

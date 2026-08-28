@@ -12,11 +12,14 @@ describe("geradores", () => {
   it("gera CPFs válidos formatados e sem máscara", () => {
     expect(validarCPF(cpf())).toBe(true);
     expect(validarCPF(cpf(false))).toBe(true);
+    expect(validarCPF("111.111.111-11")).toBe(false);
   });
 
   it("gera CNPJs válidos nos formatos numérico e alfanumérico", () => {
     expect(validarCNPJ(cnpj())).toBe(true);
     expect(validarCNPJ(cnpj(false, true))).toBe(true);
+    expect(validarCNPJ("00.000.000/0000-00")).toBe(true);
+    expect(validarCNPJ("12.345.678/0001-90")).toBe(false);
   });
 
   it("cria dados sem depender do DOM", () => {
