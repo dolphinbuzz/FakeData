@@ -1,3 +1,5 @@
+import { ACTIONS } from "./messages.js";
+
 const FIELD_SELECTOR = "input, select, textarea";
 const CUSTOM_FIELD_SELECTOR = "multi-select, [role='combobox'], .ui-autocomplete-multiselect";
 const SELECT2_OPTION_SELECTOR = "li.select2-results__option, li[list-select], [role='option'], .ui-menu-item";
@@ -302,7 +304,7 @@ function notifyPageChanged() {
   if (signature === lastPageSignature) return;
   lastPageSignature = signature;
   chrome.runtime.sendMessage({
-    action: "PAGE_CONTENT_CHANGED",
+    action: ACTIONS.PAGE_CONTENT_CHANGED,
     url: window.location.href
   });
 }
@@ -346,5 +348,6 @@ export {
   pageSignature,
   scan,
   SELECT2_OPTION_SELECTOR,
+  selectorFor,
   visible
 };

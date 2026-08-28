@@ -1,6 +1,7 @@
 // Interface e regras do gerador da extensão.
 import { createGeneratorData, generateMappedValue as generateMappedValuePure, validarCPF, validarCNPJ, pick } from "./generators.js";
 import { DDDS, ESTADOS } from "./data/estados.js";
+import { MAPPING_TYPES } from "./data/mapping-types.js";
 import { ACTIONS } from "./messages.js";
 
 let selectedType = "person";
@@ -13,8 +14,6 @@ let selectedProfileId = "";
 let mappingModalResolver = null;
 let pageFields = [];
 let markedSelectors = new Set();
-
-import { MAPPING_TYPES } from "./data/mapping-types.js";
 
 const resultSection = document.querySelector("#result-section");
 const resultFields = document.querySelector("#result-fields");

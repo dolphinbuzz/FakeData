@@ -1,3 +1,5 @@
+import { DDDS, ESTADOS } from "./data/estados.js";
+
 const DEFAULT_PROVIDERS = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 
 export function pick(items) {
@@ -63,11 +65,11 @@ export function gerarRG() {
   return `${digits(2)}.${digits(3)}.${digits(3)}-${randomInt(0, 9)}`;
 }
 
-export function gerarTelefoneCelular(estado, ddds = []) {
+export function gerarTelefoneCelular(estado, ddds = DDDS) {
   return `(${pick(estado ? estado.ddds : ddds)}) 9${digits(4)}-${digits(4)}`;
 }
 
-export function gerarTelefoneFixo(estado, ddds = []) {
+export function gerarTelefoneFixo(estado, ddds = DDDS) {
   return `(${pick(estado ? estado.ddds : ddds)}) ${digits(4)}-${digits(4)}`;
 }
 
@@ -155,8 +157,8 @@ export function validarCNPJ(valor) {
 }
 
 export function createGeneratorData({
-  getState = () => null,
-  ddds = [],
+  getState = () => pick(ESTADOS),
+  ddds = DDDS,
   getCpfFormatted = () => true,
   getCnpjFormatted = () => true,
   getCnpjAlphanumeric = () => false
