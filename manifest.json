@@ -27,6 +27,7 @@
       "js": [
         "src/scripts/content.js"
       ],
+      "type": "module",
       "run_at": "document_idle"
     }
   ],
