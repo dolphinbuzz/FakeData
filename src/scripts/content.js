@@ -2,6 +2,7 @@
   "use strict";
 
   const FIELD_SELECTOR = "input, select, textarea";
+  const CUSTOM_FIELD_SELECTOR = "multi-select, [role='combobox'], .ui-autocomplete-multiselect";
   const IGNORED_TYPES = new Set(["hidden", "submit", "button", "reset", "image", "file"]);
 
   const normalize = (value) => String(value || "")
@@ -118,12 +119,21 @@
       const selector = create(value);
       if (document.querySelectorAll(selector).length === 1) return selector;
     }
+
+    function isCustomSelect(element) {
+      return element.matches(CUSTOM_FIELD_SELECTOR);
+    }
     return structuralSelector(element);
   }
 
   function fieldFromTarget(target) {
     if (!(target instanceof Element)) return null;
     if (target.matches(FIELD_SELECTOR)) return target;
+    if (target.matches("li[list-select], [role='option'], .ui-menu-item")) {
+      const group = target.closest("form, fieldset, .form-group, .field, .form-field, [role='group']") || target.parentElement;
+      const customSelect = group && group.querySelector(CUSTOM_FIELD_SELECTOR);
+      if (customSelect) return customSelect;
+    }
     const label = target.closest("label");
     if (label) {
       if (label.control) return label.control;
@@ -179,7 +189,10 @@
   }
 
   function scan() {
-    return Array.from(document.querySelectorAll(FIELD_SELECTOR))
+    const nativeFields = Array.from(document.querySelectorAll(FIELD_SELECTOR));
+    const customFields = Array.from(document.querySelectorAll(CUSTOM_FIELD_SELECTOR))
+      .filter((element) => !element.closest("multi-select") || element.tagName.toLowerCase() === "multi-select");
+    return nativeFields.concat(customFields)
       .filter((element) => !IGNORED_TYPES.has(String(element.type || "").toLowerCase()) && visible(element) && !element.disabled)
       .map(describe);
   }
@@ -206,9 +219,19 @@
     const element = find(selector);
     if (!element || element.disabled) return false;
     if (element.type === "checkbox" || element.type === "radio") {
-      element.checked = Boolean(value);
-      element.dispatchEvent(new Event("input", { bubbles: true }));
-      element.dispatchEvent(new Event("change", { bubbles: true }));
+      const shouldBeChecked = Boolean(value);
+      if (element.checked !== shouldBeChecked) element.click();
+      return true;
+    }
+    if (isCustomSelect(element)) {
+      const trigger = element.querySelector("input, [role='combobox'], .ui-autocomplete-multiselect") || element;
+      trigger.click();
+      const options = Array.from(document.querySelectorAll("li[list-select], [role='option'], .ui-menu-item"))
+        .filter(visible);
+      if (!options.length) return false;
+      const wanted = normalize(value);
+      const option = options.find((item) => normalize(item.textContent).includes(wanted)) || options[0];
+      option.click();
       return true;
     }
     if (element.tagName === "SELECT") {

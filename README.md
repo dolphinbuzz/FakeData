@@ -15,7 +15,7 @@ Clique em **↗ Lateral** para abrir o FakeData no painel lateral do navegador. 
 
 ## Preenchimento de formulários
 
-Ao abrir o popup ou o painel lateral em uma página HTTP(S), a seção **Mapear campos** lista os inputs, selects e áreas de texto editáveis. O tipo é inferido por heurísticas gerais, usando `name`, `autocomplete`, labels associadas, `aria-label`, placeholder, tipo do input e contexto estrutural do formulário (e não apenas IDs). Cada linha permite:
+Ao abrir o popup ou o painel lateral em uma página HTTP(S), a seção **Mapear campos** lista os inputs, selects, áreas de texto e componentes de seleção customizados editáveis. O tipo é inferido por heurísticas gerais, usando `name`, `autocomplete`, labels associadas, `aria-label`, placeholder, tipo do input e contexto estrutural do formulário (e não apenas IDs). Componentes que usam elementos como `multi-select`, `role="combobox"` ou menus com opções `li` também podem ser preenchidos: uma opção visível é selecionada mesmo quando não existe um `<select>` nativo ou quando os valores não são conhecidos. Cada linha permite:
 
 - escolher ou corrigir o tipo de dado;
 - visualizar e editar o seletor CSS;
