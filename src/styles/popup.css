@@ -687,6 +687,24 @@ h2 {
   color: var(--text);
 }
 
+.page-field-fill {
+  display: grid;
+  width: 28px;
+  height: 26px;
+  place-items: center;
+  padding: 5px;
+}
+
+.page-field-fill-icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
 .compact-button {
   padding: 8px;
   font-size: 11px;

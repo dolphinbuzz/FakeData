@@ -526,6 +526,10 @@ function scanPageFields(remapping = false) {
         return;
       }
       readProfiles(activeBaseUrl, (profiles) => {
+        const matchingProfiles = profiles.filter((profile) => normalizePageUrl(profile.pageUrl) === activePageUrl);
+        if (!selectedProfileId || !matchingProfiles.some((profile) => profile.id === selectedProfileId)) {
+          selectedProfileId = matchingProfiles.length === 1 ? matchingProfiles[0].id : "";
+        }
         updateSavedProfiles(profiles);
         const selected = getCurrentProfile(profiles);
         const saved = selected && selected.fields ? selected.fields : [];
@@ -572,7 +576,12 @@ function renderPageFields() {
         <div class="page-field-actions">
           <button type="button" data-action="highlight">${markedSelectors.has(field.selector) ? "Desmarcar" : "Marcar"}</button>
           <button type="button" data-action="target" title="Capturar o próximo clique na página" aria-label="Capturar seletor do próximo clique">🎯</button>
-          <button type="button" data-action="fill">Preencher</button>
+          <button type="button" data-action="fill" class="page-field-fill" title="Preencher campo com dado gerado ou valor fixado" aria-label="Preencher ${escapeHtml(field.label)}">
+            <svg class="page-field-fill-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 4h8v3H8zM6 7h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"></path>
+              <path d="M8 12h8M8 16h5"></path>
+            </svg>
+          </button>
         </div>
       </div>
     `;
