@@ -25,6 +25,7 @@ const personOptions = document.querySelector("#person-options");
 const companyOptions = document.querySelector("#company-options");
 const openSidepanelButton = document.querySelector("#open-sidepanel-button");
 const themeToggle = document.querySelector("#theme-toggle");
+const maximizeButton = document.querySelector("#maximize-button");
 const ufSelect = document.querySelector("#uf-select");
 const scanFieldsButton = document.querySelector("#scan-fields-button");
 const addSelectorButton = document.querySelector("#add-selector-button");
@@ -125,6 +126,21 @@ openSidepanelButton.addEventListener("click", () => {
     console.error("Não foi possível abrir o painel lateral.", error);
   });
   window.close();
+});
+maximizeButton.addEventListener("click", () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("src/popup.html") }, () => {
+    const error = chrome.runtime.lastError;
+    if (error) {
+      console.error("Não foi possível abrir a extensão em uma nova aba.", error);
+      return;
+    }
+    if (chrome.sidePanel && chrome.sidePanel.close && chrome.windows) {
+      chrome.sidePanel.close({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch((error) => {
+        console.error("Não foi possível fechar o painel lateral.", error);
+      });
+    }
+    window.close();
+  });
 });
 
 if (scanFieldsButton) scanFieldsButton.addEventListener("click", scanPageFields);
