@@ -569,6 +569,32 @@ h2 {
   white-space: nowrap;
 }
 
+.page-field-label-editor {
+  min-width: 0;
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+}
+
+.page-field-edit-label {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.page-field-edit-label:hover {
+  color: var(--accent);
+}
+
 .field-warning {
   display: inline-grid;
   width: 16px;

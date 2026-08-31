@@ -27,6 +27,7 @@ const openSidepanelButton = document.querySelector("#open-sidepanel-button");
 const themeToggle = document.querySelector("#theme-toggle");
 const ufSelect = document.querySelector("#uf-select");
 const scanFieldsButton = document.querySelector("#scan-fields-button");
+const addSelectorButton = document.querySelector("#add-selector-button");
 const markAllButton = document.querySelector("#mark-all-button");
 const saveMappingsButton = document.querySelector("#save-mappings-button");
 const fillAllButton = document.querySelector("#fill-all-button");
@@ -127,6 +128,7 @@ openSidepanelButton.addEventListener("click", () => {
 });
 
 if (scanFieldsButton) scanFieldsButton.addEventListener("click", scanPageFields);
+if (addSelectorButton) addSelectorButton.addEventListener("click", addNewSelector);
 if (markAllButton) markAllButton.addEventListener("click", toggleMarkAllFields);
 if (saveMappingsButton) saveMappingsButton.addEventListener("click", savePageMappings);
 if (fillAllButton) fillAllButton.addEventListener("click", fillAllPageFields);
@@ -542,6 +544,8 @@ function renderPageFields() {
       <div class="page-field" data-index="${index}">
         <div class="page-field-heading">
           <span class="page-field-label" title="${escapeHtml(field.label)}">${escapeHtml(field.label)}</span>
+          <input class="page-field-label-editor" type="text" aria-label="Nome do campo mapeado" value="${escapeHtml(field.label)}" hidden>
+          <button type="button" class="page-field-edit-label" title="Editar nome do campo" aria-label="Editar nome do campo">✎</button>
           ${field.selectorStatus !== "stable" || field.selectorSuggestion ? `<span class="field-warning" title="${escapeHtml(field.selectorSuggestion || "Este campo possui um problema no mapeamento.")}" aria-label="${escapeHtml(field.selectorSuggestion || "Este campo possui um problema no mapeamento.")}">!</span>` : ""}
           <span class="muted">${escapeHtml(field.inputType || field.tagName)}</span>
         </div>
@@ -566,6 +570,32 @@ function renderPageFields() {
     row.querySelector(".page-field-selector").addEventListener("input", (event) => {
       pageFields[index].selector = event.target.value;
     });
+    const label = row.querySelector(".page-field-label");
+    const labelEditor = row.querySelector(".page-field-label-editor");
+    const editLabelButton = row.querySelector(".page-field-edit-label");
+    editLabelButton.addEventListener("click", () => {
+      label.hidden = true;
+      editLabelButton.hidden = true;
+      labelEditor.hidden = false;
+      labelEditor.focus();
+      labelEditor.select();
+    });
+    const saveLabel = () => {
+      const value = labelEditor.value.trim();
+      if (value) pageFields[index].label = value;
+      renderPageFields();
+    };
+    labelEditor.addEventListener("blur", saveLabel);
+    labelEditor.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        labelEditor.blur();
+      }
+      if (event.key === "Escape") {
+        labelEditor.value = pageFields[index].label;
+        labelEditor.blur();
+      }
+    });
     row.querySelector(".page-field-fixed-toggle").addEventListener("change", (event) => {
       pageFields[index].fixed = event.target.checked;
       row.querySelector(".page-field-fixed-value").disabled = !event.target.checked;
@@ -589,10 +619,41 @@ function renderPageFields() {
           renderPageFields();
           pageFieldsStatus.textContent = marked ? `${pageFields[index].label} desmarcado.` : `${pageFields[index].label} marcado.`;
         }
+
       });
     });
     row.querySelector('[data-action="target"]').addEventListener("click", () => captureFieldSelector(index));
     row.querySelector('[data-action="fill"]').addEventListener("click", () => fillPageField(index));
+  });
+}
+
+function addNewSelector() {
+  if (!activePageUrl) {
+    scanPageFields();
+    return;
+  }
+  if (pageFieldsStatus) pageFieldsStatus.textContent = "Clique no elemento desejado da página para adicionar o seletor...";
+  sendToPage({ action: ACTIONS.CAPTURE_NEXT_CLICK }, (response, error) => {
+    if (error || !response || !response.captured || !response.field || !response.field.selector) {
+      if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível adicionar o seletor.";
+      return;
+    }
+    const captured = response.field;
+    if (pageFields.some((field) => field.selector === captured.selector)) {
+      if (pageFieldsStatus) pageFieldsStatus.textContent = "Esse seletor já está mapeado.";
+      return;
+    }
+    pageFields.push({
+      ...captured,
+      key: `${captured.selector}::manual-${Date.now()}`,
+      label: captured.label || "Novo campo",
+      dataType: captured.inferredType || "text",
+      fixed: false,
+      fixedValue: ""
+    });
+    renderPageFields();
+    updateMarkAllButton();
+    if (pageFieldsStatus) pageFieldsStatus.textContent = "Seletor adicionado. Salve os seletores para mantê-lo no perfil.";
   });
 }
 
