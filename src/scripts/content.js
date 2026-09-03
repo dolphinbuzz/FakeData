@@ -13,7 +13,7 @@
   controlStyle.id = "fakedata-page-control-style";
   controlStyle.textContent = `
     .fakedata-page-fill {
-      position: fixed;
+      position: absolute;
       z-index: 2147483647;
       width: 28px;
       height: 28px;
@@ -354,8 +354,8 @@
       });
       document.documentElement.appendChild(button);
       const rect = target.getBoundingClientRect();
-      button.style.left = `${Math.min(window.innerWidth - 34, Math.max(4, rect.right + 6))}px`;
-      button.style.top = `${Math.max(4, rect.top + (rect.height - 28) / 2)}px`;
+      button.style.left = `${Math.max(4, rect.right + window.scrollX + 6)}px`;
+      button.style.top = `${Math.max(4, rect.top + window.scrollY + (rect.height - 28) / 2)}px`;
       pageControls.set(field.key, button);
     });
   }
