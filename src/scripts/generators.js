@@ -10,6 +10,39 @@ const VIN_VALUES = {
   T: 3, U: 4, V: 5, W: 6, X: 7, Y: 8, Z: 9,
   0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9
 };
+const PERSON_FIRST_NAMES = [
+  "Ana Beatriz", "Carlos Eduardo", "Mariana", "Rafael", "Julia", "Lucas",
+  "Beatriz", "Pedro Henrique", "Camila", "Gustavo", "Larissa", "Felipe",
+  "Isabela", "Thiago", "Aline", "Bruno", "Leticia", "Mateus", "Sofia",
+  "Joao Vitor", "Helena", "Diego", "Manuela", "Vinicius", "Amanda",
+  "Arthur", "Bianca", "Caio", "Daniel", "Eduarda", "Enzo", "Fabiana",
+  "Gabriel", "Giovana", "Henrique", "Igor", "Joaquim", "Karen", "Leonardo",
+  "Livia", "Marcelo", "Nicole", "Otavio", "Priscila", "Rodrigo", "Samuel",
+  "Talita", "Valentina", "Vitoria", "Wesley", "Yasmin", "Alice Maria",
+  "Joao Gabriel", "Maria Clara", "Maria Eduarda", "Luiz Felipe", "Alessandra",
+  "Bernardo", "Cecilia", "Davi", "Emanuel", "Fernando", "Heloisa", "Isadora",
+  "Joana", "Laura", "Miguel", "Nicolas", "Raquel", "Sara", "Theo", "Yuri"
+];
+const PERSON_SURNAMES = [
+  "Ferreira", "Costa", "Ribeiro", "Gomes", "Barbosa", "Moura", "Cardoso",
+  "Nascimento", "Teixeira", "Araujo", "Monteiro", "Freitas", "Pereira",
+  "Alves", "Carvalho", "Mendes", "Lopes", "Correia", "Dias", "Moreira",
+  "Martins", "Rocha", "Santos", "Oliveira", "Souza", "Goncalves", "Melo",
+  "Pinto", "Macedo", "Barros", "Nogueira", "Batista", "Campos", "Cavalcanti",
+  "Andrade", "Rezende", "Borges", "Duarte", "Farias", "Leal", "Miranda",
+  "Ramos", "Moraes", "Vieira", "Fonseca", "Matos", "Siqueira", "Tavares",
+  "Peixoto", "Coelho", "Neves", "Assis", "Braga", "Macedo", "Vasconcelos"
+];
+
+function pickDistinct(items, count) {
+  const available = [...items];
+  const selected = [];
+  while (selected.length < count && available.length) {
+    const index = Math.floor(Math.random() * available.length);
+    selected.push(available.splice(index, 1)[0]);
+  }
+  return selected;
+}
 
 export function pick(items) {
   return items[Math.floor(Math.random() * items.length)];
@@ -41,7 +74,7 @@ export function normalizar(texto) {
 
 export function gerarEmailPessoa(nome, sobrenome) {
   const primeiroNome = normalizar(nome.split(" ")[0]);
-  const sobrenomeNorm = normalizar(sobrenome);
+  const sobrenomeNorm = normalizar(sobrenome).replace(/\s+/g, ".");
   return `${primeiroNome}.${sobrenomeNorm}${randomInt(1, 999)}@${pick(DEFAULT_PROVIDERS)}`;
 }
 
@@ -69,7 +102,7 @@ export function gerarNomeFiliacao() {
     "Ana Lucia", "Jose Carlos", "Maria Helena", "Luiz Fernando", "Regina Celia",
     "Francisco Jose", "Tereza Cristina", "Carlos Alberto"
   ];
-  return `${pick(nomes)} ${pick(["Ferreira", "Costa", "Ribeiro", "Gomes", "Barbosa", "Moura", "Cardoso", "Teixeira", "Monteiro", "Pereira", "Martins", "Rocha", "Santos", "Oliveira", "Souza", "Goncalves"])}`;
+  return `${pick(nomes)} ${pickDistinct(PERSON_SURNAMES, 2).join(" ")}`;
 }
 
 export function gerarRG() {
@@ -201,25 +234,8 @@ export function createGeneratorData({
       title: "Pessoa gerada",
       label: "Pessoa",
       context: () => {
-        const nome = pick([
-          "Ana Beatriz", "Carlos Eduardo", "Mariana", "Rafael", "Julia", "Lucas",
-          "Beatriz", "Pedro Henrique", "Camila", "Gustavo", "Larissa", "Felipe",
-          "Isabela", "Thiago", "Aline", "Bruno", "Leticia", "Mateus", "Sofia",
-          "Joao Vitor", "Helena", "Diego", "Manuela", "Vinicius", "Amanda",
-          "Arthur", "Bianca", "Caio", "Daniel", "Eduarda", "Enzo", "Fabiana",
-          "Gabriel", "Giovana", "Henrique", "Igor", "Joaquim", "Karen", "Leonardo",
-          "Livia", "Marcelo", "Nicole", "Otavio", "Priscila", "Rodrigo", "Samuel",
-          "Talita", "Valentina", "Vitoria", "Wesley", "Yasmin", "Alice Maria",
-          "Joao Gabriel", "Maria Clara", "Maria Eduarda", "Luiz Felipe"
-        ]);
-        const sobrenome = pick([
-          "Ferreira", "Costa", "Ribeiro", "Gomes", "Barbosa", "Moura", "Cardoso",
-          "Nascimento", "Teixeira", "Araujo", "Monteiro", "Freitas", "Pereira",
-          "Alves", "Carvalho", "Mendes", "Lopes", "Correia", "Dias", "Moreira",
-          "Martins", "Rocha", "Santos", "Oliveira", "Souza", "Goncalves", "Melo",
-          "Pinto", "Macedo", "Barros", "Nogueira", "Batista", "Campos", "Cavalcanti",
-          "Andrade", "Rezende", "Borges", "Duarte", "Farias", "Leal", "Miranda"
-        ]);
+        const nome = pick(PERSON_FIRST_NAMES);
+        const sobrenome = pickDistinct(PERSON_SURNAMES, 2).join(" ");
         const sexo = pick(["Feminino", "Masculino"]);
         const estado = getState();
         return {

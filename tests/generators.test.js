@@ -6,6 +6,8 @@ import {
   digits,
   gerarAno,
   gerarChassi,
+  gerarEmailPessoa,
+  gerarNomeFiliacao,
   gerarPlaca,
   gerarSite,
   generateMappedValue,
@@ -39,6 +41,9 @@ describe("geradores", () => {
     const result = Object.fromEntries(data.person.fields.map(([label, create]) => [label, create(context)]));
 
     expect(result.Estado).toBe("SP - São Paulo");
+    expect(result.Nome).toBe(`${context.nome} ${context.sobrenome}`);
+    expect(context.sobrenome.split(/\s+/)).toHaveLength(2);
+    expect(context.sobrenome.split(/\s+/)[0]).not.toBe(context.sobrenome.split(/\s+/)[1]);
     expect(result.Telefone).toMatch(/^\(11\) 9\d{4}-\d{4}$/);
     expect(generateMappedValue("city", context, "", { ddds: ["11"] })).toBe("São Paulo");
     const companyData = createGeneratorData({ getState: () => state, ddds: ["11"] });
@@ -46,6 +51,26 @@ describe("geradores", () => {
       const generatedContext = definition.context();
       definition.fields.forEach(([, create]) => expect(create(generatedContext)).toBeTruthy());
     }
+  });
+
+  it("gera nomes variados com dois sobrenomes distintos", () => {
+    const names = Array.from({ length: 60 }, () => {
+      const context = createGeneratorData().person.context();
+      const parts = context.sobrenome.split(/\s+/);
+      return { ...context, parts };
+    });
+
+    expect(new Set(names.map(({ nome }) => nome)).size).toBeGreaterThan(1);
+    expect(names.every(({ parts }) => parts.length === 2 && parts[0] !== parts[1])).toBe(true);
+    expect(names.every(({ nome, parts }) => `${nome} ${parts.join(" ")}`.split(/\s+/).length >= 3)).toBe(true);
+  });
+
+  it("mantém e-mails válidos com sobrenomes compostos", () => {
+    const email = gerarEmailPessoa("Ana Beatriz", "Silva Costa");
+    expect(email).toMatch(/^ana\.silva\.costa\d+@[a-z.]+$/);
+    const filiation = gerarNomeFiliacao().trim().split(/\s+/);
+    expect(filiation.length).toBeGreaterThanOrEqual(4);
+    expect(filiation.at(-1)).not.toBe(filiation.at(-2));
   });
 
   it("mantém contratos de utilitários e formatos de veículo", () => {
