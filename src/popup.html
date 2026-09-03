@@ -142,14 +142,19 @@
           <button id="playground-mapping-tab" class="mapping-subtab" type="button" role="tab" aria-selected="false" aria-controls="playground-mapping-panel" tabindex="-1">Playground</button>
         </div>
         <div id="automatic-mapping-panel" class="mapping-subpanel" role="tabpanel" aria-labelledby="automatic-mapping-tab">
+          <p class="shortcut-help">Atalhos: <kbd>Alt+Shift+S</kbd> escanear, <kbd>Alt+Shift+P</kbd> preencher, <kbd>Alt+Shift+F</kbd> alternar botões, <kbd>Alt+Shift+L</kbd> salvar e <kbd>Alt+Shift+M</kbd> marcar.</p>
           <div class="mapping-header-actions">
-            <button id="scan-fields-button" class="copy-all-button" type="button">Escanear campos</button>
+            <button id="scan-fields-button" class="copy-all-button" type="button" title="Escanear campos (Alt+Shift+S)" aria-label="Escanear campos. Atalho: Alt+Shift+S">Escanear campos</button>
             <button id="add-selector-button" class="copy-all-button" type="button">Adicionar seletor</button>
-            <button id="mark-all-button" class="copy-all-button" type="button">Marcar todos</button>
-            <button id="save-mappings-button" class="copy-all-button" type="button">Salvar seletores</button>
+            <button id="mark-all-button" class="copy-all-button" type="button" title="Marcar todos (Alt+Shift+M)" aria-label="Marcar todos. Atalho: Alt+Shift+M">Marcar todos</button>
+            <button id="save-mappings-button" class="copy-all-button" type="button" title="Salvar seletores (Alt+Shift+L)" aria-label="Salvar seletores. Atalho: Alt+Shift+L">Salvar seletores</button>
             <button id="remap-all-button" class="copy-all-button" type="button">Remapear todos</button>
             <button id="copy-audit-button" class="copy-all-button" type="button">Copiar JSON</button>
-            <button id="fill-all-button" class="generate-button compact-button" type="button">Preencher todos</button>
+            <button id="fill-all-button" class="generate-button compact-button" type="button" title="Preencher todos (Alt+Shift+P)" aria-label="Preencher todos. Atalho: Alt+Shift+P">Preencher todos</button>
+            <label class="floating-controls-toggle" title="Mostrar ou ocultar botões flutuantes (Alt+Shift+F)">
+              <input id="floating-controls-toggle" type="checkbox" checked aria-label="Mostrar ou ocultar botões flutuantes. Atalho: Alt+Shift+F">
+              <span>Botões flutuantes</span>
+            </label>
           </div>
           <p id="page-fields-status" class="page-fields-status">Abra uma página com um formulário para começar.</p>
           <div id="page-fields" class="page-fields"></div>

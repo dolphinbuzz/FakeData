@@ -52,6 +52,16 @@ function click(selector) {
   document.querySelector(selector).click();
 }
 
+function pressShortcut(key, target = document.body) {
+  target.dispatchEvent(new KeyboardEvent("keydown", {
+    key,
+    altKey: true,
+    shiftKey: true,
+    bubbles: true,
+    cancelable: true
+  }));
+}
+
 function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs = [activeTab], windowType = "tab", vehicleCatalog = [] } = {}) {
   sentMessages = [];
   appMessageListener = null;
@@ -234,6 +244,65 @@ describe("popup app", () => {
     expect(fillAllMessage.message.fields.map((field) => field.selector)).toEqual(["#email", "#cpf"]);
     expect(fillAllMessage.message.fields.every((field) => typeof field.value === "string" && field.value.length > 0)).toBe(true);
     expect(document.querySelector("#page-fields-status").textContent).toBe("2 de 2 campo(s) preenchido(s).");
+  });
+
+  it("persiste a preferência e sincroniza a visibilidade dos botões flutuantes", async () => {
+    await loadApp();
+    const toggle = document.querySelector("#floating-controls-toggle");
+    expect(toggle.checked).toBe(true);
+
+    sentMessages = [];
+    toggle.click();
+    await nextTick();
+
+    expect(toggle.checked).toBe(false);
+    expect(storageData["fakedata-floating-controls"]).toBe(false);
+    const updateMessage = sentMessages.find((item) => item.message.action === ACTIONS.UPDATE_PAGE_FIELD_CONTROLS);
+    expect(updateMessage.message.visible).toBe(false);
+  });
+
+  it("executa as ações de mapeamento pelos atalhos de teclado", async () => {
+    await loadApp();
+    sentMessages = [];
+
+    pressShortcut("s");
+    pressShortcut("p");
+    pressShortcut("l");
+    pressShortcut("m");
+    pressShortcut("f");
+    await nextTick();
+
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.SCAN_FIELDS)).toBe(true);
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.FILL_ALL)).toBe(true);
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.MARK_ALL_FIELDS)).toBe(true);
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.UPDATE_PAGE_FIELD_CONTROLS &&
+      item.message.visible === false)).toBe(true);
+    expect(storageData["fakedata-floating-controls"]).toBe(false);
+    expect(document.querySelector("#mapping-name-input").hidden).toBe(false);
+  });
+
+  it("exibe a descrição e os tooltips dos atalhos", async () => {
+    await loadApp();
+
+    expect(document.querySelector(".shortcut-help").textContent).toContain("Alt+Shift+S");
+    expect(document.querySelector("#scan-fields-button").title).toContain("Alt+Shift+S");
+    expect(document.querySelector("#fill-all-button").title).toContain("Alt+Shift+P");
+    expect(document.querySelector("#floating-controls-toggle").getAttribute("aria-label")).toContain("Alt+Shift+F");
+    expect(document.querySelector("#save-mappings-button").title).toContain("Alt+Shift+L");
+    expect(document.querySelector("#mark-all-button").title).toContain("Alt+Shift+M");
+  });
+
+  it("não executa atalhos enquanto o foco está em campo editável", async () => {
+    await loadApp();
+    sentMessages = [];
+    const input = document.querySelector("#mapping-name-input");
+    input.focus();
+
+    pressShortcut("s", input);
+    pressShortcut("p", input);
+    await nextTick();
+
+    expect(sentMessages).toHaveLength(0);
   });
 
   it("preenche um campo individual pelo ícone de colar", async () => {

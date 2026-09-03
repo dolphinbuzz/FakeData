@@ -9,6 +9,7 @@
   let actions = null;
   const markedFields = new Map();
   const pageControls = new Map();
+  let pageControlFields = [];
   const controlStyle = document.createElement("style");
   controlStyle.id = "fakedata-page-control-style";
   controlStyle.textContent = `
@@ -319,8 +320,8 @@
 
   function updatePageControls(fields) {
     removePageControls();
-    if (!Array.isArray(fields)) return;
-    fields.filter((field) => field && field.key && field.selector).forEach((field) => {
+    pageControlFields = Array.isArray(fields) ? fields : [];
+    pageControlFields.filter((field) => field && field.key && field.selector).forEach((field) => {
       const element = find(field.selector);
       if (!element) return;
       const target = visualTarget(element) || element;
@@ -360,6 +361,14 @@
     });
   }
 
+  function setPageControlsVisibility(visible) {
+    if (visible) {
+      updatePageControls(pageControlFields);
+    } else {
+      removePageControls();
+    }
+  }
+
   function handleMessage(message, sender, sendResponse) {
     if (!message || !message.action) return;
     if (message.action === actions.SCAN_FIELDS) {
@@ -371,7 +380,16 @@
       fill(message.selector, message.value).then((filled) => sendResponse({ filled }));
     }
     if (message.action === actions.UPDATE_PAGE_FIELD_CONTROLS) {
-      updatePageControls(message.fields);
+      if (message.visible === false) {
+        setPageControlsVisibility(false);
+      } else {
+        updatePageControls(message.fields);
+      }
+      sendResponse({ updated: true, count: pageControls.size });
+    }
+    if (message.action === actions.SET_PAGE_FIELD_CONTROLS_VISIBILITY) {
+      if (message.visible !== false) setPageControlsVisibility(true);
+      else setPageControlsVisibility(false);
       sendResponse({ updated: true, count: pageControls.size });
     }
     if (message.action === actions.FILL_ALL) {

@@ -164,6 +164,26 @@ describe("content script", () => {
     expect(document.querySelectorAll(".fakedata-page-fill")).toHaveLength(0);
   });
 
+  it("oculta e reexibe controles flutuantes sem alterar o preenchimento", async () => {
+    await sendContentMessage({
+      action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS,
+      fields: [{ key: "email-field", selector: "#email", label: "E-mail" }]
+    });
+    expect(document.querySelectorAll(".fakedata-page-fill")).toHaveLength(1);
+
+    expect(await sendContentMessage({
+      action: ACTIONS.SET_PAGE_FIELD_CONTROLS_VISIBILITY,
+      visible: false
+    })).toEqual({ updated: true, count: 0 });
+    expect(document.querySelectorAll(".fakedata-page-fill")).toHaveLength(0);
+
+    expect(await sendContentMessage({
+      action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS,
+      visible: true,
+      fields: [{ key: "email-field", selector: "#email", label: "E-mail" }]
+    })).toEqual({ updated: true, count: 1 });
+  });
+
   it("marca todos os seletores e informa falhas sem interromper o lote", async () => {
     const response = await sendContentMessage({
       action: ACTIONS.MARK_ALL_FIELDS,

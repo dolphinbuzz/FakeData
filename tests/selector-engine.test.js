@@ -57,6 +57,13 @@ describe("selector engine", () => {
     expect(signature).not.toContain("[object Object]");
   });
 
+  it("ignora notificações pendentes depois que a janela é encerrada", () => {
+    dom.window.close();
+
+    expect(() => notifyPageChanged()).not.toThrow();
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["id único", '<input id="stable-field">', "#stable-field", "id"],
     ["data-cy", '<input data-cy="email-field">', '[data-cy="email-field"]', "data-cy"],

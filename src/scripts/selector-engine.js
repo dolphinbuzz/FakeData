@@ -297,8 +297,18 @@ function scan() {
     : item);
 }
 
+function currentPageUrl() {
+  try {
+    return window.location.href;
+  } catch (error) {
+    return null;
+  }
+}
+
 function pageSignature() {
-  return window.location.href + "::" + Array.from(document.querySelectorAll(`${FIELD_SELECTOR}, ${CUSTOM_FIELD_SELECTOR}`))
+  const url = currentPageUrl();
+  if (url === null) return "";
+  return url + "::" + Array.from(document.querySelectorAll(`${FIELD_SELECTOR}, ${CUSTOM_FIELD_SELECTOR}`))
     .filter(visible)
     .map((element) => {
       const locator = selectorFor(element);
@@ -308,10 +318,12 @@ function pageSignature() {
 }
 
 function notifyPageChanged() {
+  const url = currentPageUrl();
+  if (url === null) return;
   const signature = pageSignature();
   if (!pendingDomChange && signature === lastPageSignature) return;
   const previousUrl = lastPageSignature.split("::")[0];
-  const urlChanged = previousUrl !== window.location.href;
+  const urlChanged = previousUrl !== url;
   lastPageSignature = signature;
   pendingDomChange = false;
   if (runtimeContextInvalidated || typeof chrome === "undefined" || !chrome.runtime ||
@@ -319,7 +331,7 @@ function notifyPageChanged() {
   try {
     chrome.runtime.sendMessage({
       action: ACTIONS.PAGE_CONTENT_CHANGED,
-      url: window.location.href,
+      url,
       changeType: urlChanged ? "route" : "dom"
     });
   } catch (error) {
