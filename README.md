@@ -1,56 +1,172 @@
 # FakeData
 
-## Testes
+Extensão para Chrome e Microsoft Edge que gera dados fictícios para testes de QA e ajuda a mapear e preencher formulários em aplicações web.
 
-Execute `npm test` para rodar a suíte unitária. Use `npm run test:coverage` para gerar o relatório HTML/texto de cobertura; a configuração exige no mínimo 90% de Lines globalmente e nos principais módulos de produção. O workflow de CI executa os testes com cobertura em cada push e pull request para `main`.
+## Pré-requisitos
 
-No painel **Mapear campos**, o seletor **URL base monitorada** lista os domínios registráveis das abas HTTP(S) abertas. Subdomínios são agrupados em bases como `exemplo.com.br` ou `exemplo.com`; ao escolher uma base, somente a aba correspondente selecionada é usada para scan e atualizações de DOM/rota. O restante da URL identifica a página escaneada.
+- Google Chrome ou Microsoft Edge com suporte a Manifest V3.
+- Node.js 22.x e npm para executar os testes locais. As dependências exigem Node.js 18 ou superior.
+- Uma página HTTP(S) com um formulário acessível. Páginas internas do navegador, como `chrome://` e `edge://`, não permitem acesso ao content script.
 
-Extensão para Chrome e Microsoft Edge que gera dados fictícios para testes de QA.
+## Instalação da extensão
 
-## Instalação local
+1. Baixe ou clone este repositório.
+2. Abra `chrome://extensions` no Chrome ou `edge://extensions` no Edge.
+3. Ative o **Modo do desenvolvedor**.
+4. Clique em **Carregar sem compactação**.
+5. Selecione a pasta raiz deste projeto, a que contém `manifest.json`.
+6. Clique no ícone do FakeData para abrir o popup.
 
-1. Abra `chrome://extensions` no Chrome ou `edge://extensions` no Edge.
-2. Ative o **Modo do desenvolvedor**.
-3. Selecione **Carregar sem compactação** e escolha esta pasta.
-4. Clique no ícone da extensão **FakeData**.
+A extensão solicita `activeTab`, `scripting`, `storage` e `sidePanel`. Essas permissões permitem ler a aba escolhida, injetar o content script quando necessário, salvar perfis localmente e abrir o painel lateral. Nenhum dado é enviado para um servidor.
 
-O popup oferece geradores de Pessoa, Veículo e Empresa. A interface é dividida nas abas **Gerar dados** e **Mapear campos**, com a aba de geração selecionada por padrão. A UF pode ser selecionada antes da geração; com uma UF definida, endereços e DDDs são gerados para o estado escolhido e a seleção também é apresentada no resultado de Veículo. A preferência de UF é mantida localmente. Em Pessoa, são gerados nome, CPF, RG, sexo, e-mail, telefone, data de nascimento, profissão, renda, filiação e endereço completo (CEP, endereço, número, bairro, cidade e estado). Em Empresa, são gerados razão social, CNPJ, inscrição estadual, data de abertura, e-mail, site, telefone, segmento e endereço completo. O CPF pode ser gerado com ou sem pontuação. Em Empresa, o CNPJ pode usar o formato numérico ou alfanumérico e também pode ser exibido com ou sem pontuação. Os geradores incluem mais variações de nomes de pessoas, sobrenomes, empresas, marcas e modelos. Cada pessoa gerada usa um primeiro nome simples ou composto e dois sobrenomes distintos; o e-mail é derivado desses dados sem espaços. Veículos também recebem um **Chassi** no padrão VIN ISO 3779, com 17 caracteres válidos e dígito verificador. No tipo **Veículo**, o botão **Cadastrar Marca x Modelo**, ao lado do seletor de UF, abre um modal para cadastrar várias combinações de modelos para uma marca, editar ou excluir registros e mantê-los em `chrome.storage.local`; o catálogo é carregado automaticamente ao abrir a extensão. Ao gerar ou preencher campos de marca e modelo, a extensão escolhe uma marca cadastrada e somente um modelo vinculado a ela; sem registros personalizados, usa o catálogo padrão. Os botões principais de geração têm largura compacta. Os e-mails usam domínios reais de provedores populares. Cada resultado pode ser copiado individualmente ou como JSON.
+## Modos de abertura
 
-Clique em **↗ Lateral** para abrir o FakeData no painel lateral do navegador. O painel permanece aberto enquanto você navega entre páginas e abas da janela.
-Use o botão de expandir no cabeçalho, entre o controle de tema e o botão lateral, para abrir a extensão em uma nova aba e fechar o popup ou painel lateral atual.
+- **Popup:** abre pelo ícone da extensão. Começa em **Mapear campos** e mostra somente a URL base, os perfis, os campos encontrados, **Escanear campos** e **Preencher todos**.
+- **Painel lateral:** use **↗ Lateral** para abrir a extensão ao lado da página. O painel permanece disponível enquanto você navega entre abas.
+- **Aba dedicada:** use o botão de expandir no cabeçalho para abrir a interface completa em uma nova aba. Nesse modo ficam disponíveis tanto **Gerar dados** quanto **Mapear campos**.
 
-## Preenchimento de formulários
+## Gerar dados
 
-Ao abrir o popup ou o painel lateral em uma página HTTP(S), selecione a aba **Mapear campos** para listar os inputs, selects, áreas de texto e componentes de seleção customizados editáveis. O tipo é inferido por heurísticas gerais, usando `name`, `autocomplete`, labels associadas, `aria-label`, placeholder, tipo do input e contexto estrutural do formulário (e não apenas IDs). Componentes que usam elementos como `multi-select`, `role="combobox"` ou menus com opções `li` também podem ser preenchidos: uma opção visível é selecionada mesmo quando não existe um `<select>` nativo ou quando os valores não são conhecidos. Selects carregados dinamicamente aguardam brevemente suas opções; quando não há correspondência com o valor gerado, uma opção válida é escolhida aleatoriamente. Select2 é tratado usando o `<select>` nativo e seus eventos para manter o componente visual sincronizado. Cada linha permite:
+1. Abra a aba **Gerar dados** (não necessário no popup compacto).
+2. Escolha **Pessoa**, **Veículo** ou **Empresa**.
+3. Opcionalmente selecione a UF. A preferência fica salva localmente.
+4. Clique em **Gerar Pessoa**, **Gerar Veículo** ou **Gerar Empresa**.
+5. Copie um campo individualmente ou use **Copiar JSON**.
 
-- escolher ou corrigir o tipo de dado;
-- visualizar e editar o seletor CSS;
-- usar **Marcar** para destacar o campo com um contorno vermelho persistente;
-- usar o botão 🎯 para capturar o próximo clique em um label, input ou texto e sugerir um novo seletor;
-- preencher somente aquele campo.
+### Pessoa
 
-Use **Escanear campos** para atualizar a lista, **Marcar todos** para destacar todos os campos encontrados e **Desmarcar todos** para remover os contornos. Quando uma aplicação web muda de conteúdo na mesma URL, o painel atualiza automaticamente e adiciona os campos novos, preservando nomes, tipos, seletores e valores fixos já editados. Quando a rota/URL muda, a página é tratada como uma nova tela e o scan é refeito. Se houver um único template salvo para a URL atual, ele será selecionado automaticamente e seus campos serão carregados. A marcação usa o alvo visual correto para controles ocultos, incluindo wrappers do Select2, e evita duplicar o destaque quando mais de um seletor aponta para o mesmo elemento. Os **Seletores salvos** são agrupados automaticamente pela origem da aplicação (protocolo, domínio e porta), com várias páginas nomeadas dentro de cada aplicação. Ao salvar, informe o nome da página; o perfil selecionado pode ser renomeado ou excluído. **Remapear** captura novamente um campo e **Remapear todos** atualiza os campos encontrados automaticamente. Cada campo possui um botão com ícone de **Colar** no painel e, enquanto o mapeamento está aberto, também um botão flutuante junto ao campo correspondente na página. Ambos preenchem usando o valor fixado ou um dado gerado. O botão **Localizar** do painel rola a página até o campo e o centraliza na tela. Cada campo pode ser fixado com um valor literal, que será usado sempre no preenchimento daquele perfil. Use **Salvar seletores** para manter os mapeamentos em `chrome.storage.local` e **Preencher todos** para gerar valores novos e preencher todos os campos mapeados de uma vez. O preenchimento em lote processa componentes customizados de forma sequencial e fecha menus abertos ao finalizar. Checkboxes recebem marcação aleatória e grupos de radio são selecionados automaticamente. Os eventos `input` e `change` são disparados para manter compatibilidade com frameworks como React, Vue e Angular. Campos em páginas protegidas do navegador (por exemplo, `chrome://`) não podem ser acessados.
-Use o campo global **Verificar seletor CSS** para digitar um seletor e ver inline quantos elementos ele encontra na página; o botão 🎯 captura um elemento e preenche somente o seletor CSS, sem `cy.get(...)`. Use **Marcar encontrados** para destacar todos os elementos correspondentes e **Desmarcar encontrados** para remover esses destaques. Seletores inválidos são sinalizados no próprio campo.
+Gera nome simples ou composto com dois sobrenomes distintos, CPF, RG, sexo, e-mail, telefone, data de nascimento, filiação, profissão, renda e endereço completo. O CPF pode ser exibido com ou sem pontuação.
 
-A auditoria de seletores informa problemas diretamente com um ícone vermelho ao lado do campo, cujo tooltip explica a correção. O botão **Copiar JSON**, na aba **Automático**, copia um objeto `chave: valor` com os locators nomeados e seus seletores. Use **Adicionar seletor** para capturar um novo elemento da página e incluí-lo na lista; depois de editar o nome pelo lápis, o seletor e seu valor fixo podem ser salvos no perfil atual com **Salvar seletores**. Seletores priorizam primeiro o `id` existente e único do elemento, seguido por `data-cy`, `data-test`, `data-testid`, atributos ARIA/semânticos, `value` (com igualdade exata e depois parcial), `ng-model`, `name` e `type`; combinações de `ng-model`, `value`, `name` e `type` resolvem colisões antes do fallback. Classes e estilos não são usados. Um fallback estrutural posicional pode ser usado apenas para manter a operação de campos sem atributos estáveis e fica sempre marcado como frágil.
+### Empresa
 
-A separação por abas deixa o fluxo de mapeamento isolado do gerador atual e prepara a extensão para uma futura edição de dados fixos por formulário, sem alterar os mapeamentos existentes.
+Gera razão social, CNPJ, inscrição estadual, data de abertura, e-mail, site, telefone, segmento e endereço. O CNPJ pode ser numérico ou alfanumérico e pode ser exibido com ou sem pontuação.
 
-## Estrutura
+### Veículo e catálogo personalizado
+
+O resultado inclui marca, modelo, ano, placa, cor, chassi VIN de 17 caracteres com dígito verificador ISO 3779 e UF.
+
+Para cadastrar veículos:
+
+1. Selecione **Veículo**.
+2. Clique em **Cadastrar Marca x Modelo**, ao lado do seletor de UF.
+3. Informe a marca e o modelo e clique em **Adicionar**.
+4. Repita a operação para cadastrar vários modelos da mesma marca.
+5. Edite ou exclua marcas e modelos diretamente no modal.
+
+O catálogo é salvo em `chrome.storage.local`. Ao gerar um veículo, a extensão escolhe uma marca e somente um modelo vinculado a ela. Se não houver catálogo personalizado, usa o catálogo padrão.
+
+## Mapear e preencher campos
+
+1. Abra **Mapear campos**.
+2. Se houver várias páginas HTTP(S) abertas, escolha a **URL base monitorada**. Subdomínios são agrupados em bases como `exemplo.com.br` e `exemplo.com`; o monitoramento continua limitado à aba selecionada.
+3. Na subaba **Automático**, clique em **Escanear campos**.
+4. Revise cada campo encontrado, seu tipo e seu seletor CSS.
+5. Use **Marcar** para destacar um campo, **Localizar** para centralizá-lo na página ou **🎯** para capturar outro elemento.
+6. Use **Marcar todos** ou **Preencher todos** quando necessário.
+7. Clique em **Salvar seletores** para criar um perfil ou atualizar o perfil selecionado.
+
+O scan inclui inputs, selects, textareas e componentes customizados como `multi-select` e `role="combobox"`. Botões e links podem ser capturados pelo Playground, mas não entram no scan geral de preenchimento.
+
+O preenchimento dispara eventos `input` e `change`, processa campos sequencialmente e suporta:
+
+- inputs de texto, número, data e mês;
+- selects nativos e Select2;
+- radios e checkboxes;
+- menus customizados e componentes com opções visíveis.
+
+Cada campo possui um botão de preenchimento no painel. Enquanto o mapeamento está aberto, a página também recebe um botão flutuante junto ao campo correspondente.
+
+### Perfis e valores fixos
+
+Os perfis são agrupados por origem (protocolo, domínio e porta) e identificados por uma URL de página normalizada, sem query string ou fragmento. Uma mesma aplicação pode ter vários perfis nomeados para páginas diferentes.
+
+- Informe um nome ao salvar um novo perfil.
+- Com um perfil selecionado, **Salvar seletores** atualiza esse perfil sem criar outro.
+- **Renomear** altera o nome do perfil; **Excluir** remove somente o perfil selecionado.
+- Edite o nome, o tipo e o seletor de cada campo antes de salvar.
+- O campo **Valor** mostra o último valor enviado.
+- Marque **Fixar valor** para reutilizar um valor literal nos próximos preenchimentos daquele perfil.
+- Valores preenchidos são persistidos no perfil mesmo quando não estão fixados.
+
+Na mesma URL, alterações relevantes do DOM atualizam a lista e preservam as edições existentes. Ao mudar de rota, query, fragmento ou página, o estado visual é limpo e um novo scan pode ser executado. Os dados salvos não são apagados automaticamente.
+
+### Subaba Playground
+
+Na subaba **Playground**:
+
+1. Digite um seletor CSS no campo **Verificar seletor CSS**.
+2. Consulte inline a quantidade de correspondências.
+3. Use **🎯** para capturar o seletor de um elemento da página.
+4. Clique em **Marcar encontrados** ou **Desmarcar encontrados**.
+
+Seletores inválidos são sinalizados no próprio campo. O gerador prioriza `id` único, atributos de teste, ARIA/semânticos, `value`, `ng-model`, `name` e `type`; classes e estilos não são usados. Fallbacks estruturais ficam marcados como frágeis. **Copiar JSON**, na subaba Automático, copia somente os pares `locatorName: selector`.
+
+## Armazenamento e privacidade
+
+Perfis, valores fixos, valores usados, catálogo de veículos e preferência de UF são salvos apenas no armazenamento local do navegador. A extensão não possui backend nem envia os dados para a internet. Consulte `PRIVACY_POLICY.md` ou o link **Privacidade** no rodapé para detalhes.
+
+## Testes e cobertura
+
+Instale as dependências e execute:
+
+```bash
+npm ci
+npm test
+npm run test:coverage
+```
+
+`npm test` executa a suíte Vitest. `npm run test:coverage` gera os relatórios texto e HTML e exige pelo menos 90% de Lines globalmente e nos principais módulos de produção. O CI usa Node.js 22.x, executa `npm ci` e `npm run test:coverage` em cada push e pull request para `main`. O relatório é publicado como artefato do workflow.
+
+## Solução de problemas
+
+### Nenhum campo foi encontrado
+
+Confirme que a aba ativa é uma página `http://` ou `https://`, que o formulário já foi carregado e que você selecionou a URL base correta. Clique em **Escanear campos** após a aplicação terminar a navegação. Páginas `chrome://`, `edge://`, lojas de extensões, arquivos locais e outras páginas protegidas não podem ser escaneadas.
+
+### A extensão foi recarregada e o preenchimento parou
+
+Recarregue a extensão em `chrome://extensions` ou `edge://extensions` e abra novamente o popup/painel. O próximo scan injeta o content script atualizado quando o navegador permitir. Os perfis salvos permanecem no armazenamento local.
+
+### Um seletor não marca ou não preenche o campo
+
+Use **Localizar** para confirmar se o elemento existe na página atual. Verifique se o seletor é válido e único no Playground. Em aplicações dinâmicas, use **🎯** ou **Remapear todos** depois que os campos forem renderizados.
+
+### A cobertura falha no CI
+
+Use Node.js 22.x e execute `npm ci` antes dos testes. Rode `npm run test:coverage` localmente e confira o arquivo que ficou abaixo de 90% em Lines. O limiar está configurado em `vitest.config.js`.
+
+## Estrutura do projeto
 
 ```text
 FakeData/
+├── .github/
+│   └── workflows/ci.yml
 ├── manifest.json
+├── package.json
+├── package-lock.json
+├── vitest.config.js
 ├── PRIVACY_POLICY.md
-└── src/
-    ├── popup.html
-    ├── privacy.html
-    ├── scripts/app.js
-    ├── scripts/content.js
-    └── styles/
-        ├── popup.css
-        └── privacy.css
+├── src/
+│   ├── popup.html
+│   ├── privacy.html
+│   ├── scripts/
+│   │   ├── app.js
+│   │   ├── content.js
+│   │   ├── generators.js
+│   │   ├── messages.js
+│   │   ├── selector-engine.js
+│   │   └── data/
+│   │       ├── estados.js
+│   │       ├── mapping-types.js
+│   │       └── vehicle-catalog.js
+│   └── styles/
+│       ├── popup.css
+│       └── privacy.css
+└── tests/
+    ├── app.test.js
+    ├── content.test.js
+    ├── generators.test.js
+    ├── messages.test.js
+    ├── selector-engine.test.js
+    └── vehicle-catalog.test.js
 ```
-
-A política de privacidade também pode ser aberta pelo link **Privacidade** no rodapé da extensão.
