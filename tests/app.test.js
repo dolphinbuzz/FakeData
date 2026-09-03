@@ -68,7 +68,7 @@ function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs =
     },
     windows: {
       WINDOW_ID_CURRENT: 1,
-      getCurrent: vi.fn((callback) => callback({ type: windowType }))
+      getCurrent: vi.fn((callback) => callback({ id: 1, type: windowType }))
     },
     tabs: {
       onActivated: { addListener: vi.fn() },
@@ -106,7 +106,8 @@ function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs =
       }
     },
     sidePanel: {
-      open: vi.fn(() => Promise.resolve())
+      open: vi.fn(() => Promise.resolve()),
+      close: vi.fn(() => Promise.resolve())
     },
     scripting: {
       executeScript: vi.fn()
@@ -172,6 +173,19 @@ describe("popup app", () => {
     expect([...document.querySelectorAll(".page-field-label")].map((item) => item.textContent)).toEqual(["E-mail", "CPF"]);
     expect([...document.querySelectorAll(".page-field-selector")].map((item) => item.value)).toEqual(["#email", "#cpf"]);
     expect([...document.querySelectorAll(".page-field-type")].map((item) => item.value)).toEqual(["email", "cpf"]);
+  });
+
+  it("fecha o painel usando o ID real da janela ao abrir em uma aba", async () => {
+    await loadApp();
+    chrome.runtime.getURL = vi.fn((path) => `chrome-extension://test/${path}`);
+    chrome.tabs.create = vi.fn((options, callback) => callback());
+    const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {});
+
+    click("#maximize-button");
+    await nextTick();
+
+    expect(chrome.sidePanel.close).toHaveBeenCalledWith({ windowId: 1 });
+    expect(closeSpy).toHaveBeenCalled();
   });
 
   it("envia todos os campos mapeados para preenchimento", async () => {

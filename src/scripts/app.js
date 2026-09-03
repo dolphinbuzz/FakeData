@@ -178,95 +178,112 @@ maximizeButton.addEventListener("click", () => {
       console.error("Não foi possível abrir a extensão em uma nova aba.", error);
       return;
     }
+    closeCurrentSidePanel();
+  });
+});
 
-    function saveVehicleCatalog() {
-      chrome.storage.local.set({ "fakedata-vehicle-catalog": vehicleCatalog }, () => {
-        if (chrome.runtime.lastError) {
-          vehicleCatalogStatus.textContent = "Não foi possível salvar o catálogo.";
-          return;
+function closeCurrentSidePanel() {
+  if (!chrome.sidePanel || typeof chrome.sidePanel.close !== "function" ||
+    !chrome.windows || typeof chrome.windows.getCurrent !== "function") {
+    window.close();
+    return;
+  }
+  chrome.windows.getCurrent((currentWindow) => {
+    const error = chrome.runtime.lastError;
+    if (error || !currentWindow || typeof currentWindow.id !== "number") {
+      window.close();
+      return;
+    }
+    Promise.resolve(chrome.sidePanel.close({ windowId: currentWindow.id }))
+      .catch((closeError) => {
+        if (!/No window with id/i.test(String(closeError && closeError.message))) {
+          console.error("Não foi possível fechar o painel lateral.", closeError);
         }
-        renderVehicleCatalog();
-        generate();
-      });
-    }
+      })
+      .finally(() => window.close());
+  });
+}
 
-    function renderVehicleCatalog() {
-      if (!vehicleCatalogList) return;
-      vehicleCatalogList.innerHTML = vehicleCatalog.length
-        ? vehicleCatalog.map((entry) => `<div class="vehicle-brand-row">
-            <strong>${escapeHtml(entry.marca)}</strong>
-            <button type="button" class="copy-all-button" data-edit-brand="${escapeHtml(entry.marca)}">Editar marca</button>
-            <button type="button" class="copy-all-button danger-button" data-remove-brand="${escapeHtml(entry.marca)}">Excluir marca</button>
-            <div class="vehicle-models">${entry.modelos.map((model) => `<span class="vehicle-model">
-              ${escapeHtml(model)} <button type="button" aria-label="Editar ${escapeHtml(model)}" data-edit-model="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">✎</button>
-              <button type="button" aria-label="Excluir ${escapeHtml(model)}" data-remove-model="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">×</button>
-            </span>`).join("")}</div>
-          </div>`).join("")
-        : "<span class=\"muted\">Nenhum veículo personalizado cadastrado.</span>";
-      vehicleCatalogList.querySelectorAll("[data-remove-brand]").forEach((button) => {
-        button.addEventListener("click", () => {
-          vehicleCatalog = removeVehicleBrand(vehicleCatalog, button.dataset.removeBrand);
-          saveVehicleCatalog();
-        });
-        vehicleCatalogList.querySelectorAll("[data-edit-brand]").forEach((button) => {
-          button.addEventListener("click", () => {
-            const next = window.prompt("Novo nome da marca:", button.dataset.editBrand);
-            if (next == null) return;
-            try {
-              vehicleCatalog = renameVehicleBrand(vehicleCatalog, button.dataset.editBrand, next);
-              saveVehicleCatalog();
-            } catch (error) {
-              vehicleCatalogStatus.textContent = error.message;
-            }
-          });
-        });
-        vehicleCatalogList.querySelectorAll("[data-edit-model]").forEach((button) => {
-          button.addEventListener("click", () => {
-            vehicleBrandInput.value = button.dataset.editModel;
-            vehicleModelInput.value = button.dataset.model;
-            vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.editModel, button.dataset.model);
-            saveVehicleCatalog();
-            vehicleModelInput.focus();
-          });
-        });
-      });
-      vehicleCatalogList.querySelectorAll("[data-remove-model]").forEach((button) => {
-        button.addEventListener("click", () => {
-          vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.removeBrand, button.dataset.model);
-          saveVehicleCatalog();
-        });
-      });
+function saveVehicleCatalog() {
+  chrome.storage.local.set({ "fakedata-vehicle-catalog": vehicleCatalog }, () => {
+    if (chrome.runtime.lastError) {
+      vehicleCatalogStatus.textContent = "Não foi possível salvar o catálogo.";
+      return;
     }
+    renderVehicleCatalog();
+    generate();
+  });
+}
 
-    function addVehicle() {
+function renderVehicleCatalog() {
+  if (!vehicleCatalogList) return;
+  vehicleCatalogList.innerHTML = vehicleCatalog.length
+    ? vehicleCatalog.map((entry) => `<div class="vehicle-brand-row">
+        <strong>${escapeHtml(entry.marca)}</strong>
+        <button type="button" class="copy-all-button" data-edit-brand="${escapeHtml(entry.marca)}">Editar marca</button>
+        <button type="button" class="copy-all-button danger-button" data-remove-brand="${escapeHtml(entry.marca)}">Excluir marca</button>
+        <div class="vehicle-models">${entry.modelos.map((model) => `<span class="vehicle-model">
+          ${escapeHtml(model)} <button type="button" aria-label="Editar ${escapeHtml(model)}" data-edit-model="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">✎</button>
+          <button type="button" aria-label="Excluir ${escapeHtml(model)}" data-remove-model="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">×</button>
+        </span>`).join("")}</div>
+      </div>`).join("")
+    : "<span class=\"muted\">Nenhum veículo personalizado cadastrado.</span>";
+  vehicleCatalogList.querySelectorAll("[data-remove-brand]").forEach((button) => {
+    button.addEventListener("click", () => {
+      vehicleCatalog = removeVehicleBrand(vehicleCatalog, button.dataset.removeBrand);
+      saveVehicleCatalog();
+    });
+  });
+  vehicleCatalogList.querySelectorAll("[data-edit-brand]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const next = window.prompt("Novo nome da marca:", button.dataset.editBrand);
+      if (next == null) return;
       try {
-        vehicleCatalog = addVehicleModel(vehicleCatalog, vehicleBrandInput.value, vehicleModelInput.value);
-        vehicleBrandInput.value = "";
-        vehicleModelInput.value = "";
-        vehicleCatalogStatus.textContent = "Veículo cadastrado.";
+        vehicleCatalog = renameVehicleBrand(vehicleCatalog, button.dataset.editBrand, next);
         saveVehicleCatalog();
       } catch (error) {
         vehicleCatalogStatus.textContent = error.message;
       }
-    }
-
-    function loadVehicleCatalog() {
-      chrome.storage.local.get({ "fakedata-vehicle-catalog": [] }, (result) => {
-        vehicleCatalog = normalizeVehicleCatalog(result["fakedata-vehicle-catalog"]);
-        renderVehicleCatalog();
-        loadVehicleCatalog();
-      });
-    }
-
-    if (vehicleAddButton) vehicleAddButton.addEventListener("click", addVehicle);
-    if (chrome.sidePanel && chrome.sidePanel.close && chrome.windows) {
-      chrome.sidePanel.close({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch((error) => {
-        console.error("Não foi possível fechar o painel lateral.", error);
-      });
-    }
-    window.close();
+    });
   });
-});
+  vehicleCatalogList.querySelectorAll("[data-edit-model]").forEach((button) => {
+    button.addEventListener("click", () => {
+      vehicleBrandInput.value = button.dataset.editModel;
+      vehicleModelInput.value = button.dataset.model;
+      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.editModel, button.dataset.model);
+      saveVehicleCatalog();
+      vehicleModelInput.focus();
+    });
+  });
+  vehicleCatalogList.querySelectorAll("[data-remove-model]").forEach((button) => {
+    button.addEventListener("click", () => {
+      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.removeBrand, button.dataset.model);
+      saveVehicleCatalog();
+    });
+  });
+}
+
+function addVehicle() {
+  try {
+    vehicleCatalog = addVehicleModel(vehicleCatalog, vehicleBrandInput.value, vehicleModelInput.value);
+    vehicleBrandInput.value = "";
+    vehicleModelInput.value = "";
+    vehicleCatalogStatus.textContent = "Veículo cadastrado.";
+    saveVehicleCatalog();
+  } catch (error) {
+    vehicleCatalogStatus.textContent = error.message;
+  }
+}
+
+function loadVehicleCatalog() {
+  chrome.storage.local.get({ "fakedata-vehicle-catalog": [] }, (result) => {
+    vehicleCatalog = normalizeVehicleCatalog(result["fakedata-vehicle-catalog"]);
+    renderVehicleCatalog();
+    generate();
+  });
+}
+
+if (vehicleAddButton) vehicleAddButton.addEventListener("click", addVehicle);
 
 if (scanFieldsButton) scanFieldsButton.addEventListener("click", scanPageFields);
 if (baseUrlSelect) baseUrlSelect.addEventListener("change", () => {
