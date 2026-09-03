@@ -196,6 +196,7 @@ describe("popup app", () => {
     expect(fillMessage).toBeTruthy();
     expect(fillMessage.message.selector).toBe("#email");
     expect(fillMessage.message.value).toEqual(expect.any(String));
+    expect(document.querySelector(".page-field-fixed-value").value).toBe(fillMessage.message.value);
   });
 
   it("salva um novo mapeamento no storage por origem e URL normalizada", async () => {
@@ -272,6 +273,46 @@ describe("popup app", () => {
       selector: "#email",
       value: "fixo@example.test"
     });
+  });
+
+  it("exibe e salva os valores do preenchimento em lote", async () => {
+    await loadApp();
+    sentMessages = [];
+    click("#fill-all-button");
+
+    const fillAllMessage = sentMessages.find((item) => item.message.action === ACTIONS.FILL_ALL);
+    expect([...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value))
+      .toEqual(fillAllMessage.message.fields.map((field) => field.value));
+
+    click("#save-mappings-button");
+    document.querySelector("#mapping-name-input").value = "Com valores";
+    click("#mapping-modal-confirm");
+    await nextTick();
+
+    expect(storageData["fakedata-field-mappings"]["https://sistema.example.test"].pages[0].fields)
+      .toEqual(expect.arrayContaining(fillAllMessage.message.fields.map((field) =>
+        expect.objectContaining({ selector: field.selector, fixedValue: field.value, fixed: false })
+      )));
+  });
+
+  it("fixa o valor atual do campo e salva a configuração", async () => {
+    await loadApp();
+    click(".page-field [data-action='fill']");
+    const valueInput = document.querySelector(".page-field-fixed-value");
+    const generatedValue = valueInput.value;
+    expect(valueInput.disabled).toBe(true);
+
+    click(".page-field-fixed-toggle");
+    expect(valueInput.disabled).toBe(false);
+    expect(valueInput.value).toBe(generatedValue);
+
+    click("#save-mappings-button");
+    document.querySelector("#mapping-name-input").value = "Valor fixo";
+    click("#mapping-modal-confirm");
+    await nextTick();
+
+    expect(storageData["fakedata-field-mappings"]["https://sistema.example.test"].pages[0].fields[0])
+      .toMatchObject({ fixed: true, fixedValue: generatedValue });
   });
 
   it("localiza o campo pelo seletor e atualiza o status", async () => {

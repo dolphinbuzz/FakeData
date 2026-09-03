@@ -193,7 +193,15 @@ if (chrome.runtime && chrome.runtime.onMessage) {
         action: ACTIONS.FILL_FIELD,
         selector: field.selector,
         value
-      }, (response, error) => sendResponse({ filled: !error && response && response.filled }), false);
+      }, (response, error) => {
+        const filled = !error && response && response.filled;
+        if (filled) {
+          field.value = String(value);
+          field.fixedValue = String(value);
+          renderPageFields();
+        }
+        sendResponse({ filled });
+      }, false);
       return true;
     }
     if (!message || message.action !== ACTIONS.PAGE_CONTENT_CHANGED) return;
@@ -566,7 +574,7 @@ function scanPageFields(remapping = false, preserveCurrent = false) {
             selector: remapping ? field.selector : (mapping && mapping.selector ? mapping.selector : field.selector),
             label: mapping && mapping.label ? mapping.label : field.label,
             fixed: Boolean(mapping && mapping.fixed),
-            fixedValue: mapping && mapping.fixedValue ? mapping.fixedValue : ""
+            fixedValue: mapping && mapping.fixedValue != null ? mapping.fixedValue : ""
           };
         });
         if (preserveCurrent) {
@@ -602,7 +610,7 @@ function renderPageFields() {
         <select class="page-field-type" aria-label="Tipo para ${escapeHtml(field.label)}">${options}</select>
         <input class="page-field-selector" type="text" aria-label="Seletor para ${escapeHtml(field.label)}" value="${escapeHtml(field.selector)}">
         <label class="page-field-fixed"><input class="page-field-fixed-toggle" type="checkbox" ${field.fixed ? "checked" : ""}> Fixar valor</label>
-        <input class="page-field-fixed-value" type="text" aria-label="Valor fixo para ${escapeHtml(field.label)}" placeholder="Valor usado sempre" value="${escapeHtml(field.fixedValue || "")}" ${field.fixed ? "" : "disabled"}>
+        <input class="page-field-fixed-value" type="text" aria-label="Valor para ${escapeHtml(field.label)}" placeholder="Valor" value="${escapeHtml(field.fixedValue || "")}" ${field.fixed ? "" : "disabled"}>
         <div class="page-field-actions">
           <button type="button" data-action="highlight">${markedSelectors.has(field.selector) ? "Desmarcar" : "Marcar"}</button>
           <button type="button" data-action="locate" title="Localizar campo na página" aria-label="Localizar ${escapeHtml(field.label)}">⌖</button>
@@ -654,6 +662,9 @@ function renderPageFields() {
     });
     row.querySelector(".page-field-fixed-toggle").addEventListener("change", (event) => {
       pageFields[index].fixed = event.target.checked;
+      if (event.target.checked && !pageFields[index].fixedValue) {
+        pageFields[index].fixedValue = pageFields[index].value || "";
+      }
       row.querySelector(".page-field-fixed-value").disabled = !event.target.checked;
     });
     row.querySelector(".page-field-fixed-value").addEventListener("input", (event) => {
@@ -839,7 +850,7 @@ function persistPageMapping(name, existingId) {
     selector: field.selector,
     dataType: field.dataType,
     fixed: Boolean(field.fixed),
-    fixedValue: field.fixed ? field.fixedValue : "",
+    fixedValue: field.fixedValue || "",
     selectorRule: field.selectorRule || "",
     selectorStatus: field.selectorStatus || "stable",
     selectorSuggestion: field.selectorSuggestion || "",
@@ -897,6 +908,11 @@ function fillPageField(index) {
   const type = field.dataType === "auto" ? field.inferredType : field.dataType;
   const value = field.fixed ? field.fixedValue : generateMappedValuePure(type, data.person.context(), field.inputType, generatorOptions);
   sendToPage({ action: ACTIONS.FILL_FIELD, selector: field.selector, value }, (response, error) => {
+    if (!error && response && response.filled) {
+      field.value = String(value);
+      field.fixedValue = String(value);
+      renderPageFields();
+    }
     if (pageFieldsStatus) {
       pageFieldsStatus.textContent = error || !response || !response.filled
         ? "Não foi possível preencher esse campo. Verifique o seletor."
@@ -916,6 +932,14 @@ function fillAllPageFields() {
     value: field.fixed ? field.fixedValue : generateMappedValuePure(field.dataType === "auto" ? field.inferredType : field.dataType, context, field.inputType, generatorOptions)
   }));
   sendToPage({ action: ACTIONS.FILL_ALL, fields }, (response, error) => {
+    if (!error && response) {
+      pageFields.forEach((field, index) => {
+        if (!fields[index]) return;
+        field.value = String(fields[index].value);
+        field.fixedValue = String(fields[index].value);
+      });
+      renderPageFields();
+    }
     if (pageFieldsStatus) {
       pageFieldsStatus.textContent = error || !response
         ? "Não foi possível preencher os campos desta página."
