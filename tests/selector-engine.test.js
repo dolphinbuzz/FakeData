@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
-import { inferType, pageSignature, scan, selectorFor } from "../src/scripts/selector-engine.js";
+import { inferType, normalize, pageSignature, scan, selectorFor } from "../src/scripts/selector-engine.js";
 
 let dom;
 
@@ -75,5 +75,61 @@ describe("selector engine", () => {
     expect(inferType(document.querySelector("#phone"))).toBe("phone");
     expect(inferType(document.querySelector("#birth"))).toBe("birthDate");
     expect(inferType(document.querySelector("#state"))).toBe("state");
+  });
+
+  it("normaliza texto e escapa atributos difíceis", () => {
+    expect(normalize(" João__da--Silva ")).toBe("joao da silva");
+    const element = document.createElement("input");
+    element.setAttribute("data-cy", 'field"quote');
+    document.body.appendChild(element);
+    const result = selectorFor(element);
+    expect(result.selector).toBe('[data-cy="field\\"quote"]');
+  });
+
+  it("prioriza value exato e ng-model antes do fallback", () => {
+    document.body.innerHTML = `
+      <label><input type="radio" value="Male"></label>
+      <label><input type="radio" value="FeMale"></label>
+      <select ng-model="monthbox"><option>January</option></select>
+    `;
+    expect(selectorFor(document.querySelectorAll("input")[1])).toMatchObject({
+      selector: 'input[value="FeMale"]',
+      rule: "value",
+      status: "stable"
+    });
+    expect(selectorFor(document.querySelector("select"))).toMatchObject({
+      selector: 'select[ng-model="monthbox"]',
+      rule: "ng-model"
+    });
+  });
+
+  it("ignora campos ocultos, desabilitados e tipos não editáveis", () => {
+    document.body.innerHTML = `
+      <input type="hidden" id="hidden">
+      <input type="submit" id="submit">
+      <input disabled id="disabled">
+      <input id="visible">
+    `;
+    expect(scan().map((field) => field.selector)).toEqual(["#visible"]);
+  });
+
+  it("marca colisões de seletores sem omitir os campos", () => {
+    document.body.innerHTML = '<input name="same"><input name="same">';
+    const fields = scan();
+    expect(fields).toHaveLength(2);
+    expect(fields.every((field) => field.selector && field.selectorStatus === "fragile")).toBe(true);
+  });
+
+  it("usa atributos semânticos e texto de opções para inferir categorias", () => {
+    document.body.innerHTML = `
+      <input aria-label="Nome da mãe">
+      <input placeholder="Renda mensal">
+      <select aria-label="Sexo"><option>Masculino</option><option>Feminino</option></select>
+      <input autocomplete="street-address">
+    `;
+    expect(inferType(document.querySelector("[aria-label='Nome da mãe']"))).toBe("mother");
+    expect(inferType(document.querySelector("[placeholder='Renda mensal']"))).toBe("income");
+    expect(inferType(document.querySelector("select"))).toBe("gender");
+    expect(inferType(document.querySelector("[autocomplete='street-address']"))).toBe("address");
   });
 });

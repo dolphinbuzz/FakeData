@@ -42,6 +42,7 @@ const scannedFields = [
 let dom;
 let sentMessages;
 let storageData;
+let appMessageListener;
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -51,14 +52,19 @@ function click(selector) {
   document.querySelector(selector).click();
 }
 
-function setupChromeMock({ scanFields = scannedFields } = {}) {
+function setupChromeMock({ scanFields = scannedFields, profiles = [] } = {}) {
   sentMessages = [];
-  storageData = { "fakedata-field-mappings": {} };
+  appMessageListener = null;
+  storageData = {
+    "fakedata-field-mappings": profiles.length
+      ? { "https://sistema.example.test": { pages: profiles } }
+      : {}
+  };
 
   globalThis.chrome = {
     runtime: {
       lastError: null,
-      onMessage: { addListener: vi.fn() }
+      onMessage: { addListener: vi.fn((listener) => { appMessageListener = listener; }) }
     },
     tabs: {
       onActivated: { addListener: vi.fn() },
@@ -75,6 +81,10 @@ function setupChromeMock({ scanFields = scannedFields } = {}) {
         }
         if (message.action === ACTIONS.FILL_FIELD) {
           callback({ filled: true });
+          return;
+        }
+        if (message.action === ACTIONS.HIGHLIGHT_FIELD) {
+          callback({ highlighted: true });
           return;
         }
         callback({});
@@ -226,5 +236,60 @@ describe("popup app", () => {
       expect.objectContaining({ elemento: "CPF", seletorGerado: "#cpf", status: "estável" })
     ]);
     expect(document.querySelector("#page-fields-status").textContent).toBe('Mapeamento "Cadastro principal" salvo.');
+  });
+
+  it("carrega automaticamente o único perfil da URL e preserva valor fixo", async () => {
+    setupChromeMock({
+      profiles: [{
+        id: "profile-1",
+        name: "Cadastro salvo",
+        pageUrl: "https://sistema.example.test/cadastro",
+        fields: [{ ...scannedFields[0], dataType: "email", fixed: true, fixedValue: "fixo@example.test" }]
+      }]
+    });
+    await loadApp();
+
+    expect(document.querySelector("#saved-mappings-select").value).toBe("profile-1");
+    expect(document.querySelector(".page-field-fixed-toggle").checked).toBe(true);
+    expect(document.querySelector(".page-field-fixed-value").value).toBe("fixo@example.test");
+  });
+
+  it("envia valor fixo no preenchimento individual", async () => {
+    setupChromeMock({
+      profiles: [{
+        id: "profile-1",
+        name: "Cadastro salvo",
+        pageUrl: "https://sistema.example.test/cadastro",
+        fields: [{ ...scannedFields[0], dataType: "email", fixed: true, fixedValue: "fixo@example.test" }]
+      }]
+    });
+    await loadApp();
+    sentMessages = [];
+    click(".page-field [data-action='fill']");
+
+    const fillMessage = sentMessages.find((item) => item.message.action === ACTIONS.FILL_FIELD);
+    expect(fillMessage.message).toMatchObject({
+      selector: "#email",
+      value: "fixo@example.test"
+    });
+  });
+
+  it("localiza o campo pelo seletor e atualiza o status", async () => {
+    await loadApp();
+    sentMessages = [];
+    click(".page-field [data-action='locate']");
+
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.HIGHLIGHT_FIELD && item.message.selector === "#email")).toBe(true);
+    expect(document.querySelector("#page-fields-status").textContent).toBe("E-mail localizado na página.");
+  });
+
+  it("atualiza o scan em mudança de DOM e limpa em mudança de rota", async () => {
+    await loadApp();
+    expect(appMessageListener).toEqual(expect.any(Function));
+    appMessageListener({ action: ACTIONS.PAGE_CONTENT_CHANGED, changeType: "dom", url: activeTab.url }, { tab: { id: activeTab.id } });
+    appMessageListener({ action: ACTIONS.PAGE_CONTENT_CHANGED, changeType: "route", url: "https://sistema.example.test/outro" }, { tab: { id: activeTab.id } });
+
+    const scans = sentMessages.filter((item) => item.message.action === ACTIONS.SCAN_FIELDS);
+    expect(scans.length).toBeGreaterThanOrEqual(3);
   });
 });

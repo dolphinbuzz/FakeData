@@ -1,5 +1,9 @@
 # FakeData
 
+## Testes
+
+Execute `npm test` para rodar a suíte unitária. Use `npm run test:coverage` para gerar o relatório HTML/texto de cobertura; a configuração mantém uma meta global mínima de 70% enquanto os módulos puros críticos possuem limiares específicos mais altos.
+
 Extensão para Chrome e Microsoft Edge que gera dados fictícios para testes de QA.
 
 ## Instalação local

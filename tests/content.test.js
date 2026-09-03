@@ -35,6 +35,7 @@ function setupPage() {
   globalThis.MutationObserver = dom.window.MutationObserver;
   globalThis.history = dom.window.history;
   dom.window.HTMLElement.prototype.getClientRects = () => [{ width: 10, height: 10 }];
+  dom.window.HTMLElement.prototype.scrollIntoView = vi.fn();
 }
 
 function setupChromeMock() {
@@ -122,5 +123,65 @@ describe("content script", () => {
     const button = document.querySelector(".fakedata-page-fill");
     expect(button).not.toBeNull();
     expect(button.getAttribute("aria-label")).toBe("Preencher E-mail");
+  });
+
+  it("preenche checkbox e radio conforme o valor booleano", async () => {
+    document.body.insertAdjacentHTML("beforeend", `
+      <input id="check" type="checkbox">
+      <input id="radio" type="radio">
+    `);
+    expect((await sendContentMessage({ action: ACTIONS.FILL_FIELD, selector: "#check", value: true })).filled).toBe(true);
+    expect(document.querySelector("#check").checked).toBe(true);
+    expect((await sendContentMessage({ action: ACTIONS.FILL_FIELD, selector: "#radio", value: false })).filled).toBe(true);
+    expect(document.querySelector("#radio").checked).toBe(false);
+  });
+
+  it("retorna falha para seletor inválido ou elemento inexistente", async () => {
+    expect(await sendContentMessage({ action: ACTIONS.FILL_FIELD, selector: "#missing", value: "x" })).toEqual({ filled: false });
+    expect(await sendContentMessage({ action: ACTIONS.FILL_FIELD, selector: "[", value: "x" })).toEqual({ filled: false });
+    expect(await sendContentMessage({ action: ACTIONS.MARK_FIELD, selector: "#missing" })).toEqual({ marked: false });
+    expect(await sendContentMessage({ action: ACTIONS.COUNT_SELECTOR_MATCHES, selector: "[" })).toEqual({ invalid: true, count: 0 });
+  });
+
+  it("marca, desmarca e destaca um campo", async () => {
+    expect(await sendContentMessage({ action: ACTIONS.MARK_FIELD, selector: "#email" })).toEqual({ marked: true });
+    expect(document.querySelector("#email").style.outline).toContain("#ef4444");
+    expect(await sendContentMessage({ action: ACTIONS.UNMARK_FIELD, selector: "#email" })).toEqual({ unmarked: true });
+    expect(await sendContentMessage({ action: ACTIONS.HIGHLIGHT_FIELD, selector: "#email" })).toEqual({ highlighted: true });
+    expect(document.querySelector("#email").scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+  });
+
+  it("remove controles antigos ao sincronizar uma lista vazia", async () => {
+    await sendContentMessage({
+      action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS,
+      fields: [{ key: "email-field", selector: "#email", label: "E-mail" }]
+    });
+    expect(document.querySelectorAll(".fakedata-page-fill")).toHaveLength(1);
+    expect(await sendContentMessage({ action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS, fields: [] }))
+      .toEqual({ updated: true, count: 0 });
+    expect(document.querySelectorAll(".fakedata-page-fill")).toHaveLength(0);
+  });
+
+  it("marca todos os seletores e informa falhas sem interromper o lote", async () => {
+    const response = await sendContentMessage({
+      action: ACTIONS.MARK_ALL_FIELDS,
+      selectors: ["#email", "#missing"]
+    });
+    expect(response.marked).toBe(1);
+    expect(response.total).toBe(2);
+    expect(response.failed).toEqual(["#missing"]);
+    expect((await sendContentMessage({
+      action: ACTIONS.UNMARK_ALL_FIELDS,
+      selectors: ["#email", "#missing"]
+    })).unmarked).toBeGreaterThanOrEqual(1);
+  });
+
+  it("conta e marca correspondências do playground", async () => {
+    expect(await sendContentMessage({ action: ACTIONS.COUNT_SELECTOR_MATCHES, selector: "input" }))
+      .toEqual({ count: 2 });
+    expect(await sendContentMessage({ action: ACTIONS.MARK_SELECTOR_MATCHES, selector: "input" }))
+      .toEqual({ count: 2 });
+    expect(await sendContentMessage({ action: ACTIONS.UNMARK_SELECTOR_MATCHES, selector: "input" }))
+      .toEqual({ count: 2 });
   });
 });
