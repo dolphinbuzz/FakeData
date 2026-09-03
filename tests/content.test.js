@@ -111,4 +111,16 @@ describe("content script", () => {
     expect(inputEvents).toHaveBeenCalledTimes(3);
     expect(changeEvents).toHaveBeenCalledTimes(3);
   });
+
+  it("exibe um botão de preenchimento junto aos campos sincronizados", async () => {
+    const response = await sendContentMessage({
+      action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS,
+      fields: [{ key: "email-field", selector: "#email", label: "E-mail" }]
+    });
+
+    expect(response).toEqual({ updated: true, count: 1 });
+    const button = document.querySelector(".fakedata-page-fill");
+    expect(button).not.toBeNull();
+    expect(button.getAttribute("aria-label")).toBe("Preencher E-mail");
+  });
 });

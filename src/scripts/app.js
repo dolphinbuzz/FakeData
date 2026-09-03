@@ -178,7 +178,24 @@ if (chrome.tabs && chrome.tabs.onActivated) {
   });
 }
 if (chrome.runtime && chrome.runtime.onMessage) {
-  chrome.runtime.onMessage.addListener((message, sender) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message && message.action === ACTIONS.PAGE_FIELD_FILL_REQUEST) {
+      const field = pageFields.find((item) => item.key === message.key || item.selector === message.selector);
+      if (!field || !sender.tab || !sender.tab.id) {
+        sendResponse({ filled: false });
+        return true;
+      }
+      const type = field.dataType === "auto" ? field.inferredType : field.dataType;
+      const value = field.fixed
+        ? field.fixedValue
+        : generateMappedValuePure(type, data.person.context(), field.inputType, generatorOptions);
+      sendMessageToTab(sender.tab.id, {
+        action: ACTIONS.FILL_FIELD,
+        selector: field.selector,
+        value
+      }, (response, error) => sendResponse({ filled: !error && response && response.filled }), false);
+      return true;
+    }
     if (!message || message.action !== ACTIONS.PAGE_CONTENT_CHANGED) return;
     if (!activeTab || sender.tab && sender.tab.id !== activeTab.id) return;
     const changedUrl = normalizePageUrl(message.url || "") !== activePageUrl;
@@ -588,6 +605,7 @@ function renderPageFields() {
         <input class="page-field-fixed-value" type="text" aria-label="Valor fixo para ${escapeHtml(field.label)}" placeholder="Valor usado sempre" value="${escapeHtml(field.fixedValue || "")}" ${field.fixed ? "" : "disabled"}>
         <div class="page-field-actions">
           <button type="button" data-action="highlight">${markedSelectors.has(field.selector) ? "Desmarcar" : "Marcar"}</button>
+          <button type="button" data-action="locate" title="Localizar campo na página" aria-label="Localizar ${escapeHtml(field.label)}">⌖</button>
           <button type="button" data-action="target" title="Capturar o próximo clique na página" aria-label="Capturar seletor do próximo clique">🎯</button>
           <button type="button" data-action="fill" class="page-field-fill" title="Preencher campo com dado gerado ou valor fixado" aria-label="Preencher ${escapeHtml(field.label)}">
             <svg class="page-field-fill-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -661,8 +679,30 @@ function renderPageFields() {
       });
     });
     row.querySelector('[data-action="target"]').addEventListener("click", () => captureFieldSelector(index));
+    row.querySelector('[data-action="locate"]').addEventListener("click", () => {
+      sendToPage({ action: ACTIONS.HIGHLIGHT_FIELD, selector: pageFields[index].selector }, (response, error) => {
+        if (pageFieldsStatus) {
+          pageFieldsStatus.textContent = error || !response || !response.highlighted
+            ? "Não foi possível localizar o campo na página."
+            : `${pageFields[index].label} localizado na página.`;
+        }
+      });
+    });
     row.querySelector('[data-action="fill"]').addEventListener("click", () => fillPageField(index));
   });
+  syncPageFieldControls();
+}
+
+function syncPageFieldControls() {
+  if (!activeTab) return;
+  sendToPage({
+    action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS,
+    fields: pageFields.map((field) => ({
+      key: field.key,
+      selector: field.selector,
+      label: field.label
+    }))
+  }, () => {});
 }
 
 function addNewSelector() {

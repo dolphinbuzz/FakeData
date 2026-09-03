@@ -338,7 +338,16 @@ function installNavigationObserver() {
   window.addEventListener("popstate", schedulePageChangeNotification);
   window.addEventListener("hashchange", schedulePageChangeNotification);
   if (document.body) {
-    new MutationObserver(schedulePageChangeNotification).observe(document.body, {
+    new MutationObserver((records) => {
+      const relevant = records.some((record) => {
+        if (record.target instanceof Element && record.target.closest("[data-fakedata-control]")) return false;
+        return Array.from(record.addedNodes).some((node) =>
+          node instanceof Element && !node.closest("[data-fakedata-control]") &&
+          !node.querySelector("[data-fakedata-control]")
+        );
+      });
+      if (relevant) schedulePageChangeNotification(true);
+    }).observe(document.body, {
       childList: true,
       subtree: true
     });
