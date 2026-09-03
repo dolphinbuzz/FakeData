@@ -20,6 +20,7 @@ export const MAPPING_TYPES = [
   ["father", "Nome do pai"],
   ["company", "Empresa"],
   ["plate", "Placa"],
+  ["chassi", "Chassi"],
   ["website", "Site / URL"],
   ["checkbox", "Checkbox"],
   ["radio", "Radio"],

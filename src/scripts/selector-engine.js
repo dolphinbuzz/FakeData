@@ -92,6 +92,7 @@ function inferType(element) {
   if (hasAny(text, ["street", "address", "endereco", "endereço", "logradouro", "avenida", "rua"]) || autocomplete === "street-address") return "address";
   if (hasAny(text, ["number", "numero", "número", "house"])) return "number";
   if (hasAny(text, ["plate", "placa", "license"])) return "plate";
+  if (hasAny(text, ["chassi", "vin", "vehicle identification number"])) return "chassi";
   if (hasAny(text, ["website", "site", "url", "homepage"])) return "website";
   if (hasAny(text, ["company", "empresa", "organization", "razao", "razão"]) || autocomplete === "organization") return "company";
   if (autocomplete === "given-name" || autocomplete === "family-name" || autocomplete === "name" ||

@@ -74,6 +74,7 @@ describe("selector engine", () => {
       <input id="cep" placeholder="CEP">
       <input id="phone" type="tel">
       <input id="birth" name="birthDate">
+      <input id="vin" name="chassi">
       <select id="state"><option>SP</option><option>RJ</option></select>
     `;
 
@@ -82,6 +83,7 @@ describe("selector engine", () => {
     expect(inferType(document.querySelector("#cep"))).toBe("cep");
     expect(inferType(document.querySelector("#phone"))).toBe("phone");
     expect(inferType(document.querySelector("#birth"))).toBe("birthDate");
+    expect(inferType(document.querySelector("#vin"))).toBe("chassi");
     expect(inferType(document.querySelector("#state"))).toBe("state");
   });
 

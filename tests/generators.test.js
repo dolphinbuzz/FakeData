@@ -5,6 +5,7 @@ import {
   createGeneratorData,
   digits,
   gerarAno,
+  gerarChassi,
   gerarPlaca,
   gerarSite,
   generateMappedValue,
@@ -13,7 +14,8 @@ import {
   pad,
   randomInt,
   validarCNPJ,
-  validarCPF
+  validarCPF,
+  validarChassi
 } from "../src/scripts/generators.js";
 
 describe("geradores", () => {
@@ -54,7 +56,18 @@ describe("geradores", () => {
     expect(normalizar("João Áureo")).toBe("joao aureo");
     expect(gerarPlaca()).toMatch(/^[A-Z]{3}(?:\d[A-Z]\d{2}|-\d{4})$/);
     expect(gerarAno()).toMatch(/^20\d{2}\/20\d{2}$/);
+    expect(gerarChassi()).toMatch(/^[A-HJ-NPR-Z0-9]{17}$/);
     expect(gerarSite("São Paulo Teste")).toMatch(/^https:\/\/www\.saopauloteste\d{1,2}\.com\.br$/);
+  });
+
+  it("gera chassis VIN válidos com dígito verificador ISO 3779", () => {
+    const chassis = Array.from({ length: 30 }, gerarChassi);
+
+    expect(chassis.every(validarChassi)).toBe(true);
+    expect(chassis.every((value) => !/[IOQ]/.test(value))).toBe(true);
+    expect(validarChassi(`${chassis[0].slice(0, 8)}0${chassis[0].slice(9)}`)).toBe(false);
+    expect(validarChassi("1M8GDM9AXKP042788")).toBe(true);
+    expect(validarChassi("1M8GDM9A0KP042788")).toBe(false);
   });
 
   it("rejeita documentos inválidos e aceita entradas mascaradas", () => {
@@ -82,5 +95,6 @@ describe("geradores", () => {
     expect(generateMappedValue("text", context, "checkbox")).toEqual(expect.any(Boolean));
     expect(generateMappedValue("text", context, "radio")).toBe(true);
     expect(generateMappedValue("unknown", context)).toMatch(/^(acme|qa-lab|teste|sandbox|exemplo)\d{2}$/);
+    expect(generateMappedValue("chassi", context)).toMatch(/^[A-HJ-NPR-Z0-9]{17}$/);
   });
 });
