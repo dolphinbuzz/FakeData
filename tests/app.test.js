@@ -281,6 +281,17 @@ describe("popup app", () => {
     expect(document.querySelector("#mapping-name-input").hidden).toBe(false);
   });
 
+  it("exibe a descrição e os tooltips dos atalhos", async () => {
+    await loadApp();
+
+    expect(document.querySelector(".shortcut-help").textContent).toContain("Alt+Shift+S");
+    expect(document.querySelector("#scan-fields-button").title).toContain("Alt+Shift+S");
+    expect(document.querySelector("#fill-all-button").title).toContain("Alt+Shift+P");
+    expect(document.querySelector("#floating-controls-toggle").getAttribute("aria-label")).toContain("Alt+Shift+F");
+    expect(document.querySelector("#save-mappings-button").title).toContain("Alt+Shift+L");
+    expect(document.querySelector("#mark-all-button").title).toContain("Alt+Shift+M");
+  });
+
   it("não executa atalhos enquanto o foco está em campo editável", async () => {
     await loadApp();
     sentMessages = [];
