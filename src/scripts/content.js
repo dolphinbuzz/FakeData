@@ -8,6 +8,37 @@
   let selectorEngine = null;
   let actions = null;
   const markedFields = new Map();
+  const pageControls = new Map();
+  const controlStyle = document.createElement("style");
+  controlStyle.id = "fakedata-page-control-style";
+  controlStyle.textContent = `
+    .fakedata-page-fill {
+      position: absolute;
+      z-index: 2147483647;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid #2563eb;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #1d4ed8;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .25);
+      cursor: pointer;
+      font: 16px/26px sans-serif;
+    }
+    .fakedata-page-fill:hover { background: #dbeafe; }
+    .fakedata-page-fill:disabled { opacity: .6; cursor: wait; }
+    .fakedata-page-fill svg {
+      width: 17px;
+      height: 17px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.7;
+    }
+  `;
+  document.documentElement.appendChild(controlStyle);
   modulesReady.then(([engine, messages]) => {
     selectorEngine = engine;
     actions = messages.ACTIONS;
@@ -281,6 +312,54 @@
     markedFields.clear();
   }
 
+  function removePageControls() {
+    pageControls.forEach((button) => button.remove());
+    pageControls.clear();
+  }
+
+  function updatePageControls(fields) {
+    removePageControls();
+    if (!Array.isArray(fields)) return;
+    fields.filter((field) => field && field.key && field.selector).forEach((field) => {
+      const element = find(field.selector);
+      if (!element) return;
+      const target = visualTarget(element) || element;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "fakedata-page-fill";
+      button.dataset.fakedataControl = "true";
+      button.title = `Preencher ${field.label || "campo"}`;
+      button.setAttribute("aria-label", button.title);
+      button.innerHTML = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 4h8v3H8zM6 7h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"></path>
+          <path d="M8 13h8M13 10l3 3-3 3"></path>
+        </svg>`;
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        button.disabled = true;
+        chrome.runtime.sendMessage({
+          action: actions.PAGE_FIELD_FILL_REQUEST,
+          key: field.key,
+          selector: field.selector
+        }, (response) => {
+          button.disabled = false;
+          if (chrome.runtime.lastError || !response || !response.filled) {
+            button.title = "Não foi possível preencher este campo";
+          } else {
+            button.title = `Preencher ${field.label || "campo"}`;
+          }
+        });
+      });
+      document.documentElement.appendChild(button);
+      const rect = target.getBoundingClientRect();
+      button.style.left = `${Math.max(4, rect.right + window.scrollX + 6)}px`;
+      button.style.top = `${Math.max(4, rect.top + window.scrollY + (rect.height - 28) / 2)}px`;
+      pageControls.set(field.key, button);
+    });
+  }
+
   function handleMessage(message, sender, sendResponse) {
     if (!message || !message.action) return;
     if (message.action === actions.SCAN_FIELDS) {
@@ -290,6 +369,10 @@
     }
     if (message.action === actions.FILL_FIELD) {
       fill(message.selector, message.value).then((filled) => sendResponse({ filled }));
+    }
+    if (message.action === actions.UPDATE_PAGE_FIELD_CONTROLS) {
+      updatePageControls(message.fields);
+      sendResponse({ updated: true, count: pageControls.size });
     }
     if (message.action === actions.FILL_ALL) {
       const fields = message.fields || [];

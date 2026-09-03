@@ -11,6 +11,8 @@ desktop.ini
 node_modules/
 dist/
 coverage/
+.coverage*/
+.coverage-*
 
 # Segredos e chaves — NUNCA versionar
 .env

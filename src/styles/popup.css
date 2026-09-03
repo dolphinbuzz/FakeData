@@ -83,8 +83,91 @@ footer {
   font-size: 16px;
 }
 
+.vehicle-catalog-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 6px;
+}
+
+.vehicle-catalog-form input {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.vehicle-catalog-list {
+  display: grid;
+  gap: 8px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.vehicle-brand-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 5px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.vehicle-models {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.vehicle-model {
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.vehicle-model button {
+  padding: 0 2px;
+  background: transparent;
+  color: var(--muted);
+}
+
 .theme-toggle:hover,
 .theme-toggle:focus-visible {
+  border-color: var(--accent);
+  color: var(--text);
+  outline: none;
+}
+
+.maximize-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.maximize-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.maximize-button:hover,
+.maximize-button:focus-visible {
   border-color: var(--accent);
   color: var(--text);
   outline: none;
@@ -256,6 +339,7 @@ h2 {
 .uf-control {
   display: block;
   margin: -4px 0 18px;
+  flex: 1;
 }
 
 .uf-control .options-label {
@@ -277,6 +361,18 @@ h2 {
 
 .uf-control select:focus {
   border-color: var(--accent);
+}
+
+.generator-location-row {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.vehicle-catalog-trigger {
+  flex: 0 0 auto;
+  margin-bottom: 18px;
+  white-space: nowrap;
 }
 
 .format-options {
@@ -317,7 +413,8 @@ h2 {
 }
 
 .generate-button {
-  width: 100%;
+  width: auto;
+  min-width: 160px;
   padding: 13px;
   border-radius: 9px;
   background: var(--accent);
@@ -411,6 +508,7 @@ h2 {
 }
 
 .saved-mappings-controls select,
+.saved-mappings > select,
 .page-field-fixed-value {
   padding: 7px 8px;
   border: 1px solid var(--border);
@@ -495,6 +593,26 @@ h2 {
   box-shadow: 0 16px 40px rgb(0 0 0 / 30%);
 }
 
+.vehicle-catalog-dialog {
+  width: min(720px, calc(100% - 32px));
+}
+
+.vehicle-catalog-modal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vehicle-catalog-modal-heading h2 {
+  margin-bottom: 0;
+}
+
+.vehicle-catalog-modal .vehicle-catalog-list {
+  max-height: min(50vh, 420px);
+}
+
 .mapping-modal-dialog h2 {
   margin: 0 0 14px;
   font-size: 16px;
@@ -569,6 +687,32 @@ h2 {
   white-space: nowrap;
 }
 
+.page-field-label-editor {
+  min-width: 0;
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+}
+
+.page-field-edit-label {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.page-field-edit-label:hover {
+  color: var(--accent);
+}
+
 .field-warning {
   display: inline-grid;
   width: 16px;
@@ -632,12 +776,73 @@ h2 {
   color: var(--text);
 }
 
+.page-field-fill {
+  display: grid;
+  width: 28px;
+  height: 26px;
+  place-items: center;
+  padding: 5px;
+}
+
+.page-field-fill-icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+@media (min-width: 700px) {
+  body {
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  .app {
+    min-height: 100vh;
+    padding: 32px clamp(28px, 5vw, 72px) 24px;
+  }
+
+  .mapping-header-actions {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .mapping-header-actions button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .page-fields-section {
+    margin-top: 22px;
+  }
+
+  .page-fields {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    align-items: start;
+  }
+}
+
 .compact-button {
   padding: 8px;
   font-size: 11px;
 }
 
 .is-hidden {
+  display: none;
+}
+
+html[data-extension-mode="popup"] #generator-tab,
+html[data-extension-mode="popup"] #generator-panel,
+html[data-extension-mode="popup"] #playground-mapping-tab,
+html[data-extension-mode="popup"] #playground-mapping-panel,
+html[data-extension-mode="popup"] #add-selector-button,
+html[data-extension-mode="popup"] #mark-all-button,
+html[data-extension-mode="popup"] #save-mappings-button,
+html[data-extension-mode="popup"] #remap-all-button,
+html[data-extension-mode="popup"] #copy-audit-button {
   display: none;
 }
 

@@ -6,6 +6,8 @@ const SELECT2_OPTION_SELECTOR = "li.select2-results__option, li[list-select], [r
 const IGNORED_TYPES = new Set(["hidden", "submit", "button", "reset", "image", "file"]);
 let lastPageSignature = "";
 let pageChangeTimer = null;
+let pendingDomChange = false;
+let runtimeContextInvalidated = false;
 
 const normalize = (value) => String(value || "")
   .normalize("NFD")
@@ -90,6 +92,10 @@ function inferType(element) {
   if (hasAny(text, ["street", "address", "endereco", "endereço", "logradouro", "avenida", "rua"]) || autocomplete === "street-address") return "address";
   if (hasAny(text, ["number", "numero", "número", "house"])) return "number";
   if (hasAny(text, ["plate", "placa", "license"])) return "plate";
+  if (hasAny(text, ["chassi", "vin", "vehicle identification number"])) return "chassi";
+  if (hasAny(text, ["brand", "marca", "montadora"])) return "brand";
+  if (hasAny(text, ["model", "modelo"])) return "model";
+  if (hasAny(text, ["year", "ano", "fabricação", "fabricacao"])) return "year";
   if (hasAny(text, ["website", "site", "url", "homepage"])) return "website";
   if (hasAny(text, ["company", "empresa", "organization", "razao", "razão"]) || autocomplete === "organization") return "company";
   if (autocomplete === "given-name" || autocomplete === "family-name" || autocomplete === "name" ||
@@ -303,15 +309,27 @@ function pageSignature() {
 
 function notifyPageChanged() {
   const signature = pageSignature();
-  if (signature === lastPageSignature) return;
+  if (!pendingDomChange && signature === lastPageSignature) return;
+  const previousUrl = lastPageSignature.split("::")[0];
+  const urlChanged = previousUrl !== window.location.href;
   lastPageSignature = signature;
-  chrome.runtime.sendMessage({
-    action: ACTIONS.PAGE_CONTENT_CHANGED,
-    url: window.location.href
-  });
+  pendingDomChange = false;
+  if (runtimeContextInvalidated || typeof chrome === "undefined" || !chrome.runtime ||
+    typeof chrome.runtime.sendMessage !== "function") return;
+  try {
+    chrome.runtime.sendMessage({
+      action: ACTIONS.PAGE_CONTENT_CHANGED,
+      url: window.location.href,
+      changeType: urlChanged ? "route" : "dom"
+    });
+  } catch (error) {
+    if (!/Extension context invalidated/i.test(String(error && error.message))) throw error;
+    runtimeContextInvalidated = true;
+  }
 }
 
-function schedulePageChangeNotification() {
+function schedulePageChangeNotification(domChanged = false) {
+  pendingDomChange = pendingDomChange || domChanged;
   clearTimeout(pageChangeTimer);
   pageChangeTimer = setTimeout(notifyPageChanged, 250);
 }
@@ -332,7 +350,16 @@ function installNavigationObserver() {
   window.addEventListener("popstate", schedulePageChangeNotification);
   window.addEventListener("hashchange", schedulePageChangeNotification);
   if (document.body) {
-    new MutationObserver(schedulePageChangeNotification).observe(document.body, {
+    new MutationObserver((records) => {
+      const relevant = records.some((record) => {
+        if (record.target instanceof Element && record.target.closest("[data-fakedata-control]")) return false;
+        return Array.from(record.addedNodes).some((node) =>
+          node instanceof Element && !node.closest("[data-fakedata-control]") &&
+          !node.querySelector("[data-fakedata-control]")
+        );
+      });
+      if (relevant) schedulePageChangeNotification(true);
+    }).observe(document.body, {
       childList: true,
       subtree: true
     });
@@ -348,6 +375,7 @@ export {
   isCustomSelect,
   normalize,
   pageSignature,
+  notifyPageChanged,
   scan,
   SELECT2_OPTION_SELECTOR,
   selectorFor,

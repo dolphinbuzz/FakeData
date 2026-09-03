@@ -2,6 +2,7 @@
 import { createGeneratorData, generateMappedValue as generateMappedValuePure, validarCPF, validarCNPJ, pick } from "./generators.js";
 import { DDDS, ESTADOS } from "./data/estados.js";
 import { MAPPING_TYPES } from "./data/mapping-types.js";
+import { addVehicleModel, normalizeVehicleCatalog, pickVehicle, removeVehicleBrand, removeVehicleModel, renameVehicleBrand, renameVehicleModel } from "./data/vehicle-catalog.js";
 import { ACTIONS } from "./messages.js";
 
 let selectedType = "person";
@@ -9,11 +10,13 @@ let currentResult = null;
 let activeTab = null;
 let activePageUrl = "";
 let activeBaseUrl = "";
+let selectedBaseUrl = "";
 let savedProfiles = [];
 let selectedProfileId = "";
 let mappingModalResolver = null;
 let pageFields = [];
 let markedSelectors = new Set();
+let vehicleCatalog = [];
 
 const resultSection = document.querySelector("#result-section");
 const resultFields = document.querySelector("#result-fields");
@@ -23,10 +26,21 @@ const generateButton = document.querySelector("#generate-button");
 const copyJsonButton = document.querySelector("#copy-json-button");
 const personOptions = document.querySelector("#person-options");
 const companyOptions = document.querySelector("#company-options");
+const vehicleOptions = document.querySelector("#vehicle-options");
+const vehicleBrandInput = document.querySelector("#vehicle-brand-input");
+const vehicleModelInput = document.querySelector("#vehicle-model-input");
+const vehicleAddButton = document.querySelector("#vehicle-add-button");
+const vehicleCatalogList = document.querySelector("#vehicle-catalog-list");
+const vehicleCatalogStatus = document.querySelector("#vehicle-catalog-status");
+const openVehicleCatalogButton = document.querySelector("#open-vehicle-catalog-button");
+const vehicleCatalogModal = document.querySelector("#vehicle-catalog-modal");
+const closeVehicleCatalogButton = document.querySelector("#close-vehicle-catalog-button");
 const openSidepanelButton = document.querySelector("#open-sidepanel-button");
 const themeToggle = document.querySelector("#theme-toggle");
+const maximizeButton = document.querySelector("#maximize-button");
 const ufSelect = document.querySelector("#uf-select");
 const scanFieldsButton = document.querySelector("#scan-fields-button");
+const addSelectorButton = document.querySelector("#add-selector-button");
 const markAllButton = document.querySelector("#mark-all-button");
 const saveMappingsButton = document.querySelector("#save-mappings-button");
 const fillAllButton = document.querySelector("#fill-all-button");
@@ -52,24 +66,58 @@ const mappingModalConfirm = document.querySelector("#mapping-modal-confirm");
 const mappingModalCancel = document.querySelector("#mapping-modal-cancel");
 const pageFieldsElement = document.querySelector("#page-fields");
 const pageFieldsStatus = document.querySelector("#page-fields-status");
+const baseUrlSelect = document.querySelector("#base-url-select");
 const generatorTab = document.querySelector("#generator-tab");
 const mappingTab = document.querySelector("#mapping-tab");
 const generatorPanel = document.querySelector("#generator-panel");
 const mappingPanel = document.querySelector("#mapping-panel");
+
+function applyPopupMode(isPopup) {
+  if (!isPopup) return;
+  document.documentElement.dataset.extensionMode = "popup";
+  activateTab("mapping");
+  activateMappingSubtab("automatic");
+  [
+    generatorTab,
+    generatorPanel,
+    playgroundMappingTab,
+    playgroundMappingPanel,
+    addSelectorButton,
+    markAllButton,
+    saveMappingsButton,
+    remapAllButton,
+    copyAuditButton
+  ].forEach((element) => {
+    if (element) element.hidden = true;
+  });
+}
+
+function detectPopupMode(callback) {
+  if (!chrome.windows || typeof chrome.windows.getCurrent !== "function") {
+    callback(false);
+    return;
+  }
+  chrome.windows.getCurrent((currentWindow) => {
+    const error = chrome.runtime.lastError;
+    callback(!error && currentWindow && currentWindow.type === "popup");
+  });
+}
 
 const data = createGeneratorData({
   getState: () => gerarEstadoSelecionado(),
   ddds: DDDS,
   getCpfFormatted: () => document.querySelector("#cpf-formatted").checked,
   getCnpjFormatted: () => document.querySelector("#cnpj-formatted").checked,
-  getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric").checked
+  getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric").checked,
+  getVehicleCatalog: () => vehicleCatalog
 });
 const generatorOptions = {
   getState: () => gerarEstadoSelecionado(),
   ddds: DDDS,
   getCpfFormatted: () => document.querySelector("#cpf-formatted") ? document.querySelector("#cpf-formatted").checked : true,
   getCnpjFormatted: () => document.querySelector("#cnpj-formatted") ? document.querySelector("#cnpj-formatted").checked : true,
-  getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric") ? document.querySelector("#cnpj-alphanumeric").checked : false
+  getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric") ? document.querySelector("#cnpj-alphanumeric").checked : false,
+  getVehicleCatalog: () => vehicleCatalog
 };
 
 ESTADOS.forEach((estado) => {
@@ -109,6 +157,7 @@ document.querySelectorAll(".type-button").forEach((button) => {
     generateLabel.textContent = data[selectedType].label;
     personOptions.classList.toggle("is-hidden", selectedType !== "person");
     companyOptions.classList.toggle("is-hidden", selectedType !== "company");
+    if (openVehicleCatalogButton) openVehicleCatalogButton.hidden = selectedType !== "vehicle";
     generate();
   });
 });
@@ -125,8 +174,144 @@ openSidepanelButton.addEventListener("click", () => {
   });
   window.close();
 });
+maximizeButton.addEventListener("click", () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("src/popup.html") }, () => {
+    const error = chrome.runtime.lastError;
+    if (error) {
+      console.error("Não foi possível abrir a extensão em uma nova aba.", error);
+      return;
+    }
+    closeCurrentSidePanel();
+  });
+});
+
+function closeCurrentSidePanel() {
+  if (!chrome.sidePanel || typeof chrome.sidePanel.close !== "function" ||
+    !chrome.windows || typeof chrome.windows.getCurrent !== "function") {
+    window.close();
+    return;
+  }
+  chrome.windows.getCurrent((currentWindow) => {
+    const error = chrome.runtime.lastError;
+    if (error || !currentWindow || typeof currentWindow.id !== "number") {
+      window.close();
+      return;
+    }
+    Promise.resolve(chrome.sidePanel.close({ windowId: currentWindow.id }))
+      .catch((closeError) => {
+        if (!/No window with id/i.test(String(closeError && closeError.message))) {
+          console.error("Não foi possível fechar o painel lateral.", closeError);
+        }
+      })
+      .finally(() => window.close());
+  });
+}
+
+function saveVehicleCatalog() {
+  chrome.storage.local.set({ "fakedata-vehicle-catalog": vehicleCatalog }, () => {
+    if (chrome.runtime.lastError) {
+      vehicleCatalogStatus.textContent = "Não foi possível salvar o catálogo.";
+      return;
+    }
+    renderVehicleCatalog();
+    generate();
+  });
+}
+
+function renderVehicleCatalog() {
+  if (!vehicleCatalogList) return;
+  vehicleCatalogList.innerHTML = vehicleCatalog.length
+    ? vehicleCatalog.map((entry) => `<div class="vehicle-brand-row">
+        <strong>${escapeHtml(entry.marca)}</strong>
+        <button type="button" class="copy-all-button" data-edit-brand="${escapeHtml(entry.marca)}">Editar marca</button>
+        <button type="button" class="copy-all-button danger-button" data-remove-brand="${escapeHtml(entry.marca)}">Excluir marca</button>
+        <div class="vehicle-models">${entry.modelos.map((model) => `<span class="vehicle-model">
+          ${escapeHtml(model)} <button type="button" aria-label="Editar ${escapeHtml(model)}" data-edit-model="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">✎</button>
+          <button type="button" aria-label="Excluir ${escapeHtml(model)}" data-remove-model="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">×</button>
+        </span>`).join("")}</div>
+      </div>`).join("")
+    : "<span class=\"muted\">Nenhum veículo personalizado cadastrado.</span>";
+  vehicleCatalogList.querySelectorAll("[data-remove-brand]").forEach((button) => {
+    button.addEventListener("click", () => {
+      vehicleCatalog = removeVehicleBrand(vehicleCatalog, button.dataset.removeBrand);
+      saveVehicleCatalog();
+    });
+  });
+  vehicleCatalogList.querySelectorAll("[data-edit-brand]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const next = window.prompt("Novo nome da marca:", button.dataset.editBrand);
+      if (next == null) return;
+      try {
+        vehicleCatalog = renameVehicleBrand(vehicleCatalog, button.dataset.editBrand, next);
+        saveVehicleCatalog();
+      } catch (error) {
+        vehicleCatalogStatus.textContent = error.message;
+      }
+    });
+  });
+  vehicleCatalogList.querySelectorAll("[data-edit-model]").forEach((button) => {
+    button.addEventListener("click", () => {
+      vehicleBrandInput.value = button.dataset.editModel;
+      vehicleModelInput.value = button.dataset.model;
+      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.editModel, button.dataset.model);
+      saveVehicleCatalog();
+      vehicleModelInput.focus();
+    });
+  });
+  vehicleCatalogList.querySelectorAll("[data-remove-model]").forEach((button) => {
+    button.addEventListener("click", () => {
+      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.removeBrand, button.dataset.model);
+      saveVehicleCatalog();
+    });
+  });
+}
+
+function addVehicle() {
+  try {
+    vehicleCatalog = addVehicleModel(vehicleCatalog, vehicleBrandInput.value, vehicleModelInput.value);
+    vehicleBrandInput.value = "";
+    vehicleModelInput.value = "";
+    vehicleCatalogStatus.textContent = "Veículo cadastrado.";
+    saveVehicleCatalog();
+  } catch (error) {
+    vehicleCatalogStatus.textContent = error.message;
+  }
+}
+
+function loadVehicleCatalog() {
+  chrome.storage.local.get({ "fakedata-vehicle-catalog": [] }, (result) => {
+    vehicleCatalog = normalizeVehicleCatalog(result["fakedata-vehicle-catalog"]);
+    renderVehicleCatalog();
+    generate();
+  });
+}
+
+if (vehicleAddButton) vehicleAddButton.addEventListener("click", addVehicle);
+function closeVehicleCatalog() {
+  if (vehicleCatalogModal) vehicleCatalogModal.hidden = true;
+}
+
+function openVehicleCatalog() {
+  if (!vehicleCatalogModal) return;
+  vehicleCatalogModal.hidden = false;
+  vehicleBrandInput.focus();
+}
+
+if (openVehicleCatalogButton) openVehicleCatalogButton.addEventListener("click", openVehicleCatalog);
+if (closeVehicleCatalogButton) closeVehicleCatalogButton.addEventListener("click", closeVehicleCatalog);
+if (vehicleCatalogModal) {
+  vehicleCatalogModal.querySelector("[data-vehicle-modal-close]").addEventListener("click", closeVehicleCatalog);
+}
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && vehicleCatalogModal && !vehicleCatalogModal.hidden) closeVehicleCatalog();
+});
 
 if (scanFieldsButton) scanFieldsButton.addEventListener("click", scanPageFields);
+if (baseUrlSelect) baseUrlSelect.addEventListener("change", () => {
+  selectedBaseUrl = baseUrlSelect.value;
+  scanPageFields();
+});
+if (addSelectorButton) addSelectorButton.addEventListener("click", addNewSelector);
 if (markAllButton) markAllButton.addEventListener("click", toggleMarkAllFields);
 if (saveMappingsButton) saveMappingsButton.addEventListener("click", savePageMappings);
 if (fillAllButton) fillAllButton.addEventListener("click", fillAllPageFields);
@@ -148,22 +333,60 @@ if (mappingNameInput) mappingNameInput.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeMappingModal("");
 });
 
+loadVehicleCatalog();
 migrateLegacyProfiles(() => {
-  if (pageFieldsElement) scanPageFields();
+  detectPopupMode((isPopup) => {
+    applyPopupMode(isPopup);
+    refreshBaseUrlOptions(() => {
+      if (pageFieldsElement) scanPageFields();
+    });
+  });
 });
 if (chrome.tabs && chrome.tabs.onActivated) {
   chrome.tabs.onActivated.addListener(() => {
-    clearDisplayedPageFields("A aba ativa mudou. Clique em Escanear campos para ler a nova página.");
     activeTab = null;
     activePageUrl = "";
     activeBaseUrl = "";
+    refreshBaseUrlOptions(() => scanPageFields());
   });
 }
 if (chrome.runtime && chrome.runtime.onMessage) {
-  chrome.runtime.onMessage.addListener((message, sender) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message && message.action === ACTIONS.PAGE_FIELD_FILL_REQUEST) {
+      const field = pageFields.find((item) => item.key === message.key || item.selector === message.selector);
+      if (!field || !sender.tab || !sender.tab.id) {
+        sendResponse({ filled: false });
+        return true;
+      }
+      const type = field.dataType === "auto" ? field.inferredType : field.dataType;
+      const value = field.fixed
+        ? field.fixedValue
+        : generateMappedValuePure(type, data.person.context(), field.inputType, generatorOptions);
+      sendMessageToTab(sender.tab.id, {
+        action: ACTIONS.FILL_FIELD,
+        selector: field.selector,
+        value
+      }, (response, error) => {
+        const filled = !error && response && response.filled;
+        if (filled) {
+          field.value = String(value);
+          field.fixedValue = String(value);
+          renderPageFields();
+        }
+        sendResponse({ filled });
+      }, false);
+      return true;
+    }
     if (!message || message.action !== ACTIONS.PAGE_CONTENT_CHANGED) return;
-    if (!activeTab || sender.tab && sender.tab.id !== activeTab.id) return;
-    clearDisplayedPageFields("A página mudou. Clique em Escanear campos para atualizar os campos.");
+    if (!activeTab || sender.tab && sender.tab.id !== activeTab.id ||
+      sender.tab && sender.tab.url && getBaseUrl(sender.tab.url) !== activeBaseUrl) return;
+    const changedUrl = normalizePageUrl(message.url || "") !== activePageUrl;
+    if (changedUrl || message.changeType === "route") {
+      clearDisplayedPageFields("A página mudou. Atualizando os campos...");
+      scanPageFields();
+      return;
+    }
+    scanPageFields(false, true);
   });
 }
 
@@ -250,7 +473,35 @@ function getActiveTab(callback) {
     callback(null);
     return;
   }
-  chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => callback(tabs && tabs[0]));
+  chrome.tabs.query({}, (tabs) => {
+    const webTabs = (tabs || []).filter((tab) => tab && /^https?:/i.test(tab.url || ""));
+    const selectedTabs = selectedBaseUrl
+      ? webTabs.filter((tab) => getBaseUrl(tab.url) === selectedBaseUrl)
+      : webTabs;
+    callback(selectedTabs.find((tab) => tab.active) || selectedTabs[0] || null);
+  });
+}
+
+function refreshBaseUrlOptions(callback = () => {}) {
+  if (!baseUrlSelect || !chrome.tabs || !chrome.tabs.query) {
+    callback();
+    return;
+  }
+  chrome.tabs.query({}, (tabs) => {
+    const bases = [...new Set((tabs || [])
+      .map((tab) => tab && /^https?:/i.test(tab.url || "") ? getBaseUrl(tab.url) : "")
+      .filter(Boolean))].sort();
+    if (selectedBaseUrl && !bases.includes(selectedBaseUrl)) selectedBaseUrl = "";
+    baseUrlSelect.innerHTML = bases.length
+      ? bases.map((base) => `<option value="${escapeHtml(base)}">${escapeHtml(base)}</option>`).join("")
+      : '<option value="">Nenhuma página HTTP(S) aberta</option>';
+    if (!selectedBaseUrl) {
+      const activeWebTab = (tabs || []).find((tab) => tab && tab.active && /^https?:/i.test(tab.url || ""));
+      selectedBaseUrl = activeWebTab ? getBaseUrl(activeWebTab.url) : bases[0] || "";
+    }
+    baseUrlSelect.value = selectedBaseUrl;
+    callback();
+  });
 }
 
 function sendToPage(message, callback) {
@@ -370,7 +621,16 @@ function normalizePageUrl(url) {
 function getBaseUrl(url) {
   try {
     const parsed = new URL(url);
-    return parsed.origin;
+    const hostname = parsed.hostname.toLowerCase();
+    const labels = hostname.split(".").filter(Boolean);
+    let domain = hostname;
+    if (labels.length >= 3 && labels.slice(-2).join(".") === "com.br") {
+      domain = labels.slice(-3).join(".");
+    } else if (labels.length >= 2 && labels[labels.length - 1] === "com") {
+      domain = labels.slice(-2).join(".");
+    }
+    const port = parsed.port ? `:${parsed.port}` : "";
+    return `${parsed.protocol}//${domain}${port}`;
   } catch (error) {
     return "";
   }
@@ -485,7 +745,7 @@ function remapAllFields() {
   scanPageFields(true);
 }
 
-function scanPageFields(remapping = false) {
+function scanPageFields(remapping = false, preserveCurrent = false) {
   if (!pageFieldsStatus) return;
   pageFieldsStatus.textContent = remapping ? "Remapeando campos automaticamente..." : "Lendo campos da página...";
   getActiveTab((tab) => {
@@ -508,19 +768,30 @@ function scanPageFields(remapping = false) {
         return;
       }
       readProfiles(activeBaseUrl, (profiles) => {
+        const matchingProfiles = profiles.filter((profile) => normalizePageUrl(profile.pageUrl) === activePageUrl);
+        if (!selectedProfileId || !matchingProfiles.some((profile) => profile.id === selectedProfileId)) {
+          selectedProfileId = matchingProfiles.length === 1 ? matchingProfiles[0].id : "";
+        }
         updateSavedProfiles(profiles);
         const selected = getCurrentProfile(profiles);
         const saved = selected && selected.fields ? selected.fields : [];
+        const previousFields = preserveCurrent ? pageFields : [];
         pageFields = (response.fields || []).map((field) => {
-          const mapping = saved.find((item) => item.key === field.key || item.selector === field.selector);
+          const mapping = previousFields.find((item) => item.key === field.key || item.selector === field.selector) ||
+            saved.find((item) => item.key === field.key || item.selector === field.selector);
           return {
             ...field,
             dataType: mapping && mapping.dataType ? mapping.dataType : field.inferredType || "text",
             selector: remapping ? field.selector : (mapping && mapping.selector ? mapping.selector : field.selector),
+            label: mapping && mapping.label ? mapping.label : field.label,
             fixed: Boolean(mapping && mapping.fixed),
-            fixedValue: mapping && mapping.fixedValue ? mapping.fixedValue : ""
+            fixedValue: mapping && mapping.fixedValue != null ? mapping.fixedValue : ""
           };
         });
+        if (preserveCurrent) {
+          const scannedKeys = new Set(pageFields.map((field) => field.key));
+          pageFields = pageFields.concat(previousFields.filter((field) => !scannedKeys.has(field.key)));
+        }
         markedSelectors = new Set();
         updateMarkAllButton();
         renderPageFields();
@@ -542,17 +813,25 @@ function renderPageFields() {
       <div class="page-field" data-index="${index}">
         <div class="page-field-heading">
           <span class="page-field-label" title="${escapeHtml(field.label)}">${escapeHtml(field.label)}</span>
+          <input class="page-field-label-editor" type="text" aria-label="Nome do campo mapeado" value="${escapeHtml(field.label)}" hidden>
+          <button type="button" class="page-field-edit-label" title="Editar nome do campo" aria-label="Editar nome do campo">✎</button>
           ${field.selectorStatus !== "stable" || field.selectorSuggestion ? `<span class="field-warning" title="${escapeHtml(field.selectorSuggestion || "Este campo possui um problema no mapeamento.")}" aria-label="${escapeHtml(field.selectorSuggestion || "Este campo possui um problema no mapeamento.")}">!</span>` : ""}
           <span class="muted">${escapeHtml(field.inputType || field.tagName)}</span>
         </div>
         <select class="page-field-type" aria-label="Tipo para ${escapeHtml(field.label)}">${options}</select>
         <input class="page-field-selector" type="text" aria-label="Seletor para ${escapeHtml(field.label)}" value="${escapeHtml(field.selector)}">
         <label class="page-field-fixed"><input class="page-field-fixed-toggle" type="checkbox" ${field.fixed ? "checked" : ""}> Fixar valor</label>
-        <input class="page-field-fixed-value" type="text" aria-label="Valor fixo para ${escapeHtml(field.label)}" placeholder="Valor usado sempre" value="${escapeHtml(field.fixedValue || "")}" ${field.fixed ? "" : "disabled"}>
+        <input class="page-field-fixed-value" type="text" aria-label="Valor para ${escapeHtml(field.label)}" placeholder="Valor" value="${escapeHtml(field.fixedValue || "")}" ${field.fixed ? "" : "disabled"}>
         <div class="page-field-actions">
           <button type="button" data-action="highlight">${markedSelectors.has(field.selector) ? "Desmarcar" : "Marcar"}</button>
+          <button type="button" data-action="locate" title="Localizar campo na página" aria-label="Localizar ${escapeHtml(field.label)}">⌖</button>
           <button type="button" data-action="target" title="Capturar o próximo clique na página" aria-label="Capturar seletor do próximo clique">🎯</button>
-          <button type="button" data-action="fill">Preencher</button>
+          <button type="button" data-action="fill" class="page-field-fill" title="Preencher campo com dado gerado ou valor fixado" aria-label="Preencher ${escapeHtml(field.label)}">
+            <svg class="page-field-fill-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 4h8v3H8zM6 7h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"></path>
+              <path d="M8 13h8M13 10l3 3-3 3"></path>
+            </svg>
+          </button>
         </div>
       </div>
     `;
@@ -566,8 +845,37 @@ function renderPageFields() {
     row.querySelector(".page-field-selector").addEventListener("input", (event) => {
       pageFields[index].selector = event.target.value;
     });
+    const label = row.querySelector(".page-field-label");
+    const labelEditor = row.querySelector(".page-field-label-editor");
+    const editLabelButton = row.querySelector(".page-field-edit-label");
+    editLabelButton.addEventListener("click", () => {
+      label.hidden = true;
+      editLabelButton.hidden = true;
+      labelEditor.hidden = false;
+      labelEditor.focus();
+      labelEditor.select();
+    });
+    const saveLabel = () => {
+      const value = labelEditor.value.trim();
+      if (value) pageFields[index].label = value;
+      renderPageFields();
+    };
+    labelEditor.addEventListener("blur", saveLabel);
+    labelEditor.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        labelEditor.blur();
+      }
+      if (event.key === "Escape") {
+        labelEditor.value = pageFields[index].label;
+        labelEditor.blur();
+      }
+    });
     row.querySelector(".page-field-fixed-toggle").addEventListener("change", (event) => {
       pageFields[index].fixed = event.target.checked;
+      if (event.target.checked && !pageFields[index].fixedValue) {
+        pageFields[index].fixedValue = pageFields[index].value || "";
+      }
       row.querySelector(".page-field-fixed-value").disabled = !event.target.checked;
     });
     row.querySelector(".page-field-fixed-value").addEventListener("input", (event) => {
@@ -589,10 +897,63 @@ function renderPageFields() {
           renderPageFields();
           pageFieldsStatus.textContent = marked ? `${pageFields[index].label} desmarcado.` : `${pageFields[index].label} marcado.`;
         }
+
       });
     });
     row.querySelector('[data-action="target"]').addEventListener("click", () => captureFieldSelector(index));
+    row.querySelector('[data-action="locate"]').addEventListener("click", () => {
+      sendToPage({ action: ACTIONS.HIGHLIGHT_FIELD, selector: pageFields[index].selector }, (response, error) => {
+        if (pageFieldsStatus) {
+          pageFieldsStatus.textContent = error || !response || !response.highlighted
+            ? "Não foi possível localizar o campo na página."
+            : `${pageFields[index].label} localizado na página.`;
+        }
+      });
+    });
     row.querySelector('[data-action="fill"]').addEventListener("click", () => fillPageField(index));
+  });
+  syncPageFieldControls();
+}
+
+function syncPageFieldControls() {
+  if (!activeTab) return;
+  sendToPage({
+    action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS,
+    fields: pageFields.map((field) => ({
+      key: field.key,
+      selector: field.selector,
+      label: field.label
+    }))
+  }, () => {});
+}
+
+function addNewSelector() {
+  if (!activePageUrl) {
+    scanPageFields();
+    return;
+  }
+  if (pageFieldsStatus) pageFieldsStatus.textContent = "Clique no elemento desejado da página para adicionar o seletor...";
+  sendToPage({ action: ACTIONS.CAPTURE_NEXT_CLICK }, (response, error) => {
+    if (error || !response || !response.captured || !response.field || !response.field.selector) {
+      if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível adicionar o seletor.";
+      return;
+    }
+    const captured = response.field;
+    if (pageFields.some((field) => field.selector === captured.selector)) {
+      if (pageFieldsStatus) pageFieldsStatus.textContent = "Esse seletor já está mapeado.";
+      return;
+    }
+    pageFields.push({
+      ...captured,
+      key: `${captured.selector}::manual-${Date.now()}`,
+      label: captured.label || "Novo campo",
+      dataType: captured.inferredType || "text",
+      fixed: false,
+      fixedValue: ""
+    });
+    renderPageFields();
+    updateMarkAllButton();
+    if (pageFieldsStatus) pageFieldsStatus.textContent = "Seletor adicionado. Salve os seletores para mantê-lo no perfil.";
   });
 }
 
@@ -698,9 +1059,10 @@ function persistPageMapping(name, existingId) {
   const mappings = pageFields.map((field) => ({
     key: field.key,
     selector: field.selector,
+    label: field.label,
     dataType: field.dataType,
     fixed: Boolean(field.fixed),
-    fixedValue: field.fixed ? field.fixedValue : "",
+    fixedValue: field.fixedValue || "",
     selectorRule: field.selectorRule || "",
     selectorStatus: field.selectorStatus || "stable",
     selectorSuggestion: field.selectorSuggestion || "",
@@ -758,6 +1120,11 @@ function fillPageField(index) {
   const type = field.dataType === "auto" ? field.inferredType : field.dataType;
   const value = field.fixed ? field.fixedValue : generateMappedValuePure(type, data.person.context(), field.inputType, generatorOptions);
   sendToPage({ action: ACTIONS.FILL_FIELD, selector: field.selector, value }, (response, error) => {
+    if (!error && response && response.filled) {
+      field.value = String(value);
+      field.fixedValue = String(value);
+      renderPageFields();
+    }
     if (pageFieldsStatus) {
       pageFieldsStatus.textContent = error || !response || !response.filled
         ? "Não foi possível preencher esse campo. Verifique o seletor."
@@ -772,11 +1139,23 @@ function fillAllPageFields() {
     return;
   }
   const context = data.person.context();
+  const vehicleContext = pickVehicle(vehicleCatalog, pick);
   const fields = pageFields.map((field) => ({
     selector: field.selector,
-    value: field.fixed ? field.fixedValue : generateMappedValuePure(field.dataType === "auto" ? field.inferredType : field.dataType, context, field.inputType, generatorOptions)
+    value: field.fixed ? field.fixedValue : generateMappedValuePure(field.dataType === "auto" ? field.inferredType : field.dataType, context, field.inputType, {
+      ...generatorOptions,
+      vehicleContext
+    })
   }));
   sendToPage({ action: ACTIONS.FILL_ALL, fields }, (response, error) => {
+    if (!error && response) {
+      pageFields.forEach((field, index) => {
+        if (!fields[index]) return;
+        field.value = String(fields[index].value);
+        field.fixedValue = String(fields[index].value);
+      });
+      renderPageFields();
+    }
     if (pageFieldsStatus) {
       pageFieldsStatus.textContent = error || !response
         ? "Não foi possível preencher os campos desta página."
