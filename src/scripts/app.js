@@ -61,6 +61,37 @@ const mappingTab = document.querySelector("#mapping-tab");
 const generatorPanel = document.querySelector("#generator-panel");
 const mappingPanel = document.querySelector("#mapping-panel");
 
+function applyPopupMode(isPopup) {
+  if (!isPopup) return;
+  document.documentElement.dataset.extensionMode = "popup";
+  activateTab("mapping");
+  activateMappingSubtab("automatic");
+  [
+    generatorTab,
+    generatorPanel,
+    playgroundMappingTab,
+    playgroundMappingPanel,
+    addSelectorButton,
+    markAllButton,
+    saveMappingsButton,
+    remapAllButton,
+    copyAuditButton
+  ].forEach((element) => {
+    if (element) element.hidden = true;
+  });
+}
+
+function detectPopupMode(callback) {
+  if (!chrome.windows || typeof chrome.windows.getCurrent !== "function") {
+    callback(false);
+    return;
+  }
+  chrome.windows.getCurrent((currentWindow) => {
+    const error = chrome.runtime.lastError;
+    callback(!error && currentWindow && currentWindow.type === "popup");
+  });
+}
+
 const data = createGeneratorData({
   getState: () => gerarEstadoSelecionado(),
   ddds: DDDS,
@@ -173,8 +204,11 @@ if (mappingNameInput) mappingNameInput.addEventListener("keydown", (event) => {
 });
 
 migrateLegacyProfiles(() => {
-  refreshBaseUrlOptions(() => {
-    if (pageFieldsElement) scanPageFields();
+  detectPopupMode((isPopup) => {
+    applyPopupMode(isPopup);
+    refreshBaseUrlOptions(() => {
+      if (pageFieldsElement) scanPageFields();
+    });
   });
 });
 if (chrome.tabs && chrome.tabs.onActivated) {

@@ -52,7 +52,7 @@ function click(selector) {
   document.querySelector(selector).click();
 }
 
-function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs = [activeTab] } = {}) {
+function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs = [activeTab], windowType = "tab" } = {}) {
   sentMessages = [];
   appMessageListener = null;
   storageData = {
@@ -65,6 +65,10 @@ function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs =
     runtime: {
       lastError: null,
       onMessage: { addListener: vi.fn((listener) => { appMessageListener = listener; }) }
+    },
+    windows: {
+      WINDOW_ID_CURRENT: 1,
+      getCurrent: vi.fn((callback) => callback({ type: windowType }))
     },
     tabs: {
       onActivated: { addListener: vi.fn() },
@@ -104,9 +108,6 @@ function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs =
     sidePanel: {
       open: vi.fn(() => Promise.resolve())
     },
-    windows: {
-      WINDOW_ID_CURRENT: 1
-    },
     scripting: {
       executeScript: vi.fn()
     }
@@ -140,6 +141,7 @@ beforeEach(() => {
   globalThis.HTMLTextAreaElement = dom.window.HTMLTextAreaElement;
   globalThis.Element = dom.window.Element;
   globalThis.Node = dom.window.Node;
+  globalThis.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
   globalThis.Event = dom.window.Event;
   globalThis.KeyboardEvent = dom.window.KeyboardEvent;
   Object.defineProperty(globalThis.navigator, "clipboard", {
@@ -378,5 +380,28 @@ describe("popup app", () => {
     );
 
     expect(sentMessages.filter((item) => item.message.action === ACTIONS.SCAN_FIELDS)).toHaveLength(0);
+  });
+
+  it("abre o pop-up compacto diretamente em Mapear campos", async () => {
+    setupChromeMock({ windowType: "popup" });
+    await loadApp();
+
+    expect(document.querySelector("#mapping-tab").classList.contains("active")).toBe(true);
+    expect(document.querySelector("#generator-panel").hidden).toBe(true);
+    expect(document.querySelector("#generator-tab").hidden).toBe(true);
+    expect(document.documentElement.dataset.extensionMode).toBe("popup");
+    expect(document.querySelector("#playground-mapping-tab").hidden).toBe(true);
+    expect(document.querySelector("#scan-fields-button").hidden).toBe(false);
+    expect(document.querySelector("#fill-all-button").hidden).toBe(false);
+    expect(document.querySelector("#save-mappings-button").hidden).toBe(true);
+  });
+
+  it("preserva a interface completa na aba dedicada", async () => {
+    await loadApp();
+
+    expect(document.documentElement.dataset.extensionMode).toBeUndefined();
+    expect(getComputedStyle(document.querySelector("#generator-tab")).display).not.toBe("none");
+    expect(getComputedStyle(document.querySelector("#playground-mapping-tab")).display).not.toBe("none");
+    expect(getComputedStyle(document.querySelector("#save-mappings-button")).display).not.toBe("none");
   });
 });

@@ -715,6 +715,18 @@ h2 {
   display: none;
 }
 
+html[data-extension-mode="popup"] #generator-tab,
+html[data-extension-mode="popup"] #generator-panel,
+html[data-extension-mode="popup"] #playground-mapping-tab,
+html[data-extension-mode="popup"] #playground-mapping-panel,
+html[data-extension-mode="popup"] #add-selector-button,
+html[data-extension-mode="popup"] #mark-all-button,
+html[data-extension-mode="popup"] #save-mappings-button,
+html[data-extension-mode="popup"] #remap-all-button,
+html[data-extension-mode="popup"] #copy-audit-button {
+  display: none;
+}
+
 .copy-all-button {
   padding: 7px 10px;
   border: 1px solid var(--border);
