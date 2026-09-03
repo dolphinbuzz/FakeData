@@ -9,6 +9,7 @@ let currentResult = null;
 let activeTab = null;
 let activePageUrl = "";
 let activeBaseUrl = "";
+let selectedBaseUrl = "";
 let savedProfiles = [];
 let selectedProfileId = "";
 let mappingModalResolver = null;
@@ -54,6 +55,7 @@ const mappingModalConfirm = document.querySelector("#mapping-modal-confirm");
 const mappingModalCancel = document.querySelector("#mapping-modal-cancel");
 const pageFieldsElement = document.querySelector("#page-fields");
 const pageFieldsStatus = document.querySelector("#page-fields-status");
+const baseUrlSelect = document.querySelector("#base-url-select");
 const generatorTab = document.querySelector("#generator-tab");
 const mappingTab = document.querySelector("#mapping-tab");
 const generatorPanel = document.querySelector("#generator-panel");
@@ -144,6 +146,10 @@ maximizeButton.addEventListener("click", () => {
 });
 
 if (scanFieldsButton) scanFieldsButton.addEventListener("click", scanPageFields);
+if (baseUrlSelect) baseUrlSelect.addEventListener("change", () => {
+  selectedBaseUrl = baseUrlSelect.value;
+  scanPageFields();
+});
 if (addSelectorButton) addSelectorButton.addEventListener("click", addNewSelector);
 if (markAllButton) markAllButton.addEventListener("click", toggleMarkAllFields);
 if (saveMappingsButton) saveMappingsButton.addEventListener("click", savePageMappings);
@@ -167,14 +173,16 @@ if (mappingNameInput) mappingNameInput.addEventListener("keydown", (event) => {
 });
 
 migrateLegacyProfiles(() => {
-  if (pageFieldsElement) scanPageFields();
+  refreshBaseUrlOptions(() => {
+    if (pageFieldsElement) scanPageFields();
+  });
 });
 if (chrome.tabs && chrome.tabs.onActivated) {
   chrome.tabs.onActivated.addListener(() => {
-    clearDisplayedPageFields("A aba ativa mudou. Clique em Escanear campos para ler a nova página.");
     activeTab = null;
     activePageUrl = "";
     activeBaseUrl = "";
+    refreshBaseUrlOptions(() => scanPageFields());
   });
 }
 if (chrome.runtime && chrome.runtime.onMessage) {
@@ -205,7 +213,8 @@ if (chrome.runtime && chrome.runtime.onMessage) {
       return true;
     }
     if (!message || message.action !== ACTIONS.PAGE_CONTENT_CHANGED) return;
-    if (!activeTab || sender.tab && sender.tab.id !== activeTab.id) return;
+    if (!activeTab || sender.tab && sender.tab.id !== activeTab.id ||
+      sender.tab && sender.tab.url && getBaseUrl(sender.tab.url) !== activeBaseUrl) return;
     const changedUrl = normalizePageUrl(message.url || "") !== activePageUrl;
     if (changedUrl || message.changeType === "route") {
       clearDisplayedPageFields("A página mudou. Atualizando os campos...");
@@ -299,7 +308,35 @@ function getActiveTab(callback) {
     callback(null);
     return;
   }
-  chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => callback(tabs && tabs[0]));
+  chrome.tabs.query({}, (tabs) => {
+    const webTabs = (tabs || []).filter((tab) => tab && /^https?:/i.test(tab.url || ""));
+    const selectedTabs = selectedBaseUrl
+      ? webTabs.filter((tab) => getBaseUrl(tab.url) === selectedBaseUrl)
+      : webTabs;
+    callback(selectedTabs.find((tab) => tab.active) || selectedTabs[0] || null);
+  });
+}
+
+function refreshBaseUrlOptions(callback = () => {}) {
+  if (!baseUrlSelect || !chrome.tabs || !chrome.tabs.query) {
+    callback();
+    return;
+  }
+  chrome.tabs.query({}, (tabs) => {
+    const bases = [...new Set((tabs || [])
+      .map((tab) => tab && /^https?:/i.test(tab.url || "") ? getBaseUrl(tab.url) : "")
+      .filter(Boolean))].sort();
+    if (selectedBaseUrl && !bases.includes(selectedBaseUrl)) selectedBaseUrl = "";
+    baseUrlSelect.innerHTML = bases.length
+      ? bases.map((base) => `<option value="${escapeHtml(base)}">${escapeHtml(base)}</option>`).join("")
+      : '<option value="">Nenhuma página HTTP(S) aberta</option>';
+    if (!selectedBaseUrl) {
+      const activeWebTab = (tabs || []).find((tab) => tab && tab.active && /^https?:/i.test(tab.url || ""));
+      selectedBaseUrl = activeWebTab ? getBaseUrl(activeWebTab.url) : bases[0] || "";
+    }
+    baseUrlSelect.value = selectedBaseUrl;
+    callback();
+  });
 }
 
 function sendToPage(message, callback) {
@@ -419,7 +456,16 @@ function normalizePageUrl(url) {
 function getBaseUrl(url) {
   try {
     const parsed = new URL(url);
-    return parsed.origin;
+    const hostname = parsed.hostname.toLowerCase();
+    const labels = hostname.split(".").filter(Boolean);
+    let domain = hostname;
+    if (labels.length >= 3 && labels.slice(-2).join(".") === "com.br") {
+      domain = labels.slice(-3).join(".");
+    } else if (labels.length >= 2 && labels[labels.length - 1] === "com") {
+      domain = labels.slice(-2).join(".");
+    }
+    const port = parsed.port ? `:${parsed.port}` : "";
+    return `${parsed.protocol}//${domain}${port}`;
   } catch (error) {
     return "";
   }

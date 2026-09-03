@@ -4,6 +4,8 @@
 
 Execute `npm test` para rodar a suíte unitária. Use `npm run test:coverage` para gerar o relatório HTML/texto de cobertura; a configuração mantém uma meta global mínima de 70% enquanto os módulos puros críticos possuem limiares específicos mais altos.
 
+No painel **Mapear campos**, o seletor **URL base monitorada** lista os domínios registráveis das abas HTTP(S) abertas. Subdomínios são agrupados em bases como `exemplo.com.br` ou `exemplo.com`; ao escolher uma base, somente a aba correspondente selecionada é usada para scan e atualizações de DOM/rota. O restante da URL identifica a página escaneada.
+
 Extensão para Chrome e Microsoft Edge que gera dados fictícios para testes de QA.
 
 ## Instalação local

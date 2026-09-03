@@ -440,6 +440,7 @@ h2 {
 }
 
 .saved-mappings-controls select,
+.saved-mappings > select,
 .page-field-fixed-value {
   padding: 7px 8px;
   border: 1px solid var(--border);

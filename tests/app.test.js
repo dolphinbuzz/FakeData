@@ -52,7 +52,7 @@ function click(selector) {
   document.querySelector(selector).click();
 }
 
-function setupChromeMock({ scanFields = scannedFields, profiles = [] } = {}) {
+function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs = [activeTab] } = {}) {
   sentMessages = [];
   appMessageListener = null;
   storageData = {
@@ -68,7 +68,7 @@ function setupChromeMock({ scanFields = scannedFields, profiles = [] } = {}) {
     },
     tabs: {
       onActivated: { addListener: vi.fn() },
-      query: vi.fn((queryInfo, callback) => callback([activeTab])),
+      query: vi.fn((queryInfo, callback) => callback(openTabs)),
       sendMessage: vi.fn((tabId, message, callback) => {
         sentMessages.push({ tabId, message: clone(message) });
         if (message.action === ACTIONS.SCAN_FIELDS) {
@@ -327,10 +327,56 @@ describe("popup app", () => {
   it("atualiza o scan em mudança de DOM e limpa em mudança de rota", async () => {
     await loadApp();
     expect(appMessageListener).toEqual(expect.any(Function));
-    appMessageListener({ action: ACTIONS.PAGE_CONTENT_CHANGED, changeType: "dom", url: activeTab.url }, { tab: { id: activeTab.id } });
-    appMessageListener({ action: ACTIONS.PAGE_CONTENT_CHANGED, changeType: "route", url: "https://sistema.example.test/outro" }, { tab: { id: activeTab.id } });
+    appMessageListener({ action: ACTIONS.PAGE_CONTENT_CHANGED, changeType: "dom", url: activeTab.url }, { tab: { id: activeTab.id, url: activeTab.url } });
+    await nextTick();
+    appMessageListener({ action: ACTIONS.PAGE_CONTENT_CHANGED, changeType: "route", url: "https://sistema.example.test/outro" }, { tab: { id: activeTab.id, url: activeTab.url } });
+    await nextTick();
 
     const scans = sentMessages.filter((item) => item.message.action === ACTIONS.SCAN_FIELDS);
     expect(scans.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("lista bases registráveis sem duplicar subdomínios", async () => {
+    setupChromeMock({
+      openTabs: [
+        { id: 10, url: "https://www.exemplo.com.br/cadastro", active: true },
+        { id: 11, url: "https://app.exemplo.com.br/outra" },
+        { id: 12, url: "https://www.outro.com/login" },
+        { id: 13, url: "chrome://settings/" }
+      ]
+    });
+    await loadApp();
+
+    expect([...document.querySelectorAll("#base-url-select option")].map((option) => option.value))
+      .toEqual(["https://exemplo.com.br", "https://outro.com"]);
+  });
+
+  it("troca a página monitorada ao selecionar outra base", async () => {
+    const tabs = [
+      { id: 10, url: "https://www.exemplo.com.br/cadastro", active: true },
+      { id: 11, url: "https://app.outro.com/login" }
+    ];
+    setupChromeMock({ openTabs: tabs });
+    await loadApp();
+    sentMessages = [];
+
+    const select = document.querySelector("#base-url-select");
+    select.value = "https://outro.com";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(chrome.tabs.query).toHaveBeenCalled();
+    expect(sentMessages.some((item) => item.tabId === 11 && item.message.action === ACTIONS.SCAN_FIELDS)).toBe(true);
+  });
+
+  it("ignora alterações de outra aba ou de outra base", async () => {
+    await loadApp();
+    sentMessages = [];
+
+    appMessageListener(
+      { action: ACTIONS.PAGE_CONTENT_CHANGED, changeType: "dom", url: "https://outro.com/pagina" },
+      { tab: { id: 99, url: "https://outro.com/pagina" } }
+    );
+
+    expect(sentMessages.filter((item) => item.message.action === ACTIONS.SCAN_FIELDS)).toHaveLength(0);
   });
 });
