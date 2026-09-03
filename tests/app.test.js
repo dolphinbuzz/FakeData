@@ -798,4 +798,16 @@ describe("popup app", () => {
     editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(document.querySelector(".page-field-label").textContent).toBe("E-mail");
   });
+
+  it("gera dados de empresa e trata falha ao copiar", async () => {
+    await loadApp();
+    click("#generator-tab");
+    click("[data-type='company']");
+    expect(document.querySelector("#result-title").textContent).toBe("Empresa gerada");
+
+    navigator.clipboard.writeText.mockRejectedValueOnce(new Error("clipboard indisponível"));
+    click(".copy-field-button");
+    await nextTick();
+    expect(navigator.clipboard.writeText).toHaveBeenCalled();
+  });
 });
