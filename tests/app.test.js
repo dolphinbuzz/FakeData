@@ -192,6 +192,23 @@ describe("popup app", () => {
     expect(["Ka", "Ranger"]).toContain(values[1]);
   });
 
+  it("exibe o cadastro de veículos em modal somente no tipo Veículo", async () => {
+    await loadApp();
+
+    const trigger = document.querySelector("#open-vehicle-catalog-button");
+    expect(trigger.hidden).toBe(true);
+    click("[data-type='vehicle']");
+    expect(trigger.hidden).toBe(false);
+
+    click("#open-vehicle-catalog-button");
+    expect(document.querySelector("#vehicle-catalog-modal").hidden).toBe(false);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(document.querySelector("#vehicle-catalog-modal").hidden).toBe(true);
+
+    click("[data-type='person']");
+    expect(trigger.hidden).toBe(true);
+  });
+
   it("fecha o painel usando o ID real da janela ao abrir em uma aba", async () => {
     await loadApp();
     chrome.runtime.getURL = vi.fn((path) => `chrome-extension://test/${path}`);

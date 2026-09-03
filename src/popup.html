@@ -65,12 +65,17 @@
           </button>
         </div>
 
-        <label class="uf-control" for="uf-select">
-          <span class="options-label">UF dos dados</span>
-          <select id="uf-select">
-            <option value="ALL">Todas as UFs</option>
-          </select>
-        </label>
+        <div class="generator-location-row">
+          <label class="uf-control" for="uf-select">
+            <span class="options-label">UF dos dados</span>
+            <select id="uf-select">
+              <option value="ALL">Todas as UFs</option>
+            </select>
+          </label>
+          <button id="open-vehicle-catalog-button" class="copy-all-button vehicle-catalog-trigger" type="button" hidden>
+            Cadastrar Marca x Modelo
+          </button>
+        </div>
 
         <div id="person-options" class="format-options">
           <span class="options-label">Opções de CPF</span>
@@ -90,17 +95,6 @@
             <input id="cnpj-formatted" type="checkbox" checked>
             <span>Com pontuação</span>
           </label>
-        </div>
-
-        <div id="vehicle-options" class="format-options is-hidden">
-          <span class="options-label">Catálogo de veículos</span>
-          <div class="vehicle-catalog-form">
-            <input id="vehicle-brand-input" type="text" maxlength="60" placeholder="Marca">
-            <input id="vehicle-model-input" type="text" maxlength="60" placeholder="Modelo">
-            <button id="vehicle-add-button" class="copy-all-button" type="button">Adicionar</button>
-          </div>
-          <p id="vehicle-catalog-status" class="page-fields-status" aria-live="polite"></p>
-          <div id="vehicle-catalog-list" class="vehicle-catalog-list"></div>
         </div>
 
         <button id="generate-button" class="generate-button" type="button">
@@ -194,6 +188,25 @@
           <button id="mapping-modal-cancel" class="copy-all-button" type="button">Cancelar</button>
           <button id="mapping-modal-confirm" class="generate-button compact-button" type="button">Salvar</button>
         </div>
+      </section>
+    </div>
+    <div id="vehicle-catalog-modal" class="mapping-modal vehicle-catalog-modal" hidden>
+      <div class="mapping-modal-backdrop" data-vehicle-modal-close></div>
+      <section class="mapping-modal-dialog vehicle-catalog-dialog" role="dialog" aria-modal="true" aria-labelledby="vehicle-catalog-modal-title">
+        <div class="vehicle-catalog-modal-heading">
+          <div>
+            <span class="eyebrow">Configuração</span>
+            <h2 id="vehicle-catalog-modal-title">Cadastrar Marca x Modelo</h2>
+          </div>
+          <button id="close-vehicle-catalog-button" class="copy-all-button" type="button" aria-label="Fechar catálogo">×</button>
+        </div>
+        <div class="vehicle-catalog-form">
+          <input id="vehicle-brand-input" type="text" maxlength="60" placeholder="Marca">
+          <input id="vehicle-model-input" type="text" maxlength="60" placeholder="Modelo">
+          <button id="vehicle-add-button" class="copy-all-button" type="button">Adicionar</button>
+        </div>
+        <p id="vehicle-catalog-status" class="page-fields-status" aria-live="polite"></p>
+        <div id="vehicle-catalog-list" class="vehicle-catalog-list"></div>
       </section>
     </div>
     <script type="module" src="scripts/app.js"></script>

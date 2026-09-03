@@ -32,6 +32,9 @@ const vehicleModelInput = document.querySelector("#vehicle-model-input");
 const vehicleAddButton = document.querySelector("#vehicle-add-button");
 const vehicleCatalogList = document.querySelector("#vehicle-catalog-list");
 const vehicleCatalogStatus = document.querySelector("#vehicle-catalog-status");
+const openVehicleCatalogButton = document.querySelector("#open-vehicle-catalog-button");
+const vehicleCatalogModal = document.querySelector("#vehicle-catalog-modal");
+const closeVehicleCatalogButton = document.querySelector("#close-vehicle-catalog-button");
 const openSidepanelButton = document.querySelector("#open-sidepanel-button");
 const themeToggle = document.querySelector("#theme-toggle");
 const maximizeButton = document.querySelector("#maximize-button");
@@ -154,7 +157,7 @@ document.querySelectorAll(".type-button").forEach((button) => {
     generateLabel.textContent = data[selectedType].label;
     personOptions.classList.toggle("is-hidden", selectedType !== "person");
     companyOptions.classList.toggle("is-hidden", selectedType !== "company");
-    vehicleOptions.classList.toggle("is-hidden", selectedType !== "vehicle");
+    if (openVehicleCatalogButton) openVehicleCatalogButton.hidden = selectedType !== "vehicle";
     generate();
   });
 });
@@ -284,6 +287,24 @@ function loadVehicleCatalog() {
 }
 
 if (vehicleAddButton) vehicleAddButton.addEventListener("click", addVehicle);
+function closeVehicleCatalog() {
+  if (vehicleCatalogModal) vehicleCatalogModal.hidden = true;
+}
+
+function openVehicleCatalog() {
+  if (!vehicleCatalogModal) return;
+  vehicleCatalogModal.hidden = false;
+  vehicleBrandInput.focus();
+}
+
+if (openVehicleCatalogButton) openVehicleCatalogButton.addEventListener("click", openVehicleCatalog);
+if (closeVehicleCatalogButton) closeVehicleCatalogButton.addEventListener("click", closeVehicleCatalog);
+if (vehicleCatalogModal) {
+  vehicleCatalogModal.querySelector("[data-vehicle-modal-close]").addEventListener("click", closeVehicleCatalog);
+}
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && vehicleCatalogModal && !vehicleCatalogModal.hidden) closeVehicleCatalog();
+});
 
 if (scanFieldsButton) scanFieldsButton.addEventListener("click", scanPageFields);
 if (baseUrlSelect) baseUrlSelect.addEventListener("change", () => {

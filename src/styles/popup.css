@@ -339,6 +339,7 @@ h2 {
 .uf-control {
   display: block;
   margin: -4px 0 18px;
+  flex: 1;
 }
 
 .uf-control .options-label {
@@ -360,6 +361,18 @@ h2 {
 
 .uf-control select:focus {
   border-color: var(--accent);
+}
+
+.generator-location-row {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.vehicle-catalog-trigger {
+  flex: 0 0 auto;
+  margin-bottom: 18px;
+  white-space: nowrap;
 }
 
 .format-options {
@@ -578,6 +591,26 @@ h2 {
   border-radius: 10px;
   background: var(--surface);
   box-shadow: 0 16px 40px rgb(0 0 0 / 30%);
+}
+
+.vehicle-catalog-dialog {
+  width: min(720px, calc(100% - 32px));
+}
+
+.vehicle-catalog-modal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vehicle-catalog-modal-heading h2 {
+  margin-bottom: 0;
+}
+
+.vehicle-catalog-modal .vehicle-catalog-list {
+  max-height: min(50vh, 420px);
 }
 
 .mapping-modal-dialog h2 {
