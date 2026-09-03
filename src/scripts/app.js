@@ -181,7 +181,13 @@ if (chrome.runtime && chrome.runtime.onMessage) {
   chrome.runtime.onMessage.addListener((message, sender) => {
     if (!message || message.action !== ACTIONS.PAGE_CONTENT_CHANGED) return;
     if (!activeTab || sender.tab && sender.tab.id !== activeTab.id) return;
-    clearDisplayedPageFields("A página mudou. Clique em Escanear campos para atualizar os campos.");
+    const changedUrl = normalizePageUrl(message.url || "") !== activePageUrl;
+    if (changedUrl || message.changeType === "route") {
+      clearDisplayedPageFields("A página mudou. Atualizando os campos...");
+      scanPageFields();
+      return;
+    }
+    scanPageFields(false, true);
   });
 }
 
@@ -503,7 +509,7 @@ function remapAllFields() {
   scanPageFields(true);
 }
 
-function scanPageFields(remapping = false) {
+function scanPageFields(remapping = false, preserveCurrent = false) {
   if (!pageFieldsStatus) return;
   pageFieldsStatus.textContent = remapping ? "Remapeando campos automaticamente..." : "Lendo campos da página...";
   getActiveTab((tab) => {
@@ -533,16 +539,23 @@ function scanPageFields(remapping = false) {
         updateSavedProfiles(profiles);
         const selected = getCurrentProfile(profiles);
         const saved = selected && selected.fields ? selected.fields : [];
+        const previousFields = preserveCurrent ? pageFields : [];
         pageFields = (response.fields || []).map((field) => {
-          const mapping = saved.find((item) => item.key === field.key || item.selector === field.selector);
+          const mapping = previousFields.find((item) => item.key === field.key || item.selector === field.selector) ||
+            saved.find((item) => item.key === field.key || item.selector === field.selector);
           return {
             ...field,
             dataType: mapping && mapping.dataType ? mapping.dataType : field.inferredType || "text",
             selector: remapping ? field.selector : (mapping && mapping.selector ? mapping.selector : field.selector),
+            label: mapping && mapping.label ? mapping.label : field.label,
             fixed: Boolean(mapping && mapping.fixed),
             fixedValue: mapping && mapping.fixedValue ? mapping.fixedValue : ""
           };
         });
+        if (preserveCurrent) {
+          const scannedKeys = new Set(pageFields.map((field) => field.key));
+          pageFields = pageFields.concat(previousFields.filter((field) => !scannedKeys.has(field.key)));
+        }
         markedSelectors = new Set();
         updateMarkAllButton();
         renderPageFields();
@@ -579,7 +592,7 @@ function renderPageFields() {
           <button type="button" data-action="fill" class="page-field-fill" title="Preencher campo com dado gerado ou valor fixado" aria-label="Preencher ${escapeHtml(field.label)}">
             <svg class="page-field-fill-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M8 4h8v3H8zM6 7h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"></path>
-              <path d="M8 12h8M8 16h5"></path>
+              <path d="M8 13h8M13 10l3 3-3 3"></path>
             </svg>
           </button>
         </div>

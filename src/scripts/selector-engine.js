@@ -6,6 +6,7 @@ const SELECT2_OPTION_SELECTOR = "li.select2-results__option, li[list-select], [r
 const IGNORED_TYPES = new Set(["hidden", "submit", "button", "reset", "image", "file"]);
 let lastPageSignature = "";
 let pageChangeTimer = null;
+let pendingDomChange = false;
 
 const normalize = (value) => String(value || "")
   .normalize("NFD")
@@ -303,15 +304,20 @@ function pageSignature() {
 
 function notifyPageChanged() {
   const signature = pageSignature();
-  if (signature === lastPageSignature) return;
+  if (!pendingDomChange && signature === lastPageSignature) return;
+  const previousUrl = lastPageSignature.split("::")[0];
+  const urlChanged = previousUrl !== window.location.href;
   lastPageSignature = signature;
+  pendingDomChange = false;
   chrome.runtime.sendMessage({
     action: ACTIONS.PAGE_CONTENT_CHANGED,
-    url: window.location.href
+    url: window.location.href,
+    changeType: urlChanged ? "route" : "dom"
   });
 }
 
-function schedulePageChangeNotification() {
+function schedulePageChangeNotification(domChanged = false) {
+  pendingDomChange = pendingDomChange || domChanged;
   clearTimeout(pageChangeTimer);
   pageChangeTimer = setTimeout(notifyPageChanged, 250);
 }

@@ -73,6 +73,10 @@ function setupChromeMock({ scanFields = scannedFields } = {}) {
           callback({ filled: message.fields.length, total: message.fields.length });
           return;
         }
+        if (message.action === ACTIONS.FILL_FIELD) {
+          callback({ filled: true });
+          return;
+        }
         callback({});
       })
     },
@@ -170,6 +174,18 @@ describe("popup app", () => {
     expect(fillAllMessage.message.fields.map((field) => field.selector)).toEqual(["#email", "#cpf"]);
     expect(fillAllMessage.message.fields.every((field) => typeof field.value === "string" && field.value.length > 0)).toBe(true);
     expect(document.querySelector("#page-fields-status").textContent).toBe("2 de 2 campo(s) preenchido(s).");
+  });
+
+  it("preenche um campo individual pelo ícone de colar", async () => {
+    await loadApp();
+    sentMessages = [];
+
+    click(".page-field [data-action='fill']");
+
+    const fillMessage = sentMessages.find((item) => item.message.action === ACTIONS.FILL_FIELD);
+    expect(fillMessage).toBeTruthy();
+    expect(fillMessage.message.selector).toBe("#email");
+    expect(fillMessage.message.value).toEqual(expect.any(String));
   });
 
   it("salva um novo mapeamento no storage por origem e URL normalizada", async () => {
