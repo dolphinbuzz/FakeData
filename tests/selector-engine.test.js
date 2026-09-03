@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { JSDOM } from "jsdom";
-import { inferType, normalize, pageSignature, scan, selectorFor } from "../src/scripts/selector-engine.js";
+import { inferType, normalize, notifyPageChanged, pageSignature, scan, selectorFor } from "../src/scripts/selector-engine.js";
 
 let dom;
+let sendMessage;
 
 beforeEach(() => {
   dom = new JSDOM(`<!doctype html><body>
@@ -13,8 +14,15 @@ beforeEach(() => {
   globalThis.document = dom.window.document;
   globalThis.Element = dom.window.Element;
   globalThis.Node = dom.window.Node;
+  sendMessage = vi.fn();
+  globalThis.chrome = { runtime: { sendMessage } };
   globalThis.HTMLElement = dom.window.HTMLElement;
   dom.window.HTMLElement.prototype.getClientRects = () => [{ width: 10, height: 10 }];
+});
+
+afterEach(() => {
+  dom.window.close();
+  delete globalThis.chrome;
 });
 
 describe("selector engine", () => {
@@ -131,5 +139,30 @@ describe("selector engine", () => {
     expect(inferType(document.querySelector("[placeholder='Renda mensal']"))).toBe("income");
     expect(inferType(document.querySelector("select"))).toBe("gender");
     expect(inferType(document.querySelector("[autocomplete='street-address']"))).toBe("address");
+  });
+
+  it("notifica mudanças de DOM quando o runtime está disponível", () => {
+    document.body.appendChild(document.createElement("input"));
+    notifyPageChanged();
+    document.body.appendChild(document.createElement("input"));
+    notifyPageChanged();
+
+    expect(sendMessage).toHaveBeenLastCalledWith({
+      action: "PAGE_CONTENT_CHANGED",
+      url: "https://example.test/form",
+      changeType: "dom"
+    });
+  });
+
+  it("não lança quando o contexto da extensão é invalidado", () => {
+    sendMessage.mockImplementationOnce(() => {
+      throw new Error("Uncaught Error: Extension context invalidated.");
+    });
+
+    document.body.appendChild(document.createElement("input"));
+    expect(() => notifyPageChanged()).not.toThrow();
+    document.body.appendChild(document.createElement("input"));
+    expect(() => notifyPageChanged()).not.toThrow();
+    expect(sendMessage).toHaveBeenCalledTimes(1);
   });
 });

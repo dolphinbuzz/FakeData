@@ -7,6 +7,7 @@ const IGNORED_TYPES = new Set(["hidden", "submit", "button", "reset", "image", "
 let lastPageSignature = "";
 let pageChangeTimer = null;
 let pendingDomChange = false;
+let runtimeContextInvalidated = false;
 
 const normalize = (value) => String(value || "")
   .normalize("NFD")
@@ -309,11 +310,18 @@ function notifyPageChanged() {
   const urlChanged = previousUrl !== window.location.href;
   lastPageSignature = signature;
   pendingDomChange = false;
-  chrome.runtime.sendMessage({
-    action: ACTIONS.PAGE_CONTENT_CHANGED,
-    url: window.location.href,
-    changeType: urlChanged ? "route" : "dom"
-  });
+  if (runtimeContextInvalidated || typeof chrome === "undefined" || !chrome.runtime ||
+    typeof chrome.runtime.sendMessage !== "function") return;
+  try {
+    chrome.runtime.sendMessage({
+      action: ACTIONS.PAGE_CONTENT_CHANGED,
+      url: window.location.href,
+      changeType: urlChanged ? "route" : "dom"
+    });
+  } catch (error) {
+    if (!/Extension context invalidated/i.test(String(error && error.message))) throw error;
+    runtimeContextInvalidated = true;
+  }
 }
 
 function schedulePageChangeNotification(domChanged = false) {
@@ -363,6 +371,7 @@ export {
   isCustomSelect,
   normalize,
   pageSignature,
+  notifyPageChanged,
   scan,
   SELECT2_OPTION_SELECTOR,
   selectorFor,
