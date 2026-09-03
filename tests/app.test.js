@@ -810,4 +810,29 @@ describe("popup app", () => {
     await nextTick();
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
   });
+
+  it("conclui a captura de campo e restaura o botão após copiar", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      sentMessages.push({ tabId, message: clone(message) });
+      if (message.action === ACTIONS.CAPTURE_NEXT_CLICK) {
+        callback({ captured: true, field: { selector: "#capturado", label: "Campo capturado", inferredType: "text" } });
+        return;
+      }
+      callback({});
+    });
+    click(".page-field [data-action='target']");
+    await nextTick();
+    expect(document.querySelector(".page-field-selector").value).toBe("#capturado");
+
+    vi.useFakeTimers();
+    const copyButton = document.querySelector(".copy-field-button");
+    const originalText = copyButton.textContent;
+    copyButton.click();
+    await Promise.resolve();
+    expect(copyButton.textContent).toBe("✓");
+    vi.advanceTimersByTime(1200);
+    expect(copyButton.textContent).toBe(originalText);
+    vi.useRealTimers();
+  });
 });
