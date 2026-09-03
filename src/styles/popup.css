@@ -760,6 +760,37 @@ h2 {
   stroke-width: 1.7;
 }
 
+@media (min-width: 700px) {
+  body {
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  .app {
+    min-height: 100vh;
+    padding: 32px clamp(28px, 5vw, 72px) 24px;
+  }
+
+  .mapping-header-actions {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .mapping-header-actions button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .page-fields-section {
+    margin-top: 22px;
+  }
+
+  .page-fields {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    align-items: start;
+  }
+}
+
 .compact-button {
   padding: 8px;
   font-size: 11px;
