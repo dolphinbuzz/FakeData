@@ -835,4 +835,16 @@ describe("popup app", () => {
     expect(copyButton.textContent).toBe(originalText);
     vi.useRealTimers();
   });
+
+  it("informa erro quando a captura de um campo mapeado falha", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      if (message.action === ACTIONS.CAPTURE_NEXT_CLICK) callback({ captured: false });
+      else callback({});
+    });
+    click(".page-field [data-action='target']");
+    await nextTick();
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("Não foi possível capturar um campo.");
+  });
 });
