@@ -2,7 +2,7 @@
 
 ## Testes
 
-Execute `npm test` para rodar a suíte unitária. Use `npm run test:coverage` para gerar o relatório HTML/texto de cobertura; a configuração mantém uma meta global mínima de 70% enquanto os módulos puros críticos possuem limiares específicos mais altos.
+Execute `npm test` para rodar a suíte unitária. Use `npm run test:coverage` para gerar o relatório HTML/texto de cobertura; a configuração exige no mínimo 90% de Lines globalmente e nos principais módulos de produção. O workflow de CI executa os testes com cobertura em cada push e pull request para `main`.
 
 No painel **Mapear campos**, o seletor **URL base monitorada** lista os domínios registráveis das abas HTTP(S) abertas. Subdomínios são agrupados em bases como `exemplo.com.br` ou `exemplo.com`; ao escolher uma base, somente a aba correspondente selecionada é usada para scan e atualizações de DOM/rota. O restante da URL identifica a página escaneada.
 
