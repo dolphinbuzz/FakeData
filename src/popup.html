@@ -92,6 +92,17 @@
           </label>
         </div>
 
+        <div id="vehicle-options" class="format-options is-hidden">
+          <span class="options-label">Catálogo de veículos</span>
+          <div class="vehicle-catalog-form">
+            <input id="vehicle-brand-input" type="text" maxlength="60" placeholder="Marca">
+            <input id="vehicle-model-input" type="text" maxlength="60" placeholder="Modelo">
+            <button id="vehicle-add-button" class="copy-all-button" type="button">Adicionar</button>
+          </div>
+          <p id="vehicle-catalog-status" class="page-fields-status" aria-live="polite"></p>
+          <div id="vehicle-catalog-list" class="vehicle-catalog-list"></div>
+        </div>
+
         <button id="generate-button" class="generate-button" type="button">
           <span aria-hidden="true">✦</span>
           Gerar <span id="generate-label">Pessoa</span>

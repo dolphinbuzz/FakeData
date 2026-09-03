@@ -1,4 +1,5 @@
 import { DDDS, ESTADOS } from "./data/estados.js";
+import { pickVehicle } from "./data/vehicle-catalog.js";
 
 const DEFAULT_PROVIDERS = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 const VIN_ALPHABET = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789";
@@ -192,7 +193,8 @@ export function createGeneratorData({
   ddds = DDDS,
   getCpfFormatted = () => true,
   getCnpjFormatted = () => true,
-  getCnpjAlphanumeric = () => false
+  getCnpjAlphanumeric = () => false,
+  getVehicleCatalog = () => []
 } = {}) {
   return {
     person: {
@@ -246,10 +248,10 @@ export function createGeneratorData({
     },
     vehicle: {
       title: "Veículo gerado", label: "Veículo",
-      context: () => ({ estado: getState() }),
+      context: () => ({ estado: getState(), ...pickVehicle(getVehicleCatalog(), pick) }),
       fields: [
-        ["Marca", () => pick(["Toyota", "Volkswagen", "Chevrolet", "Honda", "Fiat", "Hyundai", "Nissan", "Renault", "Ford", "Jeep", "Kia", "BYD"])],
-        ["Modelo", () => pick(["Corolla", "T-Cross", "Onix", "Civic", "Argo", "HB20", "Kicks", "Kwid", "Ranger", "Compass", "Sportage", "Dolphin"])],
+        ["Marca", (ctx) => ctx.marca],
+        ["Modelo", (ctx) => ctx.modelo],
         ["Placa", () => gerarPlaca()], ["Chassi", () => gerarChassi()], ["Ano", () => gerarAno()],
         ["Cor", () => pick(["Preto", "Branco", "Prata", "Azul", "Vermelho", "Cinza", "Verde"])],
         ["UF", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`]
@@ -287,6 +289,8 @@ export function generateMappedValue(type, context, inputType = "", options = {})
   if (inputType === "radio") return true;
   const data = createGeneratorData(options);
   const resolvedContext = context || data.person.context();
+  const vehicle = options.vehicleContext ||
+    pickVehicle(options.getVehicleCatalog ? options.getVehicleCatalog() : [], pick);
   const personValues = {
     name: `${resolvedContext.nome} ${resolvedContext.sobrenome}`,
     cpf: cpf(options.getCpfFormatted ? options.getCpfFormatted() : true),
@@ -302,6 +306,7 @@ export function generateMappedValue(type, context, inputType = "", options = {})
     income: `R$ ${randomInt(1800, 18000).toLocaleString("pt-BR")},00`,
     company: `${pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma", "Conecta", "Aliança", "Pleno", "Vértice"])} Tecnologia Ltda.`,
     cnpj: cnpj(options.getCnpjFormatted ? options.getCnpjFormatted() : true, options.getCnpjAlphanumeric ? options.getCnpjAlphanumeric() : false),
+    brand: vehicle.marca, model: vehicle.modelo, year: gerarAno(),
     plate: gerarPlaca(), chassi: gerarChassi(),
     website: gerarSite(pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma"])), text: randomWord()
   };

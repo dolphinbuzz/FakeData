@@ -96,5 +96,11 @@ describe("geradores", () => {
     expect(generateMappedValue("text", context, "radio")).toBe(true);
     expect(generateMappedValue("unknown", context)).toMatch(/^(acme|qa-lab|teste|sandbox|exemplo)\d{2}$/);
     expect(generateMappedValue("chassi", context)).toMatch(/^[A-HJ-NPR-Z0-9]{17}$/);
+    expect(generateMappedValue("brand", context, "", {
+      getVehicleCatalog: () => [{ marca: "Ford", modelos: ["Ka"] }]
+    })).toBe("Ford");
+    expect(generateMappedValue("model", context, "", {
+      getVehicleCatalog: () => [{ marca: "Ford", modelos: ["Ka"] }]
+    })).toBe("Ka");
   });
 });

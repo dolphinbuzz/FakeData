@@ -2,6 +2,7 @@
 import { createGeneratorData, generateMappedValue as generateMappedValuePure, validarCPF, validarCNPJ, pick } from "./generators.js";
 import { DDDS, ESTADOS } from "./data/estados.js";
 import { MAPPING_TYPES } from "./data/mapping-types.js";
+import { addVehicleModel, normalizeVehicleCatalog, pickVehicle, removeVehicleBrand, removeVehicleModel, renameVehicleBrand, renameVehicleModel } from "./data/vehicle-catalog.js";
 import { ACTIONS } from "./messages.js";
 
 let selectedType = "person";
@@ -15,6 +16,7 @@ let selectedProfileId = "";
 let mappingModalResolver = null;
 let pageFields = [];
 let markedSelectors = new Set();
+let vehicleCatalog = [];
 
 const resultSection = document.querySelector("#result-section");
 const resultFields = document.querySelector("#result-fields");
@@ -24,6 +26,12 @@ const generateButton = document.querySelector("#generate-button");
 const copyJsonButton = document.querySelector("#copy-json-button");
 const personOptions = document.querySelector("#person-options");
 const companyOptions = document.querySelector("#company-options");
+const vehicleOptions = document.querySelector("#vehicle-options");
+const vehicleBrandInput = document.querySelector("#vehicle-brand-input");
+const vehicleModelInput = document.querySelector("#vehicle-model-input");
+const vehicleAddButton = document.querySelector("#vehicle-add-button");
+const vehicleCatalogList = document.querySelector("#vehicle-catalog-list");
+const vehicleCatalogStatus = document.querySelector("#vehicle-catalog-status");
 const openSidepanelButton = document.querySelector("#open-sidepanel-button");
 const themeToggle = document.querySelector("#theme-toggle");
 const maximizeButton = document.querySelector("#maximize-button");
@@ -97,14 +105,16 @@ const data = createGeneratorData({
   ddds: DDDS,
   getCpfFormatted: () => document.querySelector("#cpf-formatted").checked,
   getCnpjFormatted: () => document.querySelector("#cnpj-formatted").checked,
-  getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric").checked
+  getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric").checked,
+  getVehicleCatalog: () => vehicleCatalog
 });
 const generatorOptions = {
   getState: () => gerarEstadoSelecionado(),
   ddds: DDDS,
   getCpfFormatted: () => document.querySelector("#cpf-formatted") ? document.querySelector("#cpf-formatted").checked : true,
   getCnpjFormatted: () => document.querySelector("#cnpj-formatted") ? document.querySelector("#cnpj-formatted").checked : true,
-  getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric") ? document.querySelector("#cnpj-alphanumeric").checked : false
+  getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric") ? document.querySelector("#cnpj-alphanumeric").checked : false,
+  getVehicleCatalog: () => vehicleCatalog
 };
 
 ESTADOS.forEach((estado) => {
@@ -144,6 +154,7 @@ document.querySelectorAll(".type-button").forEach((button) => {
     generateLabel.textContent = data[selectedType].label;
     personOptions.classList.toggle("is-hidden", selectedType !== "person");
     companyOptions.classList.toggle("is-hidden", selectedType !== "company");
+    vehicleOptions.classList.toggle("is-hidden", selectedType !== "vehicle");
     generate();
   });
 });
@@ -167,6 +178,87 @@ maximizeButton.addEventListener("click", () => {
       console.error("Não foi possível abrir a extensão em uma nova aba.", error);
       return;
     }
+
+    function saveVehicleCatalog() {
+      chrome.storage.local.set({ "fakedata-vehicle-catalog": vehicleCatalog }, () => {
+        if (chrome.runtime.lastError) {
+          vehicleCatalogStatus.textContent = "Não foi possível salvar o catálogo.";
+          return;
+        }
+        renderVehicleCatalog();
+        generate();
+      });
+    }
+
+    function renderVehicleCatalog() {
+      if (!vehicleCatalogList) return;
+      vehicleCatalogList.innerHTML = vehicleCatalog.length
+        ? vehicleCatalog.map((entry) => `<div class="vehicle-brand-row">
+            <strong>${escapeHtml(entry.marca)}</strong>
+            <button type="button" class="copy-all-button" data-edit-brand="${escapeHtml(entry.marca)}">Editar marca</button>
+            <button type="button" class="copy-all-button danger-button" data-remove-brand="${escapeHtml(entry.marca)}">Excluir marca</button>
+            <div class="vehicle-models">${entry.modelos.map((model) => `<span class="vehicle-model">
+              ${escapeHtml(model)} <button type="button" aria-label="Editar ${escapeHtml(model)}" data-edit-model="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">✎</button>
+              <button type="button" aria-label="Excluir ${escapeHtml(model)}" data-remove-model="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">×</button>
+            </span>`).join("")}</div>
+          </div>`).join("")
+        : "<span class=\"muted\">Nenhum veículo personalizado cadastrado.</span>";
+      vehicleCatalogList.querySelectorAll("[data-remove-brand]").forEach((button) => {
+        button.addEventListener("click", () => {
+          vehicleCatalog = removeVehicleBrand(vehicleCatalog, button.dataset.removeBrand);
+          saveVehicleCatalog();
+        });
+        vehicleCatalogList.querySelectorAll("[data-edit-brand]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const next = window.prompt("Novo nome da marca:", button.dataset.editBrand);
+            if (next == null) return;
+            try {
+              vehicleCatalog = renameVehicleBrand(vehicleCatalog, button.dataset.editBrand, next);
+              saveVehicleCatalog();
+            } catch (error) {
+              vehicleCatalogStatus.textContent = error.message;
+            }
+          });
+        });
+        vehicleCatalogList.querySelectorAll("[data-edit-model]").forEach((button) => {
+          button.addEventListener("click", () => {
+            vehicleBrandInput.value = button.dataset.editModel;
+            vehicleModelInput.value = button.dataset.model;
+            vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.editModel, button.dataset.model);
+            saveVehicleCatalog();
+            vehicleModelInput.focus();
+          });
+        });
+      });
+      vehicleCatalogList.querySelectorAll("[data-remove-model]").forEach((button) => {
+        button.addEventListener("click", () => {
+          vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.removeBrand, button.dataset.model);
+          saveVehicleCatalog();
+        });
+      });
+    }
+
+    function addVehicle() {
+      try {
+        vehicleCatalog = addVehicleModel(vehicleCatalog, vehicleBrandInput.value, vehicleModelInput.value);
+        vehicleBrandInput.value = "";
+        vehicleModelInput.value = "";
+        vehicleCatalogStatus.textContent = "Veículo cadastrado.";
+        saveVehicleCatalog();
+      } catch (error) {
+        vehicleCatalogStatus.textContent = error.message;
+      }
+    }
+
+    function loadVehicleCatalog() {
+      chrome.storage.local.get({ "fakedata-vehicle-catalog": [] }, (result) => {
+        vehicleCatalog = normalizeVehicleCatalog(result["fakedata-vehicle-catalog"]);
+        renderVehicleCatalog();
+        loadVehicleCatalog();
+      });
+    }
+
+    if (vehicleAddButton) vehicleAddButton.addEventListener("click", addVehicle);
     if (chrome.sidePanel && chrome.sidePanel.close && chrome.windows) {
       chrome.sidePanel.close({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch((error) => {
         console.error("Não foi possível fechar o painel lateral.", error);
@@ -1007,9 +1099,13 @@ function fillAllPageFields() {
     return;
   }
   const context = data.person.context();
+  const vehicleContext = pickVehicle(vehicleCatalog, pick);
   const fields = pageFields.map((field) => ({
     selector: field.selector,
-    value: field.fixed ? field.fixedValue : generateMappedValuePure(field.dataType === "auto" ? field.inferredType : field.dataType, context, field.inputType, generatorOptions)
+    value: field.fixed ? field.fixedValue : generateMappedValuePure(field.dataType === "auto" ? field.inferredType : field.dataType, context, field.inputType, {
+      ...generatorOptions,
+      vehicleContext
+    })
   }));
   sendToPage({ action: ACTIONS.FILL_ALL, fields }, (response, error) => {
     if (!error && response) {
