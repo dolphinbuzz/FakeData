@@ -322,6 +322,26 @@ if (floatingControlsToggle) floatingControlsToggle.addEventListener("change", ()
   chrome.storage.local.set({ "fakedata-floating-controls": floatingControlsVisible });
   syncPageFieldControls();
 });
+
+function isEditableTarget(target) {
+  return target instanceof HTMLElement &&
+    (target.matches("input, textarea, select") || target.isContentEditable);
+}
+
+document.addEventListener("keydown", (event) => {
+  if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey || isEditableTarget(event.target)) return;
+  const shortcuts = {
+    s: scanFieldsButton,
+    p: fillAllButton,
+    f: floatingControlsToggle,
+    l: saveMappingsButton,
+    m: markAllButton
+  };
+  const control = shortcuts[event.key.toLowerCase()];
+  if (!control || control.hidden || control.disabled) return;
+  event.preventDefault();
+  control.click();
+});
 if (remapAllButton) remapAllButton.addEventListener("click", remapAllFields);
 if (savedMappingsSelect) savedMappingsSelect.addEventListener("change", () => loadSavedProfile(savedMappingsSelect.value));
 if (renameMappingButton) renameMappingButton.addEventListener("click", renameSavedProfile);

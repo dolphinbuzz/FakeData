@@ -52,6 +52,16 @@ function click(selector) {
   document.querySelector(selector).click();
 }
 
+function pressShortcut(key, target = document.body) {
+  target.dispatchEvent(new KeyboardEvent("keydown", {
+    key,
+    altKey: true,
+    shiftKey: true,
+    bubbles: true,
+    cancelable: true
+  }));
+}
+
 function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs = [activeTab], windowType = "tab", vehicleCatalog = [] } = {}) {
   sentMessages = [];
   appMessageListener = null;
@@ -249,6 +259,39 @@ describe("popup app", () => {
     expect(storageData["fakedata-floating-controls"]).toBe(false);
     const updateMessage = sentMessages.find((item) => item.message.action === ACTIONS.UPDATE_PAGE_FIELD_CONTROLS);
     expect(updateMessage.message.visible).toBe(false);
+  });
+
+  it("executa as ações de mapeamento pelos atalhos de teclado", async () => {
+    await loadApp();
+    sentMessages = [];
+
+    pressShortcut("s");
+    pressShortcut("p");
+    pressShortcut("l");
+    pressShortcut("m");
+    pressShortcut("f");
+    await nextTick();
+
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.SCAN_FIELDS)).toBe(true);
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.FILL_ALL)).toBe(true);
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.MARK_ALL_FIELDS)).toBe(true);
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.UPDATE_PAGE_FIELD_CONTROLS &&
+      item.message.visible === false)).toBe(true);
+    expect(storageData["fakedata-floating-controls"]).toBe(false);
+    expect(document.querySelector("#mapping-name-input").hidden).toBe(false);
+  });
+
+  it("não executa atalhos enquanto o foco está em campo editável", async () => {
+    await loadApp();
+    sentMessages = [];
+    const input = document.querySelector("#mapping-name-input");
+    input.focus();
+
+    pressShortcut("s", input);
+    pressShortcut("p", input);
+    await nextTick();
+
+    expect(sentMessages).toHaveLength(0);
   });
 
   it("preenche um campo individual pelo ícone de colar", async () => {
