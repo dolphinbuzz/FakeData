@@ -460,6 +460,21 @@ h2 {
   width: auto;
 }
 
+.floating-controls-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 5px;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.floating-controls-toggle input {
+  accent-color: var(--accent);
+}
+
 .mapping-subtabs {
   display: flex;
   gap: 4px;

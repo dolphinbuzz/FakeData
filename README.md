@@ -65,6 +65,8 @@ O catálogo é salvo em `chrome.storage.local`. Ao gerar um veículo, a extensã
 6. Use **Marcar todos** ou **Preencher todos** quando necessário.
 7. Clique em **Salvar seletores** para criar um perfil ou atualizar o perfil selecionado.
 
+Ao lado de **Preencher todos**, o checkbox **Botões flutuantes** controla os botões de preenchimento exibidos junto aos campos na página. Ele vem marcado por padrão e a escolha fica salva para as próximas aberturas da extensão.
+
 O scan inclui inputs, selects, textareas e componentes customizados como `multi-select` e `role="combobox"`. Botões e links podem ser capturados pelo Playground, mas não entram no scan geral de preenchimento.
 
 O preenchimento dispara eventos `input` e `change`, processa campos sequencialmente e suporta:

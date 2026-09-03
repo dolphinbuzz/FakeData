@@ -17,6 +17,7 @@ let mappingModalResolver = null;
 let pageFields = [];
 let markedSelectors = new Set();
 let vehicleCatalog = [];
+let floatingControlsVisible = true;
 
 const resultSection = document.querySelector("#result-section");
 const resultFields = document.querySelector("#result-fields");
@@ -44,6 +45,7 @@ const addSelectorButton = document.querySelector("#add-selector-button");
 const markAllButton = document.querySelector("#mark-all-button");
 const saveMappingsButton = document.querySelector("#save-mappings-button");
 const fillAllButton = document.querySelector("#fill-all-button");
+const floatingControlsToggle = document.querySelector("#floating-controls-toggle");
 const remapAllButton = document.querySelector("#remap-all-button");
 const savedMappingsSelect = document.querySelector("#saved-mappings-select");
 const renameMappingButton = document.querySelector("#rename-mapping-button");
@@ -315,6 +317,11 @@ if (addSelectorButton) addSelectorButton.addEventListener("click", addNewSelecto
 if (markAllButton) markAllButton.addEventListener("click", toggleMarkAllFields);
 if (saveMappingsButton) saveMappingsButton.addEventListener("click", savePageMappings);
 if (fillAllButton) fillAllButton.addEventListener("click", fillAllPageFields);
+if (floatingControlsToggle) floatingControlsToggle.addEventListener("change", () => {
+  floatingControlsVisible = floatingControlsToggle.checked;
+  chrome.storage.local.set({ "fakedata-floating-controls": floatingControlsVisible });
+  syncPageFieldControls();
+});
 if (remapAllButton) remapAllButton.addEventListener("click", remapAllFields);
 if (savedMappingsSelect) savedMappingsSelect.addEventListener("change", () => loadSavedProfile(savedMappingsSelect.value));
 if (renameMappingButton) renameMappingButton.addEventListener("click", renameSavedProfile);
@@ -333,12 +340,22 @@ if (mappingNameInput) mappingNameInput.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeMappingModal("");
 });
 
+function loadFloatingControlsPreference(callback) {
+  chrome.storage.local.get({ "fakedata-floating-controls": true }, (result) => {
+    floatingControlsVisible = result["fakedata-floating-controls"] !== false;
+    if (floatingControlsToggle) floatingControlsToggle.checked = floatingControlsVisible;
+    callback();
+  });
+}
+
 loadVehicleCatalog();
 migrateLegacyProfiles(() => {
-  detectPopupMode((isPopup) => {
-    applyPopupMode(isPopup);
-    refreshBaseUrlOptions(() => {
-      if (pageFieldsElement) scanPageFields();
+  loadFloatingControlsPreference(() => {
+    detectPopupMode((isPopup) => {
+      applyPopupMode(isPopup);
+      refreshBaseUrlOptions(() => {
+        if (pageFieldsElement) scanPageFields();
+      });
     });
   });
 });
@@ -923,7 +940,8 @@ function syncPageFieldControls() {
       key: field.key,
       selector: field.selector,
       label: field.label
-    }))
+    })),
+    visible: floatingControlsVisible
   }, () => {});
 }
 

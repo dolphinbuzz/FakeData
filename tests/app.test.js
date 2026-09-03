@@ -236,6 +236,21 @@ describe("popup app", () => {
     expect(document.querySelector("#page-fields-status").textContent).toBe("2 de 2 campo(s) preenchido(s).");
   });
 
+  it("persiste a preferência e sincroniza a visibilidade dos botões flutuantes", async () => {
+    await loadApp();
+    const toggle = document.querySelector("#floating-controls-toggle");
+    expect(toggle.checked).toBe(true);
+
+    sentMessages = [];
+    toggle.click();
+    await nextTick();
+
+    expect(toggle.checked).toBe(false);
+    expect(storageData["fakedata-floating-controls"]).toBe(false);
+    const updateMessage = sentMessages.find((item) => item.message.action === ACTIONS.UPDATE_PAGE_FIELD_CONTROLS);
+    expect(updateMessage.message.visible).toBe(false);
+  });
+
   it("preenche um campo individual pelo ícone de colar", async () => {
     await loadApp();
     sentMessages = [];
