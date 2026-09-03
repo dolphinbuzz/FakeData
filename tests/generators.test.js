@@ -68,9 +68,9 @@ describe("geradores", () => {
   it("mantém e-mails válidos com sobrenomes compostos", () => {
     const email = gerarEmailPessoa("Ana Beatriz", "Silva Costa");
     expect(email).toMatch(/^ana\.silva\.costa\d+@[a-z.]+$/);
-    const filiation = gerarNomeFiliacao().trim().split(/\s+/);
-    expect(filiation.length).toBeGreaterThanOrEqual(4);
-    expect(filiation.at(-1)).not.toBe(filiation.at(-2));
+    const filiations = Array.from({ length: 30 }, () => gerarNomeFiliacao().trim().split(/\s+/));
+    expect(filiations.every((filiation) => filiation.length >= 4)).toBe(true);
+    expect(filiations.every((filiation) => filiation.at(-1) !== filiation.at(-2))).toBe(true);
   });
 
   it("mantém contratos de utilitários e formatos de veículo", () => {
@@ -87,10 +87,11 @@ describe("geradores", () => {
 
   it("gera chassis VIN válidos com dígito verificador ISO 3779", () => {
     const chassis = Array.from({ length: 30 }, gerarChassi);
+    const replacement = chassis[0][8] === "1" ? "2" : "1";
 
     expect(chassis.every(validarChassi)).toBe(true);
     expect(chassis.every((value) => !/[IOQ]/.test(value))).toBe(true);
-    expect(validarChassi(`${chassis[0].slice(0, 8)}0${chassis[0].slice(9)}`)).toBe(false);
+    expect(validarChassi(`${chassis[0].slice(0, 8)}${replacement}${chassis[0].slice(9)}`)).toBe(false);
     expect(validarChassi("1M8GDM9AXKP042788")).toBe(true);
     expect(validarChassi("1M8GDM9A0KP042788")).toBe(false);
   });
