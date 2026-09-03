@@ -52,13 +52,14 @@ function click(selector) {
   document.querySelector(selector).click();
 }
 
-function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs = [activeTab], windowType = "tab" } = {}) {
+function setupChromeMock({ scanFields = scannedFields, profiles = [], openTabs = [activeTab], windowType = "tab", vehicleCatalog = [] } = {}) {
   sentMessages = [];
   appMessageListener = null;
   storageData = {
     "fakedata-field-mappings": profiles.length
       ? { "https://sistema.example.test": { pages: profiles } }
-      : {}
+      : {},
+    "fakedata-vehicle-catalog": vehicleCatalog
   };
 
   globalThis.chrome = {
@@ -173,6 +174,22 @@ describe("popup app", () => {
     expect([...document.querySelectorAll(".page-field-label")].map((item) => item.textContent)).toEqual(["E-mail", "CPF"]);
     expect([...document.querySelectorAll(".page-field-selector")].map((item) => item.value)).toEqual(["#email", "#cpf"]);
     expect([...document.querySelectorAll(".page-field-type")].map((item) => item.value)).toEqual(["email", "cpf"]);
+  });
+
+  it("carrega o catálogo salvo e gera marca e modelo vinculados", async () => {
+    setupChromeMock({
+      vehicleCatalog: [{ marca: "Ford", modelos: ["Ka", "Ranger"] }]
+    });
+    await loadApp();
+
+    click("[data-type='vehicle']");
+
+    expect(document.querySelector("#vehicle-catalog-list").textContent).toContain("Ford");
+    expect(document.querySelector("#vehicle-catalog-list").textContent).toContain("Ka");
+    expect(document.querySelector("#vehicle-catalog-list").textContent).toContain("Ranger");
+    const values = [...document.querySelectorAll("#result-fields .field-value")].map((item) => item.textContent);
+    expect(values).toContain("Ford");
+    expect(["Ka", "Ranger"]).toContain(values[1]);
   });
 
   it("fecha o painel usando o ID real da janela ao abrir em uma aba", async () => {

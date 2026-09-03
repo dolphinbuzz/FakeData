@@ -312,6 +312,7 @@ if (mappingNameInput) mappingNameInput.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeMappingModal("");
 });
 
+loadVehicleCatalog();
 migrateLegacyProfiles(() => {
   detectPopupMode((isPopup) => {
     applyPopupMode(isPopup);
