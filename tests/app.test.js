@@ -257,6 +257,35 @@ describe("popup app", () => {
     expect(document.querySelector(".page-field-fixed-value").value).toBe("fixo@example.test");
   });
 
+  it("preserva o nome editado ao salvar e selecionar novamente o perfil", async () => {
+    setupChromeMock({
+      scanFields: [{ ...scannedFields[0], label: "First Name" }]
+    });
+    await loadApp();
+
+    click(".page-field-edit-label");
+    const editor = document.querySelector(".page-field-label-editor");
+    editor.value = "Nome principal";
+    editor.dispatchEvent(new Event("blur", { bubbles: true }));
+
+    click("#save-mappings-button");
+    document.querySelector("#mapping-name-input").value = "Cadastro com nome editado";
+    click("#mapping-modal-confirm");
+    await nextTick();
+
+    const storedProfile = storageData["fakedata-field-mappings"]["https://sistema.example.test"].pages[0];
+    expect(storedProfile.fields[0].label).toBe("Nome principal");
+
+    const profileSelect = document.querySelector("#saved-mappings-select");
+    profileSelect.value = "";
+    profileSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(document.querySelectorAll(".page-field").length).toBe(1);
+
+    profileSelect.value = storedProfile.id;
+    profileSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(document.querySelector(".page-field-label").textContent).toBe("Nome principal");
+  });
+
   it("envia valor fixo no preenchimento individual", async () => {
     setupChromeMock({
       profiles: [{

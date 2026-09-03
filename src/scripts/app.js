@@ -1020,6 +1020,7 @@ function persistPageMapping(name, existingId) {
   const mappings = pageFields.map((field) => ({
     key: field.key,
     selector: field.selector,
+    label: field.label,
     dataType: field.dataType,
     fixed: Boolean(field.fixed),
     fixedValue: field.fixedValue || "",
