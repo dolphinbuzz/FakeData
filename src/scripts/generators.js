@@ -37,9 +37,15 @@ const PERSON_SURNAMES = [
 function pickDistinct(items, count) {
   const available = [...items];
   const selected = [];
+  const selectedKeys = new Set();
   while (selected.length < count && available.length) {
     const index = Math.floor(Math.random() * available.length);
-    selected.push(available.splice(index, 1)[0]);
+    const item = available.splice(index, 1)[0];
+    const key = String(item).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+    if (!selectedKeys.has(key)) {
+      selected.push(item);
+      selectedKeys.add(key);
+    }
   }
   return selected;
 }

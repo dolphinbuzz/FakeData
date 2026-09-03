@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cnpj,
   cpf,
@@ -19,6 +19,10 @@ import {
   validarCPF,
   validarChassi
 } from "../src/scripts/generators.js";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("geradores", () => {
   it("gera CPFs válidos formatados e sem máscara", () => {
@@ -63,6 +67,12 @@ describe("geradores", () => {
     expect(new Set(names.map(({ nome }) => nome)).size).toBeGreaterThan(1);
     expect(names.every(({ parts }) => parts.length === 2 && parts[0] !== parts[1])).toBe(true);
     expect(names.every(({ nome, parts }) => `${nome} ${parts.join(" ")}`.split(/\s+/).length >= 3)).toBe(true);
+  });
+
+  it("não repete sobrenomes equivalentes ignorando maiúsculas e acentos", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.99);
+    const filiation = gerarNomeFiliacao().trim().split(/\s+/);
+    expect(filiation.at(-1)).not.toBe(filiation.at(-2));
   });
 
   it("mantém e-mails válidos com sobrenomes compostos", () => {
