@@ -1,37 +1,191 @@
-# Sistema operacional
-.DS_Store
-Thumbs.db
-desktop.ini
+# ============================================
+# FakeData - .gitignore
+# ============================================
 
-# Editores
-.vscode/
-.idea/
-
-# Dependências e artefatos de build
+# ----------------------------------------------------------------------
+# Dependencies & Build Artifacts
+# ----------------------------------------------------------------------
 node_modules/
-dist/
-coverage/
-.coverage*/
-.coverage-*
-
-# Segredos e chaves — NUNCA versionar
-.env
-.env.local
-.env.*.local
-*.pem
-
-# Empacotamento da extensão
-*.crx
-*.zip
-/web-ext-artifacts/
-
-# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Cache de ferramentas
-.eslintcache
-.vitest/
+# Build outputs
+dist/
+build/
+*.zip
+*.crx
+
+# Coverage reports
+coverage/
 .nyc_output/
+
+# Test artifacts
+tests/*.test.js.snap
+
+# ----------------------------------------------------------------------
+# Environment & Secrets (NUNCA COMMITAR)
+# ----------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
+
+# Chrome Web Store credentials
+*.pem
+*.key
+client_secret*.json
+service-account*.json
+chrome-web-store-credentials.json
+
+# API keys, tokens, secrets
+*secret*
+*token*
+*api-key*
+*apikey*
+*.p12
+*.pfx
+
+# ----------------------------------------------------------------------
+# IDE & Editor Configurations (pessoais)
+# ----------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.vs/
+*.code-workspace
+
+# ----------------------------------------------------------------------
+# OS Generated Files
+# ----------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ----------------------------------------------------------------------
+# Logs & Temporary Files
+# ----------------------------------------------------------------------
+*.log
+logs/
+*.tmp
+*.temp
+tmp/
+temp/
+
+# ----------------------------------------------------------------------
+# OpenCode Agent Memory & Sessions (privados por desenvolvedor)
+# ----------------------------------------------------------------------
+.opencode/team/memory/*/last-session.md
+.opencode/team/memory/*/decisions.md
+.opencode/team/memory/*/todo.md
+.opencode/team/memory/*/blockers.md
+.opencode/team/memory/*/*.md
+!.opencode/team/memory/*/README.md
+
+# Session data
+.opencode/session/
+.opencode/sessions/
+.opencode/*.session
+
+# ----------------------------------------------------------------------
+# Chrome Extension Specific
+# ----------------------------------------------------------------------
+# Packed extensions
+*.crx
+*.pem
+
+# Extension icons generated during build
+icons/generated/
+
+# ----------------------------------------------------------------------
+# Documentation Generated (opcional - manter se versionar docs)
+# ----------------------------------------------------------------------
+docs/api/
+docs/generated/
+site/
+public/
+
+# ----------------------------------------------------------------------
+# Certificates & Keys
+# ----------------------------------------------------------------------
+*.crt
+*.cer
+*.der
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# ----------------------------------------------------------------------
+# Database & Local Storage
+# ----------------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+*.realm
+
+# ----------------------------------------------------------------------
+# Misc
+# ----------------------------------------------------------------------
+# TurboRepo
+.turbo/
+
+# Vercel/Netlify
+.vercel
+.netlify
+
+# Cache
+.cache/
+.parcel-cache/
+.esbuild-cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Linting
+.eslintcache
+.stylelintcache
+
+# Testing
+.vitest/
+
+# Bundle analyzer
+.stats.html
+*.stats.json
+
+# ----------------------------------------------------------------------
+# Arquivos que DEVEM ser versionados (exceções explícitas)
+# ----------------------------------------------------------------------
+# !.opencode/config.yaml
+# !.opencode/team/README.md
+# !.opencode/team/agents/*.yaml
+# !.opencode/team/context/*.md
+# !.opencode/team/workflows/*.md
+# !.opencode/hooks/**/*.sh
+# !.opencode/skills/*.yaml
+# !.github/workflows/*.yml
+# !tests/setup.js
+# !vitest.config.js
+# !package.json
+# !package-lock.json
+# !manifest.json
+# !README.md
+# !CHANGELOG.md
+# !CONTRIBUTING.md
+# !PRIVACY_POLICY.md
+# !src/**/*
+# !.gitignore

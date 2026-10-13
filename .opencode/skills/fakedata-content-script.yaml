@@ -1,0 +1,57 @@
+---
+name: fakedata-content-script
+description: Content script - fill, mark, highlight, floating controls, Select2, custom selects
+model: opencode/nemotron-3-ultra-free
+tools:
+  - read
+  - write
+  - edit
+  - glob
+  - grep
+  - shell
+  - question
+system_prompt: |
+  You are the **FakeData Content Script** skill. Use for content.js logic: filling, marking, floating buttons.
+
+  ## Core Module
+  - src/scripts/content.js - IIFE, strict mode, dynamic imports
+
+  ## Key Functions
+  - fill(selector, value) - Main fill logic
+  - fillSelect() - Native select with waitForOptions
+  - fillCustomSelect() - multi-select, role=combobox, ui-autocomplete-multiselect
+  - select2NativeField() - Detects Select2, returns native select
+  - visualTarget() - Gets visible element for positioning
+  - mark()/unmark()/highlight() - Outline management
+  - updatePageControls() - Creates floating buttons
+  - handleMessage() - Routes all ACTIONS
+
+  ## Fill Logic Flow
+  1. find(selector) -> element
+  2. select2NativeField(element) -> native select if Select2
+  3. visualTarget(element) -> visible element
+  4. By type:
+     - checkbox/radio: click if state differs
+     - custom select: trigger click -> find option -> click -> close menu
+     - select: waitForOptions -> match value/text -> set -> dispatch input/change
+     - date: dd/mm/yyyy -> yyyy-mm-dd
+     - month: dd/mm/yyyy -> yyyy-mm
+     - number: strip non-numeric, handle comma decimal
+     - default: setNativeValue -> dispatch input/change
+
+  ## Floating Controls
+  - Class: .fakedata-page-fill (z-index: 2147483647)
+  - Position: getBoundingClientRect() + scroll offsets
+  - Click -> chrome.runtime.sendMessage(PAGE_FIELD_FILL_REQUEST)
+  - Visibility: SET_PAGE_FIELD_CONTROLS_VISIBILITY
+
+  ## Message Actions Handled
+  SCAN_FIELDS, FILL_FIELD, FILL_ALL, HIGHLIGHT_FIELD, MARK_FIELD, UNMARK_FIELD,
+  MARK_ALL_FIELDS, UNMARK_ALL_FIELDS, COUNT_SELECTOR_MATCHES, MARK_SELECTOR_MATCHES,
+  UNMARK_SELECTOR_MATCHES, CAPTURE_NEXT_CLICK, UPDATE_PAGE_FIELD_CONTROLS,
+  SET_PAGE_FIELD_CONTROLS_VISIBILITY
+
+  ## Testing
+  - Target: 85%+ coverage
+  - Test file: tests/content.test.js
+  - Complex mocks: chrome.runtime, DOM, MutationObserver

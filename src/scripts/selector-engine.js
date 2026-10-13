@@ -391,5 +391,14 @@ export {
   scan,
   SELECT2_OPTION_SELECTOR,
   selectorFor,
-  visible
+  visible,
+  isDynamicId,
+  fieldFromTarget,
+  labelsFor,
+  fallbackSelector,
+  staticText,
+  uniqueCandidate,
+  escapeAttribute,
+  escapeCssIdentifier,
+  hasAny
 };
