@@ -48,4 +48,23 @@ describe("catálogo de veículos", () => {
     expect(() => addVehicleModel([], "", "Ka")).toThrow("Informe uma marca.");
     expect(() => addVehicleModel([], "Ford", "")).toThrow("Informe um modelo.");
   });
+
+  it("rejeita renomeação de marca para nome já existente", () => {
+    let catalog = [
+      { marca: "Ford", modelos: ["Ka"] },
+      { marca: "Chevrolet", modelos: ["Onix"] }
+    ];
+    expect(() => renameVehicleBrand(catalog, "Ford", "Chevrolet")).toThrow("Essa marca já está cadastrada.");
+  });
+
+  it("rejeita renomeação de modelo para nome já existente na marca", () => {
+    let catalog = [{ marca: "Ford", modelos: ["Ka", "Ranger"] }];
+    expect(() => renameVehicleModel(catalog, "Ford", "Ka", "Ranger")).toThrow("Esse modelo já está cadastrado para a marca.");
+  });
+
+  it("retorna catálogo atual se marca não existe ao renomear", () => {
+    const catalog = [{ marca: "Ford", modelos: ["Ka"] }];
+    expect(renameVehicleBrand(catalog, "Chevrolet", "Ford")).toEqual(catalog);
+    expect(renameVehicleModel(catalog, "Chevrolet", "Onix", "Ka")).toEqual(catalog);
+  });
 });
