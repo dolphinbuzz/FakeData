@@ -71,11 +71,11 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install manifest validator
-        run: npm install -g @extensity/manifest-validator
+      - name: Install dependencies
+        run: npm ci
 
       - name: Validate manifest.json
-        run: manifest-validator manifest.json
+        run: npm run validate-manifest
 
   version-consistency:
     name: Version Consistency
