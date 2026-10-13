@@ -11,6 +11,9 @@ import {
   scan,
   selectorFor,
   isDynamicId,
+  isAngularAttribute,
+  isAngularClass,
+  hasAngularAttributes,
   fieldFromTarget,
   visible
 } from "../src/scripts/selector-engine.js";
@@ -70,7 +73,8 @@ describe("selector engine", () => {
   it.each([
     ["id único", '<input id="stable-field">', "#stable-field", "id"],
     ["data-cy", '<input data-cy="email-field">', '[data-cy="email-field"]', "data-cy"],
-    ["ng-model", '<select ng-model="monthbox"><option>January</option></select>', 'select[ng-model="monthbox"]', "ng-model"]
+    ["data-testid", '<input data-testid="email-field">', '[data-testid="email-field"]', "data-testid"],
+    ["aria-label", '<input aria-label="Email">', 'input[aria-label="Email"]', "aria-label"]
   ])("prioriza %s", (_, markup, expectedSelector, expectedRule) => {
     document.body.innerHTML = markup;
     const element = document.body.firstElementChild;
@@ -118,20 +122,21 @@ describe("selector engine", () => {
     expect(result.selector).toBe('[data-cy="field\\"quote"]');
   });
 
-  it("prioriza value exato e ng-model antes do fallback", () => {
+  it("prioriza value exato e atributos semânticos antes do fallback", () => {
     document.body.innerHTML = `
       <label><input type="radio" value="Male"></label>
       <label><input type="radio" value="FeMale"></label>
-      <select ng-model="monthbox"><option>January</option></select>
+      <select data-testid="month-select"><option>January</option></select>
     `;
+    // Combinações rodam primeiro: type + value (priority 1) é mais específico que value sozinho
     expect(selectorFor(document.querySelectorAll("input")[1])).toMatchObject({
-      selector: 'input[value="FeMale"]',
-      rule: "value",
+      selector: 'input[type="radio"][value="FeMale"]',
+      rule: "type + value",
       status: "stable"
     });
     expect(selectorFor(document.querySelector("select"))).toMatchObject({
-      selector: 'select[ng-model="monthbox"]',
-      rule: "ng-model"
+      selector: '[data-testid="month-select"]',
+      rule: "data-testid"
     });
   });
 
@@ -566,13 +571,12 @@ describe("selector engine", () => {
   });
 
   it("testa combinações sem valor (continue no loop)", () => {
-    document.body.innerHTML = `<input ng-model="test">`;
+    document.body.innerHTML = `<input data-testid="test-field">`;
     const input = document.querySelector("input");
-    // Tem ng-model mas não name, type, value
-    // Combinações: ng-model+name+type+value (falha), ng-model+name+type (falha), etc.
-    // Apenas ng-model sozinho funciona
+    // Tem data-testid mas não name, type, value
+    // Combinações sem valor devem ser ignoradas, data-testid sozinho funciona
     const result = selectorFor(input);
-    expect(result.rule).toBe("ng-model");
+    expect(result.rule).toBe("data-testid");
     expect(result.status).toBe("stable");
   });
 
@@ -639,21 +643,20 @@ describe("selector engine", () => {
     });
   });
 
-  it("testa combinações - value tem prioridade sobre ng-model", () => {
+  it("testa combinações - name + type + value tem prioridade", () => {
     document.body.innerHTML = `
-      <input ng-model="user.name" name="username" type="text" value="test">
-      <input ng-model="user.email" name="email" type="email" value="test@test.com">
+      <input name="username" type="text" value="test">
+      <input name="email" type="email" value="test@test.com">
     `;
-    // O atributo 'value' tem prioridade 3 (vem antes de ng-model na lista de candidates)
-    // e é único para cada input, então será usado
+    // Combinações rodam primeiro: name + type + value (priority 1) é mais específico
     const inputs = document.querySelectorAll("input");
     const result1 = selectorFor(inputs[0]);
     const result2 = selectorFor(inputs[1]);
     
-    // Deve usar value como prioridade 3 estável
-    expect(result1.rule).toBe("value");
+    // Deve usar name + type + value como prioridade 1 estável
+    expect(result1.rule).toBe("name + type + value");
     expect(result1.status).toBe("stable");
-    expect(result2.rule).toBe("value");
+    expect(result2.rule).toBe("name + type + value");
     expect(result2.status).toBe("stable");
   });
 
@@ -729,5 +732,120 @@ describe("selector engine", () => {
     const div = document.querySelector("#no-field");
     const result = fieldFromTarget(div);
     expect(result).toBeNull();
+  });
+
+  // ===== TESTES ESPECÍFICOS PARA ANGULAR (2+) =====
+
+  describe("Angular (2+) - detecção de atributos instáveis", () => {
+    it("detecta ng-reflect-* como atributo Angular instável", () => {
+      document.body.innerHTML = `<input ng-reflect-name="email" ng-reflect-model="test@test.com">`;
+      const input = document.querySelector("input");
+      expect(hasAngularAttributes(input)).toBe(true);
+      const result = selectorFor(input);
+      expect(result.status).toBe("fragile");
+      expect(result.rule).toContain("Angular");
+    });
+
+    it("detecta _ngcontent-* como atributo Angular instável", () => {
+      document.body.innerHTML = `<input _ngcontent-ng-c123456789="1">`;
+      const input = document.querySelector("input");
+      expect(hasAngularAttributes(input)).toBe(true);
+      const result = selectorFor(input);
+      expect(result.status).toBe("fragile");
+    });
+
+    it("detecta _nghost-* como atributo Angular instável", () => {
+      document.body.innerHTML = `<div _nghost-ng-c123456789="1"><input></div>`;
+      const div = document.querySelector("div");
+      expect(hasAngularAttributes(div)).toBe(true);
+    });
+
+    it("detecta IDs Angular Material (mat-input-0, mat-select-1, etc.)", () => {
+      expect(isAngularAttribute("mat-input-0")).toBe(true);
+      expect(isAngularAttribute("mat-select-1")).toBe(true);
+      expect(isAngularAttribute("mat-option-2")).toBe(true);
+      expect(isAngularAttribute("cdk-describedby-message-3")).toBe(true);
+      expect(isAngularAttribute("cdk-overlay-4")).toBe(true);
+      expect(isAngularAttribute("stable-id")).toBe(false);
+    });
+
+    it("detecta classes Angular (ng-valid, ng-invalid, etc.)", () => {
+      expect(isAngularClass("ng-valid")).toBe(true);
+      expect(isAngularClass("ng-invalid")).toBe(true);
+      expect(isAngularClass("ng-dirty")).toBe(true);
+      expect(isAngularClass("ng-pristine")).toBe(true);
+      expect(isAngularClass("ng-touched")).toBe(true);
+      expect(isAngularClass("ng-untouched")).toBe(true);
+      expect(isAngularClass("ng-submitted")).toBe(true);
+      expect(isAngularClass("ng-pending")).toBe(true);
+      expect(isAngularClass("cdk-overlay-pane")).toBe(true);
+      expect(isAngularClass("mat-form-field")).toBe(true);
+      expect(isAngularClass("minha-classe-custom")).toBe(false);
+    });
+
+    it("usa fallback quando elemento tem ng-reflect-* (não usa como seletor)", () => {
+      document.body.innerHTML = `<input ng-reflect-name="email" data-cy="stable-email">`;
+      const input = document.querySelector("input");
+      // Mesmo com data-cy, se tem ng-reflect-*, deve usar fallback
+      const result = selectorFor(input);
+      expect(result.status).toBe("fragile");
+      expect(result.rule).toContain("Angular");
+    });
+
+    it("usa data-cy estável quando NÃO tem atributos Angular", () => {
+      document.body.innerHTML = `<input data-cy="email-field" name="email">`;
+      const input = document.querySelector("input");
+      const result = selectorFor(input);
+      expect(result.selector).toBe('[data-cy="email-field"]');
+      expect(result.rule).toBe("data-cy");
+      expect(result.status).toBe("stable");
+    });
+
+    it("ignora ng-version attribute", () => {
+      expect(isAngularAttribute("ng-version")).toBe(true);
+    });
+
+    it("prioriza data-testid sobre name quando ambos presentes e únicos", () => {
+      document.body.innerHTML = `<input data-testid="email-input" name="email" type="email">`;
+      const input = document.querySelector("input");
+      const result = selectorFor(input);
+      expect(result.rule).toBe("data-testid");
+      expect(result.selector).toBe('[data-testid="email-input"]');
+      expect(result.status).toBe("stable");
+    });
+
+    it("usa autocomplete + name como combinação estável", () => {
+      document.body.innerHTML = `<input autocomplete="email" name="user-email" type="email">`;
+      const input = document.querySelector("input");
+      const result = selectorFor(input);
+      expect(result.rule).toBe("autocomplete + name");
+      expect(result.selector).toBe('input[autocomplete="email"][name="user-email"]');
+      expect(result.status).toBe("stable");
+    });
+
+    it("usa placeholder + name como combinação estável", () => {
+      document.body.innerHTML = `<input placeholder="Digite seu email" name="email" type="email">`;
+      const input = document.querySelector("input");
+      const result = selectorFor(input);
+      expect(result.rule).toBe("placeholder + name");
+      expect(result.selector).toBe('input[placeholder="Digite seu email"][name="email"]');
+      expect(result.status).toBe("stable");
+    });
+  });
+
+  // ===== TESTES PARA isDynamicId COM PADRÕES ANGULAR =====
+
+  describe("isDynamicId - padrões Angular", () => {
+    it("detecta IDs numéricos sequenciais como dinâmicos", () => {
+      expect(isDynamicId("mat-input-0")).toBe(true);
+      expect(isDynamicId("mat-select-1")).toBe(true);
+      expect(isDynamicId("cdk-describedby-message-2")).toBe(true);
+    });
+
+    it("não detecta IDs estáveis como dinâmicos", () => {
+      expect(isDynamicId("email-field")).toBe(false);
+      expect(isDynamicId("user-name")).toBe(false);
+      expect(isDynamicId("cpf-input")).toBe(false);
+    });
   });
 });
