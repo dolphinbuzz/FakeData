@@ -9,6 +9,7 @@ import {
   gerarEmailPessoa,
   gerarNomeFiliacao,
   gerarPlaca,
+  gerarRenavam,
   gerarSite,
   generateMappedValue,
   letters,
@@ -17,7 +18,8 @@ import {
   randomInt,
   validarCNPJ,
   validarCPF,
-  validarChassi
+  validarChassi,
+  validarRenavam
 } from "../src/scripts/generators.js";
 
 afterEach(() => {
@@ -106,6 +108,18 @@ describe("geradores", () => {
     expect(validarChassi("1M8GDM9A0KP042788")).toBe(false);
   });
 
+  it("gera RENAVAMs válidos com dígito verificador módulo 11", () => {
+    const renavams = Array.from({ length: 30 }, gerarRenavam);
+    const renavamsSemFormatacao = Array.from({ length: 30 }, () => gerarRenavam(false));
+
+    expect(renavams.every(validarRenavam)).toBe(true);
+    expect(renavamsSemFormatacao.every(validarRenavam)).toBe(true);
+    expect(renavams.every((v) => /^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(v))).toBe(true);
+    expect(renavamsSemFormatacao.every((v) => /^\d{11}$/.test(v))).toBe(true);
+    expect(validarRenavam("12345678901")).toBe(false);
+    expect(validarRenavam("123.456.789-01")).toBe(false);
+  });
+
   it("rejeita documentos inválidos e aceita entradas mascaradas", () => {
     expect(validarCPF("123")).toBe(false);
     expect(validarCPF(null)).toBe(false);
@@ -113,6 +127,10 @@ describe("geradores", () => {
     expect(validarCNPJ("")).toBe(false);
     expect(validarCNPJ("04.252.011/0001-10")).toBe(true);
     expect(validarCNPJ("04.252.011/0001-11")).toBe(false);
+    expect(validarRenavam("")).toBe(false);
+    expect(validarRenavam("123")).toBe(false);
+    expect(validarRenavam("000.000.000-00")).toBe(true);
+    expect(validarRenavam("123.456.789-01")).toBe(false);
   });
 
   it("mapeia tipos especiais e usa fallback para tipos desconhecidos", () => {
@@ -132,6 +150,9 @@ describe("geradores", () => {
     expect(generateMappedValue("text", context, "radio")).toBe(true);
     expect(generateMappedValue("unknown", context)).toMatch(/^(acme|qa-lab|teste|sandbox|exemplo)\d{2}$/);
     expect(generateMappedValue("chassi", context)).toMatch(/^[A-HJ-NPR-Z0-9]{17}$/);
+    expect(generateMappedValue("renavam", context)).toMatch(/^\d{11}$/);
+    expect(generateMappedValue("renavam", context, "", { getRenavamFormatted: () => true })).toMatch(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/);
+    expect(generateMappedValue("renavam", context, "", { getRenavamFormatted: () => false })).toMatch(/^\d{11}$/);
     expect(generateMappedValue("brand", context, "", {
       getVehicleCatalog: () => [{ marca: "Ford", modelos: ["Ka"] }]
     })).toBe("Ford");

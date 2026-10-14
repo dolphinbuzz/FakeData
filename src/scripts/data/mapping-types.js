@@ -24,6 +24,7 @@ export const MAPPING_TYPES = [
   ["year", "Ano"],
   ["plate", "Placa"],
   ["chassi", "Chassi"],
+  ["renavam", "Renavam"],
   ["website", "Site / URL"],
   ["checkbox", "Checkbox"],
   ["radio", "Radio"],

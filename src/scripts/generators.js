@@ -10,6 +10,7 @@ const VIN_VALUES = {
   T: 3, U: 4, V: 5, W: 6, X: 7, Y: 8, Z: 9,
   0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9
 };
+const RENAVAM_WEIGHTS = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 const PERSON_FIRST_NAMES = [
   "Ana Beatriz", "Carlos Eduardo", "Mariana", "Rafael", "Julia", "Lucas",
   "Beatriz", "Pedro Henrique", "Camila", "Gustavo", "Larissa", "Felipe",
@@ -227,12 +228,33 @@ export function validarCNPJ(valor) {
   return dv1 === dv1Informado && dv2 === dv2Informado;
 }
 
+export function gerarRenavam(formatado = true) {
+  const base = Array.from({ length: 10 }, () => randomInt(0, 9));
+  const soma = base.reduce((acc, digito, i) => acc + digito * RENAVAM_WEIGHTS[i], 0);
+  const resto = soma % 11;
+  const dv = resto < 2 ? 0 : 11 - resto;
+  const numeroCompleto = [...base, dv].join("");
+  return formatado ? numeroCompleto.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") : numeroCompleto;
+}
+
+export function validarRenavam(valor) {
+  const numeros = String(valor).replace(/\D/g, "");
+  if (numeros.length !== 11) return false;
+  const base = numeros.slice(0, 10).split("").map(Number);
+  const dvInformado = Number(numeros[10]);
+  const soma = base.reduce((acc, digito, i) => acc + digito * RENAVAM_WEIGHTS[i], 0);
+  const resto = soma % 11;
+  const dv = resto < 2 ? 0 : 11 - resto;
+  return dv === dvInformado;
+}
+
 export function createGeneratorData({
   getState = () => pick(ESTADOS),
   ddds = DDDS,
   getCpfFormatted = () => true,
   getCnpjFormatted = () => true,
   getCnpjAlphanumeric = () => false,
+  getRenavamFormatted = () => true,
   getVehicleCatalog = () => []
 } = {}) {
   return {
@@ -275,6 +297,7 @@ export function createGeneratorData({
         ["Marca", (ctx) => ctx.marca],
         ["Modelo", (ctx) => ctx.modelo],
         ["Placa", () => gerarPlaca()], ["Chassi", () => gerarChassi()], ["Ano", () => gerarAno()],
+        ["Renavam", () => gerarRenavam(getRenavamFormatted())],
         ["Cor", () => pick(["Preto", "Branco", "Prata", "Azul", "Vermelho", "Cinza", "Verde"])],
         ["UF", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`]
       ]
@@ -329,7 +352,7 @@ export function generateMappedValue(type, context, inputType = "", options = {})
     company: `${pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma", "Conecta", "Aliança", "Pleno", "Vértice"])} Tecnologia Ltda.`,
     cnpj: cnpj(options.getCnpjFormatted ? options.getCnpjFormatted() : true, options.getCnpjAlphanumeric ? options.getCnpjAlphanumeric() : false),
     brand: vehicle.marca, model: vehicle.modelo, year: gerarAno(),
-    plate: gerarPlaca(), chassi: gerarChassi(),
+    plate: gerarPlaca(), chassi: gerarChassi(), renavam: gerarRenavam(options.getRenavamFormatted ? options.getRenavamFormatted() : false),
     website: gerarSite(pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma"])), text: randomWord()
   };
   return personValues[type] || personValues.text;
