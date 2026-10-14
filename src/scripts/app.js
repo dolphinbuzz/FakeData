@@ -1,5 +1,5 @@
 // Interface e regras do gerador da extensão.
-import { createGeneratorData, generateMappedValue as generateMappedValuePure, validarCPF, validarCNPJ, pick } from "./generators.js";
+import { createGeneratorData, generateMappedValue as generateMappedValuePure, validarCPF, validarCNPJ, validarRenavam, pick } from "./generators.js";
 import { DDDS, ESTADOS } from "./data/estados.js";
 import { MAPPING_TYPES } from "./data/mapping-types.js";
 import { addVehicleModel, normalizeVehicleCatalog, pickVehicle, removeVehicleBrand, removeVehicleModel, renameVehicleBrand, renameVehicleModel } from "./data/vehicle-catalog.js";
@@ -111,6 +111,7 @@ const data = createGeneratorData({
   getCpfFormatted: () => document.querySelector("#cpf-formatted").checked,
   getCnpjFormatted: () => document.querySelector("#cnpj-formatted").checked,
   getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric").checked,
+  getRenavamFormatted: () => document.querySelector("#renavam-formatted").checked,
   getVehicleCatalog: () => vehicleCatalog
 });
 const generatorOptions = {
@@ -119,6 +120,7 @@ const generatorOptions = {
   getCpfFormatted: () => document.querySelector("#cpf-formatted") ? document.querySelector("#cpf-formatted").checked : true,
   getCnpjFormatted: () => document.querySelector("#cnpj-formatted") ? document.querySelector("#cnpj-formatted").checked : true,
   getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric") ? document.querySelector("#cnpj-alphanumeric").checked : false,
+  getRenavamFormatted: () => false,
   getVehicleCatalog: () => vehicleCatalog
 };
 
@@ -159,6 +161,7 @@ document.querySelectorAll(".type-button").forEach((button) => {
     generateLabel.textContent = data[selectedType].label;
     personOptions.classList.toggle("is-hidden", selectedType !== "person");
     companyOptions.classList.toggle("is-hidden", selectedType !== "company");
+    vehicleOptions.classList.toggle("is-hidden", selectedType !== "vehicle");
     if (openVehicleCatalogButton) openVehicleCatalogButton.hidden = selectedType !== "vehicle";
     generate();
   });
@@ -1211,13 +1214,16 @@ function gerarEstadoSelecionado() {
 }
 
 // Checagem de sanidade em desenvolvimento: garante que o próprio gerador
-// nunca produza um CPF/CNPJ com dígito verificador inválido (regressão silenciosa).
+// nunca produza um CPF/CNPJ/RENAVAM com dígito verificador inválido (regressão silenciosa).
 function autovalidar(resultado) {
   if (resultado.CPF) {
     console.assert(validarCPF(resultado.CPF), "CPF gerado é inválido:", resultado.CPF);
   }
   if (resultado.CNPJ) {
     console.assert(validarCNPJ(resultado.CNPJ), "CNPJ gerado é inválido:", resultado.CNPJ);
+  }
+  if (resultado.Renavam) {
+    console.assert(validarRenavam(resultado.Renavam), "RENAVAM gerado é inválido:", resultado.Renavam);
   }
 }
 

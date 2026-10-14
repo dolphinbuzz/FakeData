@@ -105,8 +105,25 @@ function inferType(element) {
   return "text";
 }
 
+const ANGULAR_ATTR_PATTERN = /^(ng-reflect-|_ng(content|host)-|ng-version$)/i;
+const ANGULAR_CLASS_PATTERN = /^(ng-(valid|invalid|dirty|pristine|touched|untouched|submitted|pending)|cdk-|mat-)/i;
+const ANGULAR_ID_PATTERN = /^(mat-input|mat-select|mat-option|mat-autocomplete|cdk-describedby|cdk-overlay)(-\w+)*-\d+$/i;
+
 function isDynamicId(value) {
-  return !value || /(^|[-_])[a-f0-9]{6,}($|[-_])|(^|[-_])\d{3,}($|[-_])|^(r|component|ember|headlessui)[-_]/i.test(value);
+  return !value || /(^|[-_])[a-f0-9]{6,}($|[-_])|(^|[-_])\d{3,}($|[-_])|^(r|component|ember|headlessui)[-_]/i.test(value) || ANGULAR_ID_PATTERN.test(value);
+}
+
+function isAngularAttribute(value) {
+  return ANGULAR_ATTR_PATTERN.test(value) || ANGULAR_ID_PATTERN.test(value);
+}
+
+function isAngularClass(className) {
+  return ANGULAR_CLASS_PATTERN.test(className);
+}
+
+function hasAngularAttributes(element) {
+  const attrs = Array.from(element.attributes);
+  return attrs.some((attr) => isAngularAttribute(attr.name) || isAngularAttribute(attr.value));
 }
 
 function uniqueCandidate(element, selector) {
@@ -127,40 +144,64 @@ function selectorFor(element) {
   const tag = element.tagName.toLowerCase();
   const attributeValue = element.getAttribute("value");
   const supportsValueSelector = ["INPUT", "SELECT", "TEXTAREA"].includes(element.tagName);
-  const candidates = [
-    ["id", element.id, (value) => `#${escapeCssIdentifier(value)}`, 1],
+
+  // Rejeitar elementos com atributos Angular instáveis para evitar seletores quebrados
+  if (hasAngularAttributes(element)) {
+    return {
+      selector: fallbackSelector(element),
+      rule: "fallback: atributos Angular detectados",
+      priority: 4,
+      status: "fragile",
+      suggestion: "Adicionar data-cy/data-testid estável. Atributos Angular (ng-reflect-*, _ngcontent-*) mudam dinamicamente."
+    };
+  }
+
+  // Atributos de teste explícitos (data-cy, data-test, data-testid) - máxima prioridade
+  // São adicionados intencionalmente por desenvolvedores para serem únicos e estáveis
+  const testAttributes = [
     ["data-cy", element.getAttribute("data-cy"), (value) => `[data-cy="${escapeAttribute(value)}"]`, 1],
     ["data-test", element.getAttribute("data-test"), (value) => `[data-test="${escapeAttribute(value)}"]`, 1],
-    ["data-testid", element.getAttribute("data-testid"), (value) => `[data-testid="${escapeAttribute(value)}"]`, 1],
+    ["data-testid", element.getAttribute("data-testid"), (value) => `[data-testid="${escapeAttribute(value)}"]`, 1]
+  ];
+  for (const [rule, value, create, priority] of testAttributes) {
+    if (value) {
+      const selector = create(value);
+      if (uniqueCandidate(element, selector)) return { selector, rule, priority, status: "stable" };
+    }
+  }
+
+  // Combinações de alta prioridade (mais específicas = mais estáveis)
+  const combinations = [
+    ["name + type + value", supportsValueSelector && element.getAttribute("name") && element.getAttribute("type") && attributeValue, () => `${tag}[name="${escapeAttribute(element.getAttribute("name"))}"][type="${escapeAttribute(element.getAttribute("type"))}"][value="${escapeAttribute(attributeValue)}"]`, 1],
+    ["type + value", supportsValueSelector && element.getAttribute("type") && attributeValue, () => `${tag}[type="${escapeAttribute(element.getAttribute("type"))}"][value="${escapeAttribute(attributeValue)}"]`, 1],
+    ["name + value", supportsValueSelector && element.getAttribute("name") && attributeValue, () => `${tag}[name="${escapeAttribute(element.getAttribute("name"))}"][value="${escapeAttribute(attributeValue)}"]`, 1],
+    ["autocomplete + name", element.getAttribute("autocomplete") && element.getAttribute("name"), () => `${tag}[autocomplete="${escapeAttribute(element.getAttribute("autocomplete"))}"][name="${escapeAttribute(element.getAttribute("name"))}"]`, 1],
+    ["placeholder + name", element.getAttribute("placeholder") && element.getAttribute("name"), () => `${tag}[placeholder="${escapeAttribute(element.getAttribute("placeholder"))}"][name="${escapeAttribute(element.getAttribute("name"))}"]`, 1],
+    ["name + type", element.getAttribute("name") && element.getAttribute("type"), () => `${tag}[name="${escapeAttribute(element.getAttribute("name"))}"][type="${escapeAttribute(element.getAttribute("type"))}"]`, 2],
+    ["role + aria-label", element.getAttribute("role") && element.getAttribute("aria-label"), () => `${tag}[role="${escapeAttribute(element.getAttribute("role"))}"][aria-label="${escapeAttribute(element.getAttribute("aria-label"))}"]`, 2],
+    ["aria-labelledby + role", element.getAttribute("aria-labelledby") && element.getAttribute("role"), () => `${tag}[aria-labelledby="${escapeAttribute(element.getAttribute("aria-labelledby"))}"][role="${escapeAttribute(element.getAttribute("role"))}"]`, 2]
+  ];
+  for (const [rule, value, create, priority] of combinations) {
+    if (value && uniqueCandidate(element, create())) return { selector: create(), rule, priority, status: "stable" };
+  }
+
+  const candidates = [
+    ["id", element.id, (value) => `#${escapeCssIdentifier(value)}`, 1, (v) => !isDynamicId(v)],
     ["role", element.getAttribute("role"), (value) => `${tag}[role="${escapeAttribute(value)}"]`, 2],
     ["aria-label", element.getAttribute("aria-label"), (value) => `${tag}[aria-label="${escapeAttribute(value)}"]`, 2],
     ["aria-labelledby", element.getAttribute("aria-labelledby"), (value) => `${tag}[aria-labelledby="${escapeAttribute(value)}"]`, 2],
     ["value", supportsValueSelector && attributeValue, (value) => `${tag}[value="${escapeAttribute(value)}"]`, 3],
     ["value parcial", supportsValueSelector && attributeValue, (value) => `${tag}[value*="${escapeAttribute(value)}"]`, 3],
-    ["ng-model", element.getAttribute("ng-model"), (value) => `${tag}[ng-model="${escapeAttribute(value)}"]`, 3],
-    ["name", element.getAttribute("name"), (value) => `${tag}[name="${escapeAttribute(value)}"]`, 3],
-    ["type", element.getAttribute("type"), (value) => `${tag}[type="${escapeAttribute(value)}"]`, 3]
+    ["name", element.getAttribute("name"), (value) => `${tag}[name="${escapeAttribute(value)}"]`, 3, (v) => !isDynamicId(v)],
+    ["type", element.getAttribute("type"), (value) => `${tag}[type="${escapeAttribute(value)}"]`, 3],
+    ["autocomplete", element.getAttribute("autocomplete"), (value) => `${tag}[autocomplete="${escapeAttribute(value)}"]`, 3],
+    ["placeholder", element.getAttribute("placeholder"), (value) => `${tag}[placeholder="${escapeAttribute(value)}"]`, 4]
   ];
-  for (const [rule, value, create, priority] of candidates) {
+  for (const [rule, value, create, priority, validate] of candidates) {
     if (!value) continue;
+    if (validate && !validate(value)) continue;
     const selector = create(value);
     if (uniqueCandidate(element, selector)) return { selector, rule, priority, status: "stable" };
-  }
-  const combinations = [
-    ["ng-model + name + type + value", element.getAttribute("ng-model") && element.getAttribute("name") && element.getAttribute("type") && attributeValue, () => `${tag}[ng-model="${escapeAttribute(element.getAttribute("ng-model"))}"][name="${escapeAttribute(element.getAttribute("name"))}"][type="${escapeAttribute(element.getAttribute("type"))}"][value="${escapeAttribute(attributeValue)}"]`],
-    ["ng-model + name + type", element.getAttribute("ng-model") && element.getAttribute("name") && element.getAttribute("type"), () => `${tag}[ng-model="${escapeAttribute(element.getAttribute("ng-model"))}"][name="${escapeAttribute(element.getAttribute("name"))}"][type="${escapeAttribute(element.getAttribute("type"))}"]`],
-    ["ng-model + value", element.getAttribute("ng-model") && attributeValue, () => `${tag}[ng-model="${escapeAttribute(element.getAttribute("ng-model"))}"][value="${escapeAttribute(attributeValue)}"]`],
-    ["ng-model + name", element.getAttribute("ng-model") && element.getAttribute("name"), () => `${tag}[ng-model="${escapeAttribute(element.getAttribute("ng-model"))}"][name="${escapeAttribute(element.getAttribute("name"))}"]`],
-    ["ng-model + type", element.getAttribute("ng-model") && element.getAttribute("type"), () => `${tag}[ng-model="${escapeAttribute(element.getAttribute("ng-model"))}"][type="${escapeAttribute(element.getAttribute("type"))}"]`],
-    ["name + type + value", supportsValueSelector && element.getAttribute("name") && element.getAttribute("type") && attributeValue, () => `${tag}[name="${escapeAttribute(element.getAttribute("name"))}"][type="${escapeAttribute(element.getAttribute("type"))}"][value="${escapeAttribute(attributeValue)}"]`],
-    ["type + value", supportsValueSelector && element.getAttribute("type") && attributeValue, () => `${tag}[type="${escapeAttribute(element.getAttribute("type"))}"][value="${escapeAttribute(attributeValue)}"]`],
-    ["name + value", supportsValueSelector && element.getAttribute("name") && attributeValue, () => `${tag}[name="${escapeAttribute(element.getAttribute("name"))}"][value="${escapeAttribute(attributeValue)}"]`],
-    ["name + type", element.getAttribute("name") && element.getAttribute("type"), () => `${tag}[name="${escapeAttribute(element.getAttribute("name"))}"][type="${escapeAttribute(element.getAttribute("type"))}"]`],
-    ["role + aria-label", element.getAttribute("role") && element.getAttribute("aria-label"), () => `${tag}[role="${escapeAttribute(element.getAttribute("role"))}"][aria-label="${escapeAttribute(element.getAttribute("aria-label"))}"]`],
-    ["aria-labelledby + role", element.getAttribute("aria-labelledby") && element.getAttribute("role"), () => `${tag}[aria-labelledby="${escapeAttribute(element.getAttribute("aria-labelledby"))}"][role="${escapeAttribute(element.getAttribute("role"))}"]`]
-  ];
-  for (const [rule, value, create] of combinations) {
-    if (value && uniqueCandidate(element, create())) return { selector: create(), rule, priority: 3, status: "stable" };
   }
 
   const text = staticText(element);
@@ -393,6 +434,9 @@ export {
   selectorFor,
   visible,
   isDynamicId,
+  isAngularAttribute,
+  isAngularClass,
+  hasAngularAttributes,
   fieldFromTarget,
   labelsFor,
   fallbackSelector,
