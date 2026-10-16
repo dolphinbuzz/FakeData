@@ -45,7 +45,12 @@ const addSelectorButton = document.querySelector("#add-selector-button");
 const markAllButton = document.querySelector("#mark-all-button");
 const saveMappingsButton = document.querySelector("#save-mappings-button");
 const fillAllButton = document.querySelector("#fill-all-button");
+const clearAllButton = document.querySelector("#clear-all-button");
 const floatingControlsToggle = document.querySelector("#floating-controls-toggle");
+const emptyStateScanButton = document.querySelector("#empty-state-scan");
+const emptyStateElement = document.querySelector("#empty-state");
+const emptyStateTitle = document.querySelector("#empty-state-title");
+const emptyStateSubtitle = document.querySelector("#empty-state-subtitle");
 const remapAllButton = document.querySelector("#remap-all-button");
 const savedMappingsSelect = document.querySelector("#saved-mappings-select");
 const renameMappingButton = document.querySelector("#rename-mapping-button");
@@ -316,10 +321,12 @@ if (baseUrlSelect) baseUrlSelect.addEventListener("change", () => {
   selectedBaseUrl = baseUrlSelect.value;
   scanPageFields();
 });
+if (emptyStateScanButton) emptyStateScanButton.addEventListener("click", () => scanPageFields());
 if (addSelectorButton) addSelectorButton.addEventListener("click", addNewSelector);
 if (markAllButton) markAllButton.addEventListener("click", toggleMarkAllFields);
 if (saveMappingsButton) saveMappingsButton.addEventListener("click", savePageMappings);
 if (fillAllButton) fillAllButton.addEventListener("click", fillAllPageFields);
+if (clearAllButton) clearAllButton.addEventListener("click", clearAllPageFields);
 if (floatingControlsToggle) floatingControlsToggle.addEventListener("change", () => {
   floatingControlsVisible = floatingControlsToggle.checked;
   chrome.storage.local.set({ "fakedata-floating-controls": floatingControlsVisible });
@@ -331,6 +338,53 @@ function isEditableTarget(target) {
     (target.matches("input, textarea, select") || target.isContentEditable);
 }
 
+function setLoading(button, isLoading) {
+  if (!button) return;
+  if (isLoading) {
+    button.classList.add("button--loading");
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+  } else {
+    button.classList.remove("button--loading");
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+}
+
+function renderEmptyState() {
+  if (!emptyStateElement || !emptyStateTitle || !emptyStateSubtitle || !pageFieldsStatus) return;
+
+  const hasFields = pageFields.length > 0;
+  const hasPageUrl = Boolean(activePageUrl);
+
+  emptyStateElement.hidden = hasFields || !hasPageUrl;
+
+  if (!hasFields && hasPageUrl) {
+    emptyStateTitle.textContent = "Nenhum campo encontrado nesta página";
+    emptyStateSubtitle.textContent = "A página carregada não possui inputs, selects ou textareas detectáveis. Tente recarregar a página ou verificar se o formulário está visível.";
+  } else if (!hasPageUrl) {
+    emptyStateTitle.textContent = "Nenhuma página acessível";
+    emptyStateSubtitle.textContent = "Abra uma página HTTP(S) com um formulário para começar. Páginas internas do navegador (chrome://, edge://) não são suportadas.";
+  }
+}
+
+function clearAllPageFields() {
+  if (!pageFields.length) {
+    if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum preenchimento para limpar.";
+    return;
+  }
+
+  let cleared = 0;
+  pageFields.forEach((field) => {
+    field.value = "";
+    field.fixedValue = "";
+    cleared++;
+  });
+  renderPageFields();
+  renderEmptyState();
+  if (pageFieldsStatus) pageFieldsStatus.textContent = `${cleared} campo(s) limpado(s).`;
+}
+
 document.addEventListener("keydown", (event) => {
   if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey || isEditableTarget(event.target)) return;
   const shortcuts = {
@@ -338,7 +392,8 @@ document.addEventListener("keydown", (event) => {
     p: fillAllButton,
     f: floatingControlsToggle,
     l: saveMappingsButton,
-    m: markAllButton
+    m: markAllButton,
+    c: clearAllButton
   };
   const control = shortcuts[event.key.toLowerCase()];
   if (!control || control.hidden || control.disabled) return;
@@ -953,6 +1008,7 @@ function renderPageFields() {
     row.querySelector('[data-action="fill"]').addEventListener("click", () => fillPageField(index));
   });
   syncPageFieldControls();
+  renderEmptyState();
 }
 
 function syncPageFieldControls() {
