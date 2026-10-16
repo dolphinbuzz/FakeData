@@ -107,7 +107,7 @@ describe("content script", () => {
       ]
     });
 
-    expect(response).toEqual({ filled: 3, total: 3 });
+    expect(response).toEqual({ filled: 3, total: 3, failed: [] });
     expect(email.value).toBe("qa@example.test");
     expect(cpf.value).toBe("123.456.789-09");
     expect(uf.value).toBe("CE");
@@ -287,7 +287,7 @@ describe("content script", () => {
         { selector: "#missing", value: "falha" }
       ]
     });
-    expect(response).toEqual({ filled: 1, total: 2 });
+    expect(response).toEqual({ filled: 1, total: 2, failed: [] });
   });
 
   it("atualiza o título do botão de campo quando o preenchimento falha", async () => {

@@ -110,24 +110,17 @@ function detectPopupMode(callback) {
   });
 }
 
-const data = createGeneratorData({
-  getState: () => gerarEstadoSelecionado(),
-  ddds: DDDS,
-  getCpfFormatted: () => document.querySelector("#cpf-formatted").checked,
-  getCnpjFormatted: () => document.querySelector("#cnpj-formatted").checked,
-  getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric").checked,
-  getRenavamFormatted: () => document.querySelector("#renavam-formatted").checked,
-  getVehicleCatalog: () => vehicleCatalog
-});
-const generatorOptions = {
+const generatorConfig = {
   getState: () => gerarEstadoSelecionado(),
   ddds: DDDS,
   getCpfFormatted: () => document.querySelector("#cpf-formatted") ? document.querySelector("#cpf-formatted").checked : true,
   getCnpjFormatted: () => document.querySelector("#cnpj-formatted") ? document.querySelector("#cnpj-formatted").checked : true,
   getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric") ? document.querySelector("#cnpj-alphanumeric").checked : false,
-  getRenavamFormatted: () => false,
+  getRenavamFormatted: () => document.querySelector("#renavam-formatted") ? document.querySelector("#renavam-formatted").checked : false,
   getVehicleCatalog: () => vehicleCatalog
 };
+const data = createGeneratorData(generatorConfig);
+const generatorOptions = generatorConfig;
 
 ESTADOS.forEach((estado) => {
   const option = document.createElement("option");

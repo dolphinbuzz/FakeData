@@ -394,12 +394,19 @@
     }
     if (message.action === actions.FILL_ALL) {
       const fields = message.fields || [];
+      const failed = [];
       fields.reduce((chain, item) => chain.then(async (results) => {
-        results.push(await fill(item.selector, item.value));
+        try {
+          const filled = await fill(item.selector, item.value);
+          results.push(filled);
+        } catch (error) {
+          failed.push({ selector: item.selector, error: String(error && error.message || error) });
+          results.push(false);
+        }
         return results;
       }), Promise.resolve([])).then((results) => {
         closeCustomMenus();
-        sendResponse({ filled: results.filter(Boolean).length, total: results.length });
+        sendResponse({ filled: results.filter(Boolean).length, total: results.length, failed });
       });
     }
     if (message.action === actions.HIGHLIGHT_FIELD) sendResponse({ highlighted: highlight(message.selector) });

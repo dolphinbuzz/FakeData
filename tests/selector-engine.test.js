@@ -783,13 +783,14 @@ describe("selector engine", () => {
       expect(isAngularClass("minha-classe-custom")).toBe(false);
     });
 
-    it("usa fallback quando elemento tem ng-reflect-* (não usa como seletor)", () => {
+    it("usa data-cy estável mesmo quando elemento tem atributos Angular", () => {
       document.body.innerHTML = `<input ng-reflect-name="email" data-cy="stable-email">`;
       const input = document.querySelector("input");
-      // Mesmo com data-cy, se tem ng-reflect-*, deve usar fallback
+      // data-cy estável tem prioridade sobre detecção de Angular
       const result = selectorFor(input);
-      expect(result.status).toBe("fragile");
-      expect(result.rule).toContain("Angular");
+      expect(result.status).toBe("stable");
+      expect(result.rule).toBe("data-cy");
+      expect(result.selector).toBe('[data-cy="stable-email"]');
     });
 
     it("usa data-cy estável quando NÃO tem atributos Angular", () => {
