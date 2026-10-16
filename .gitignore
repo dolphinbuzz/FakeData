@@ -168,6 +168,10 @@ public/
 *.stats.json
 
 # ----------------------------------------------------------------------
+# Arquivos locais de planejamento (NUNCA COMMITAR)
+# ----------------------------------------------------------------------
+TODO.md
+
 # Arquivos que DEVEM ser versionados (exceções explícitas)
 # ----------------------------------------------------------------------
 # !.opencode/config.yaml

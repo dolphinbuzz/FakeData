@@ -12,68 +12,7 @@
     "temperature": 0.3,
     "maxTokens": 8192
   },
-  "agents": {
-    "architect": {
-      "description": "Arquiteto principal - define arquitetura, padrões e decisões técnicas transversais",
-      "model": "opencode/nemotron-3-ultra-free",
-      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
-      "system_prompt_file": ".opencode/team/agents/architect.yaml"
-    },
-    "ui-ux": {
-      "description": "Especialista em UI/UX - interfaces, side panels, popups, experiência do usuário",
-      "model": "opencode/nemotron-3-ultra-free",
-      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
-      "system_prompt_file": ".opencode/team/agents/ui-ux.yaml"
-    },
-    "data-generation": {
-      "description": "Geração de dados - pessoas, veículos, empresas, catálogos personalizáveis",
-      "model": "opencode/nemotron-3-ultra-free",
-      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
-      "system_prompt_file": ".opencode/team/agents/data-generation.yaml"
-    },
-    "selector-engine": {
-      "description": "Engine de seletores - mapeamento automático, captura manual, prioridade de seletores",
-      "model": "opencode/nemotron-3-ultra-free",
-      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
-      "system_prompt_file": ".opencode/team/agents/selector-engine.yaml"
-    },
-    "content-script": {
-      "description": "Content script - injeção, comunicação com página, floating buttons, playground",
-      "model": "opencode/nemotron-3-ultra-free",
-      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
-      "system_prompt_file": ".opencode/team/agents/content-script.yaml"
-    },
-    "messaging": {
-      "description": "Mensageria - contratos ACTIONS, popup↔content, tipagem TypeScript",
-      "model": "opencode/nemotron-3-ultra-free",
-      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
-      "system_prompt_file": ".opencode/team/agents/messaging.yaml"
-    },
-    "storage-profile": {
-      "description": "Storage e perfis - chrome.storage.local, perfis por URL base, migração",
-      "model": "opencode/nemotron-3-ultra-free",
-      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
-      "system_prompt_file": ".opencode/team/agents/storage-profile.yaml"
-    },
-    "testing": {
-      "description": "Testes - Vitest, jsdom, coverage 90%, estratégias de teste",
-      "model": "opencode/nemotron-3-ultra-free",
-      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
-      "system_prompt_file": ".opencode/team/agents/testing.yaml"
-    },
-    "devops": {
-      "description": "DevOps - CI/CD, build, manifest validation, release, GitHub Actions",
-      "model": "opencode/nemotron-3-ultra-free",
-      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
-      "system_prompt_file": ".opencode/team/agents/devops.yaml"
-    },
-    "documentation": {
-      "description": "Documentação - specs, ADRs, guias, README, documentação técnica",
-      "model": "opencode/nemotron-3-ultra-free",
-      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
-      "system_prompt_file": ".opencode/team/agents/documentation.yaml"
-    }
-  },
+  "agents": {},
   "skills": {
     "fakedata-architect": {
       "description": "Architectural decisions and ADR management for FakeData extension",
