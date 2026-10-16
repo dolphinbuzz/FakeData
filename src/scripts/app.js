@@ -1,5 +1,5 @@
 // Interface e regras do gerador da extensão.
-import { createGeneratorData, generateMappedValue as generateMappedValuePure, validarCPF, validarCNPJ, validarRenavam, pick } from "./generators.js";
+import { createGeneratorData, generateMappedValue as generateMappedValuePure, validarCPF, validarCNPJ, validarRenavam, validarPlaca, pick } from "./generators.js";
 import { DDDS, ESTADOS } from "./data/estados.js";
 import { MAPPING_TYPES } from "./data/mapping-types.js";
 import { addVehicleModel, normalizeVehicleCatalog, pickVehicle, removeVehicleBrand, removeVehicleModel, renameVehicleBrand, renameVehicleModel } from "./data/vehicle-catalog.js";
@@ -1273,6 +1273,9 @@ function autovalidar(resultado) {
   }
   if (resultado.Renavam) {
     console.assert(validarRenavam(resultado.Renavam), "RENAVAM gerado é inválido:", resultado.Renavam);
+  }
+  if (resultado.Placa) {
+    console.assert(validarPlaca(resultado.Placa), "Placa gerada é inválida:", resultado.Placa);
   }
 }
 
