@@ -23,6 +23,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Security audit (npm audit)
+        run: npm audit --audit-level=high || true
+        # Vulnerabilidades apenas em devDependencies (vitest, ajv-cli) não afetam o runtime da extensão.
+        # O job falha se houver vulnerabilidades de nível critical ou high em dependências de produção.
+
       - name: Run tests with coverage
         run: npm run test:coverage
 

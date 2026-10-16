@@ -145,19 +145,9 @@ function selectorFor(element) {
   const attributeValue = element.getAttribute("value");
   const supportsValueSelector = ["INPUT", "SELECT", "TEXTAREA"].includes(element.tagName);
 
-  // Rejeitar elementos com atributos Angular instáveis para evitar seletores quebrados
-  if (hasAngularAttributes(element)) {
-    return {
-      selector: fallbackSelector(element),
-      rule: "fallback: atributos Angular detectados",
-      priority: 4,
-      status: "fragile",
-      suggestion: "Adicionar data-cy/data-testid estável. Atributos Angular (ng-reflect-*, _ngcontent-*) mudam dinamicamente."
-    };
-  }
-
   // Atributos de teste explícitos (data-cy, data-test, data-testid) - máxima prioridade
-  // São adicionados intencionalmente por desenvolvedores para serem únicos e estáveis
+  // São adicionados intencionalmente por desenvolvedores para serem únicos e estáveis.
+  // Verificados ANTES da detecção Angular para permitir data-cy estável mesmo em elementos Angular.
   const testAttributes = [
     ["data-cy", element.getAttribute("data-cy"), (value) => `[data-cy="${escapeAttribute(value)}"]`, 1],
     ["data-test", element.getAttribute("data-test"), (value) => `[data-test="${escapeAttribute(value)}"]`, 1],
@@ -168,6 +158,18 @@ function selectorFor(element) {
       const selector = create(value);
       if (uniqueCandidate(element, selector)) return { selector, rule, priority, status: "stable" };
     }
+  }
+
+  // Rejeitar elementos com atributos Angular instáveis para evitar seletores quebrados
+  // Apenas se não houver um atributo de teste estável já retornado acima
+  if (hasAngularAttributes(element)) {
+    return {
+      selector: fallbackSelector(element),
+      rule: "fallback: atributos Angular detectados",
+      priority: 4,
+      status: "fragile",
+      suggestion: "Adicionar data-cy/data-testid estável. Atributos Angular (ng-reflect-*, _ngcontent-*) mudam dinamicamente."
+    };
   }
 
   // Combinações de alta prioridade (mais específicas = mais estáveis)

@@ -9,6 +9,10 @@
   --accent: #6d5dfc;
   --accent-light: #8c7fff;
   --success: #46d39a;
+--loading-bg: #2a3444;
+--empty-bg: #171c26;
+--empty-text: #8f9bad;
+--focus-ring: #6d5dfc;
 }
 
 [data-theme="light"] {
@@ -22,6 +26,10 @@
   --accent: #5a4bea;
   --accent-light: #5a4bea;
   --success: #16805a;
+--loading-bg: #d9deea;
+--empty-bg: #ffffff;
+--empty-text: #667085;
+--focus-ring: #5a4bea;
 }
 
 * {
@@ -963,4 +971,94 @@ footer {
 
 .copied {
   color: var(--success) !important;
+}
+
+/* ----- Loading states for buttons ----- */
+.button--loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.button--loading::after {
+  content: "";
+  position: absolute;
+  inset: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid var(--focus-ring);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: fakedata-spin 0.8s linear infinite;
+}
+
+@keyframes fakedata-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ----- Empty state ----- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  text-align: center;
+  background: var(--empty-bg);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  margin: 24px 0;
+}
+
+.empty-state__icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.empty-state__title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.empty-state__subtitle {
+  margin: 0 0 16px;
+  font-size: 11px;
+  color: var(--empty-text);
+  line-height: 1.5;
+}
+
+.empty-state__cta {
+  padding: 9px 16px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 11px;
+  border: none;
+  cursor: pointer;
+}
+
+.empty-state__cta:hover {
+  background: var(--accent-light);
+}
+
+/* ----- Clear all button ----- */
+.clear-all-button {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.clear-all-button:hover {
+  border-color: #d05c6b;
+  color: #d05c6b;
 }

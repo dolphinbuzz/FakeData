@@ -77,12 +77,19 @@
             <button id="remap-all-button" class="copy-all-button" type="button">Remapear todos</button>
             <button id="copy-audit-button" class="copy-all-button" type="button">Copiar JSON</button>
             <button id="fill-all-button" class="generate-button compact-button" type="button" title="Preencher todos (Alt+Shift+P)" aria-label="Preencher todos. Atalho: Alt+Shift+P">Preencher todos</button>
+            <button id="clear-all-button" class="clear-all-button" type="button" title="Limpar preenchimentos" aria-label="Limpar preenchimentos. Atalho: Alt+Shift+C">Limpar todos</button>
             <label class="floating-controls-toggle" title="Mostrar ou ocultar botões flutuantes (Alt+Shift+F)">
               <input id="floating-controls-toggle" type="checkbox" checked aria-label="Mostrar ou ocultar botões flutuantes. Atalho: Alt+Shift+F">
               <span>Botões flutuantes</span>
             </label>
           </div>
           <p id="page-fields-status" class="page-fields-status">Abra uma página com um formulário para começar.</p>
+          <div id="empty-state" class="empty-state" hidden>
+            <span class="empty-state__icon">📋</span>
+            <h3 class="empty-state__title" id="empty-state-title">Nenhum campo encontrado</h3>
+            <p class="empty-state__subtitle" id="empty-state-subtitle">Abra uma página com um formulário e clique em "Escanear campos" para começar.</p>
+            <button id="empty-state-scan" class="empty-state__cta" type="button">Escanear campos</button>
+          </div>
           <div id="page-fields" class="page-fields"></div>
         </div>
         <div id="playground-mapping-panel" class="mapping-subpanel" role="tabpanel" aria-labelledby="playground-mapping-tab" hidden>
@@ -179,20 +186,6 @@
           <button id="copy-json-button" class="copy-all-button" type="button">Copiar JSON</button>
         </div>
         <div id="result-fields" class="result-fields"></div>
-      </section>
-      </div>
-        <div id="playground-mapping-panel" class="mapping-subpanel" role="tabpanel" aria-labelledby="playground-mapping-tab" hidden>
-        <div class="selector-playground">
-          <label class="saved-mappings-label" for="selector-playground-input">Verificar seletor CSS</label>
-          <div class="selector-playground-controls">
-            <input id="selector-playground-input" type="text" placeholder="Ex.: form input[name='email']" aria-label="Seletor CSS para verificar">
-            <button id="selector-playground-target" class="copy-all-button" type="button" title="Capturar seletor na página" aria-label="Capturar seletor na página">🎯</button>
-            <span id="selector-playground-count" class="selector-playground-count" aria-live="polite">—</span>
-          </div>
-          <button id="selector-playground-mark" class="copy-all-button selector-playground-mark" type="button" disabled>Marcar encontrados</button>
-        </div>
-        </div>
-        </div>
       </section>
       </div>
 

@@ -121,6 +121,17 @@ Seletores inválidos são sinalizados no próprio campo. O gerador prioriza `id`
 
 Perfis, valores fixos, valores usados, catálogo de veículos e preferência de UF são salvos apenas no armazenamento local do navegador. A extensão não possui backend nem envia os dados para a internet. Consulte `PRIVACY_POLICY.md` ou o link **Privacidade** no rodapé para detalhes.
 
+## Segurança
+
+- **Zero rede**: a extensão não faz nenhuma requisição HTTP externa. Toda a lógica roda localmente no navegador.
+- **CSP restrita**: `script-src 'self'; object-src 'self'` — sem `unsafe-eval`, sem `unsafe-inline`.
+- **Permissões mínimas**: apenas `storage`, `activeTab`, `scripting` e `sidePanel`.
+- **Sanitização de saída**: todo conteúdo do usuário é escapado via `escapeHtml()` antes de ser injetado no DOM (previne XSS).
+- **Sem dependências de runtime**: a extensão usa código vanilla JavaScript; todas as dependências npm são apenas de desenvolvimento (vitest, jsdom, ajv-cli).
+- **Sem segredos hardcoded**: não há chaves, tokens ou credenciais no código-fonte.
+
+Para detalhes sobre dados processados e permissões, consulte `PRIVACY_POLICY.md`.
+
 ## Testes e cobertura
 
 Instale as dependências e execute:
