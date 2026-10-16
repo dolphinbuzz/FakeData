@@ -171,6 +171,7 @@ public/
 # Arquivos locais de planejamento (NUNCA COMMITAR)
 # ----------------------------------------------------------------------
 TODO.md
+CODE-REVIEW-RELATORIO.md
 
 # Arquivos que DEVEM ser versionados (exceções explícitas)
 # ----------------------------------------------------------------------
