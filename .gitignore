@@ -87,12 +87,7 @@ temp/
 # ----------------------------------------------------------------------
 # OpenCode Agent Memory & Sessions (privados por desenvolvedor)
 # ----------------------------------------------------------------------
-.opencode/team/memory/*/last-session.md
-.opencode/team/memory/*/decisions.md
-.opencode/team/memory/*/todo.md
-.opencode/team/memory/*/blockers.md
-.opencode/team/memory/*/*.md
-!.opencode/team/memory/*/README.md
+.opencode/memory/
 
 # Session data
 .opencode/session/
@@ -175,22 +170,20 @@ CODE-REVIEW-RELATORIO.md
 
 # Arquivos que DEVEM ser versionados (exceções explícitas)
 # ----------------------------------------------------------------------
-# !.opencode/config.yaml
-# !.opencode/team/README.md
-# !.opencode/team/agents/*.yaml
-# !.opencode/team/context/*.md
-# !.opencode/team/workflows/*.md
-# !.opencode/hooks/**/*.sh
-# !.opencode/skills/*.yaml
-# !.github/workflows/*.yml
-# !tests/setup.js
-# !vitest.config.js
-# !package.json
-# !package-lock.json
-# !manifest.json
-# !README.md
-# !CHANGELOG.md
-# !CONTRIBUTING.md
-# !PRIVACY_POLICY.md
-# !src/**/*
-# !.gitignore
+!.opencode/skills/*.md
+!.opencode/context/*.md
+!.opencode/hooks/**/*.sh
+!.opencode/workflows/*.md
+!.opencode/README.md
+!.github/workflows/*.yml
+!tests/setup.js
+!vitest.config.js
+!package.json
+!package-lock.json
+!manifest.json
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!PRIVACY_POLICY.md
+!src/**/*
+!.gitignore
