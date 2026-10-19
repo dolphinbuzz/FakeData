@@ -51,6 +51,6 @@ StoredField: {key, selector, label, dataType, fixed, fixedValue, selectorRule, s
 - Agrupamento por Base URL: getBaseUrl() trata .com.br, .com
 
 ## Testes
-- Target: 85%+ coverage
+- Target: 90%+ coverage
 - Arquivo de teste: tests/app.test.js
 - Mock chrome.storage.local.get/set

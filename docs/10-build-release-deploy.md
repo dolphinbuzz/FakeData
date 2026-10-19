@@ -79,7 +79,7 @@ zip -r fakedata-v{X.Y.Z}.zip . \
 ## Release Checklist (Pre-Release)
 
 - [ ] Todos os testes passam (`npm run test:coverage`)
-- [ ] Coverage >= 90% (global) / 85% (app.js, content.js) / 90% funcs (selector-engine.js)
+- [ ] Coverage: global >= 90% (lines/functions/statements) e >= 80% (branches); thresholds por arquivo >= 90% (vitest.config.js)
 - [ ] Version bump em `manifest.json` E `package.json` (SemVer)
 - [ ] `CHANGELOG.md` atualizado (Keep a Changelog format)
 - [ ] Package zip validado

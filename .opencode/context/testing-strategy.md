@@ -4,7 +4,7 @@
 - **Framework**: Vitest + jsdom (ESM native, fast, good Chrome API mocking)
 - **Coverage Target**: 90% lines global, 90% functions, 80% branches, 90% statements
 - **Critical Modules (90%+)**: `generators.js`, `selector-engine.js`, `vehicle-catalog.js`, `messages.js`
-- **UI/Integration Modules (85%+)**: `app.js`, `content.js`
+- **UI/Integration Modules (90%+)**: `app.js`, `content.js`
 - **CI**: Node 22, `npm ci`, `npm run test:coverage`, artifact upload
 
 ## Test File Structure
@@ -156,7 +156,7 @@ chrome.tabs.sendMessage.mockImplementation((tabId, msg, cb) => {
 | `renameVehicleModel` | Valid rename, empty name error, duplicate model error |
 | `pickVehicle` | Custom catalog priority, fallback to DEFAULT, random selection |
 
-### content.test.js (Target: 85%+)
+### content.test.js (Target: 90%+)
 | Function | Test Cases |
 |----------|------------|
 | `fill()` | text, email, number (BR format), date (dd/mm/yyyy->yyyy-mm-dd), month, checkbox, radio, select (waitForOptions), Select2 detection, custom select (multi-select, role=combobox) |
@@ -167,7 +167,7 @@ chrome.tabs.sendMessage.mockImplementation((tabId, msg, cb) => {
 | `handleMessage()` | All ACTIONS handlers, async responses, error handling |
 | `select2NativeField()` | select.select2-hidden-accessible, aria-labelledby container, previous sibling |
 
-### app.test.js (Target: 85%+)
+### app.test.js (Target: 90%+)
 | Function | Test Cases |
 |----------|------------|
 | `migrateLegacyProfiles` | Old format (array per URL) -> new format (baseUrl + pages), legacyId generation |

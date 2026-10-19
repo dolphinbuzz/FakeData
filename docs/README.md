@@ -40,9 +40,9 @@ FakeData/
 │           ├── estados.js      # Const: ESTADOS (27), DDDS
 │           ├── mapping-types.js # Const: MAPPING_TYPES (30 entradas: 29 tipos + auto)
 │           └── vehicle-catalog.js # CRUD catálogo veículos (puro)
-├── tests/                      # 161 testes (100% passing)
+├── tests/                      # 205 testes (100% passing)
 │   ├── setup.js               # Mocks globais Chrome + DOM
-│   └── *.test.js              # 6 arquivos: app(53), content(23), selector-engine(65), generators(11), vehicle-catalog(8), messages(1)
+│   └── *.test.js              # 6 arquivos: app(83), content(33), selector-engine(65), generators(11), vehicle-catalog(12), messages(1)
 ├── .github/workflows/ci.yml    # Pipeline CI (4 jobs: test, lint, manifest-validation, version-consistency)
 ├── .opencode/                  # Config agente OpenCode V2
 │   ├── context/               # ADRs, API contracts, coding standards, testing strategy
@@ -98,10 +98,10 @@ Salva mapeamento → Nomeia → Aparece no dropdown → Seleciona → Edita/Reno
 
 ## Qualidade
 
-- **161 testes** passando (100%)
-- **Coverage real**: 92.9% statements, 84.57% branches, 96.13% functions, 92.9% lines
+- **205 testes** passando (100%)
+- **Coverage real**: 98.63% statements, 89.79% branches, 97.1% functions, 98.63% lines
 - **✅ Gate de coverage**: todos os thresholds atendidos (`selector-engine.js` functions 94.28%)
-- **Thresholds**: 90% global (lines/functions/statements), 80% branches; módulos críticos 85-95%
+- **Thresholds**: 90% global (lines/functions/statements), 80% branches; mínimo 90% por arquivo (críticos 95-100%)
 - **CI**: GitHub Actions (Node 22, npm ci, test:coverage, manifest-validation, version-consistency; job de lint é no-op, pois não há script lint)
 - **Manifest validation**: integrada ao pipeline (ajv-cli); lint não configurado
 

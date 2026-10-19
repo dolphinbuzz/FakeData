@@ -81,7 +81,7 @@ Lazy load modules via dynamic import. modulesReady Promise evita race condition.
 z-index 2147483647, position absolute. data-fakedata-control para MutationObserver ignorar. Click -> PAGE_FIELD_FILL_REQUEST -> popup responde.
 
 ### ADR 008: Testes - Vitest + jsdom + 90% Coverage
-Funções puras = alta cobertura (95%+). Integração = mocks complexos (85%+).
+Funções puras = alta cobertura (95%+). Integração = mocks complexos (90%+).
 
 ---
 

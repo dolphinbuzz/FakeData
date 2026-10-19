@@ -25,8 +25,8 @@ opencode/nemotron-3-ultra-free
 - selector-engine.test.js (95%+) - Funções puras
 - vehicle-catalog.test.js (95%+) - Funções puras
 - messages.test.js (100%) - Enum ACTIONS
-- content.test.js (85%+) - Integração, mocks complexos
-- app.test.js (85%+) - Integração, mocks complexos
+- content.test.js (90%+) - Integração, mocks complexos
+- app.test.js (90%+) - Integração, mocks complexos
 
 ## Pattern de Mocking Chrome API
 ```javascript
@@ -53,7 +53,7 @@ global.chrome = {
 
 ## Thresholds de Coverage
 - Módulos críticos (generators, selector-engine, vehicle-catalog, messages): 90%+
-- Módulos de integração (app, content): 85%+
+- Módulos de integração (app, content): 90%+
 
 ## Testes de Regressão
 - Bug encontrado -> escrever teste falhando primeiro -> corrigir
