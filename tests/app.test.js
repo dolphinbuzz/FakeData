@@ -582,12 +582,17 @@ describe("popup app", () => {
     expect(storageData["fakedata-vehicle-catalog"]).toEqual([{ marca: "Toyota", modelos: ["Corolla"] }]);
     expect(document.querySelector("#vehicle-catalog-status").textContent).toBe("Veículo cadastrado.");
 
-    vi.spyOn(window, "prompt").mockReturnValue("Lexus");
     click("[data-edit-brand='Toyota']");
+    await nextTick();
+    expect(document.querySelector("#mapping-modal").hidden).toBe(false);
+    expect(document.querySelector("#mapping-modal-title").textContent).toBe("Renomear marca");
+    document.querySelector("#mapping-name-input").value = "Lexus";
+    click("#mapping-modal-confirm");
+    await nextTick();
     await nextTick();
     expect(storageData["fakedata-vehicle-catalog"][0].marca).toBe("Lexus");
 
-    click("[data-edit-model][data-model='Corolla']");
+    click("[data-edit-brand][data-model='Corolla']");
     await nextTick();
     expect(document.querySelector("#vehicle-brand-input").value).toBe("Lexus");
     expect(document.querySelector("#vehicle-model-input").value).toBe("Corolla");
