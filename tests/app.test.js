@@ -1206,4 +1206,503 @@ describe("popup app", () => {
     expect(document.querySelector("#page-fields-status").textContent)
       .toBe("Não foi possível capturar um campo.");
   });
+
+  it("trata ausência de chrome.windows na detecção de popup", async () => {
+    delete chrome.windows.getCurrent;
+    await loadApp();
+
+    expect(document.documentElement.dataset.extensionMode).toBeUndefined();
+    expect(document.querySelector("#generator-tab").hidden).toBe(false);
+    expect(document.querySelector("#playground-mapping-tab").hidden).toBe(false);
+  });
+
+  it("registra erro ao falhar a abertura da extensão em nova aba", async () => {
+    await loadApp();
+    chrome.runtime.getURL = vi.fn((path) => `chrome-extension://test/${path}`);
+    chrome.tabs.create = vi.fn((options, callback) => {
+      chrome.runtime.lastError = { message: "sem permissão" };
+      callback();
+      chrome.runtime.lastError = null;
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    click("#maximize-button");
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Não foi possível abrir a extensão em uma nova aba.",
+      expect.objectContaining({ message: "sem permissão" })
+    );
+  });
+
+  it("fecha a janela quando sidePanel não está disponível", async () => {
+    await loadApp();
+    chrome.runtime.getURL = vi.fn((path) => `chrome-extension://test/${path}`);
+    chrome.tabs.create = vi.fn((options, callback) => callback());
+    delete chrome.sidePanel;
+    const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {});
+
+    click("#maximize-button");
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("fecha a janela quando getCurrent não devolve uma janela válida", async () => {
+    await loadApp();
+    chrome.runtime.getURL = vi.fn((path) => `chrome-extension://test/${path}`);
+    chrome.tabs.create = vi.fn((options, callback) => callback());
+    chrome.windows.getCurrent = vi.fn((callback) => {
+      chrome.runtime.lastError = { message: "sem janela" };
+      callback(null);
+      chrome.runtime.lastError = null;
+    });
+    const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {});
+
+    click("#maximize-button");
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+    expect(chrome.sidePanel.close).not.toHaveBeenCalled();
+  });
+
+  it("registra erro inesperado ao fechar o painel lateral e ainda fecha a janela", async () => {
+    await loadApp();
+    chrome.runtime.getURL = vi.fn((path) => `chrome-extension://test/${path}`);
+    chrome.tabs.create = vi.fn((options, callback) => callback());
+    chrome.sidePanel.close = vi.fn(() => Promise.reject(new Error("falha inesperada")));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {});
+
+    click("#maximize-button");
+    await nextTick();
+    await nextTick();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Não foi possível fechar o painel lateral.",
+      expect.objectContaining({ message: "falha inesperada" })
+    );
+    expect(closeSpy).toHaveBeenCalled();
+  });
+
+  it("informa falha ao salvar o catálogo de veículos", async () => {
+    await loadApp();
+    click("[data-type='vehicle']");
+    click("#open-vehicle-catalog-button");
+    document.querySelector("#vehicle-brand-input").value = "Toyota";
+    document.querySelector("#vehicle-model-input").value = "Corolla";
+    chrome.storage.local.set.mockImplementation((items, callback) => {
+      chrome.runtime.lastError = { message: "quota excedida" };
+      callback();
+      chrome.runtime.lastError = null;
+    });
+
+    click("#vehicle-add-button");
+
+    expect(document.querySelector("#vehicle-catalog-status").textContent).toBe("Não foi possível salvar o catálogo.");
+  });
+
+  it("informa conflito ao renomear marca para um nome já cadastrado", async () => {
+    setupChromeMock({
+      vehicleCatalog: [
+        { marca: "Toyota", modelos: ["Corolla"] },
+        { marca: "Ford", modelos: ["Ka"] }
+      ]
+    });
+    await loadApp();
+    click("[data-type='vehicle']");
+    click("#open-vehicle-catalog-button");
+    click("[data-edit-brand='Toyota']");
+    await nextTick();
+
+    document.querySelector("#mapping-name-input").value = "Ford";
+    click("#mapping-modal-confirm");
+    await nextTick();
+    await nextTick();
+
+    expect(document.querySelector("#vehicle-catalog-status").textContent).toBe("Essa marca já está cadastrada.");
+    expect(storageData["fakedata-vehicle-catalog"].map((entry) => entry.marca)).toEqual(["Toyota", "Ford"]);
+  });
+
+  it("valida modelo ausente ao cadastrar veículo", async () => {
+    await loadApp();
+    click("[data-type='vehicle']");
+    click("#open-vehicle-catalog-button");
+    document.querySelector("#vehicle-brand-input").value = "Toyota";
+
+    click("#vehicle-add-button");
+
+    expect(document.querySelector("#vehicle-catalog-status").textContent).toBe("Informe um modelo.");
+  });
+
+  it("atualiza bases e escaneia ao ativar aba, tolerando ausência de tabs.query", async () => {
+    await loadApp();
+    const listener = chrome.tabs.onActivated.addListener.mock.calls[0][0];
+    delete chrome.tabs.query;
+
+    listener();
+    await nextTick();
+
+    expect(document.querySelector("#page-fields-status").textContent).toBe("A página ativa não permite acesso a formulários.");
+    expect(document.querySelectorAll(".page-field")).toHaveLength(0);
+  });
+
+  it("reporta ausência de tabs.sendMessage no escaneamento", async () => {
+    await loadApp();
+    delete chrome.tabs.sendMessage;
+
+    click("#scan-fields-button");
+    await nextTick();
+
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("Não foi possível ler esta página. Recarregue-a e tente novamente.");
+  });
+
+  it("reporta erro de conexão quando não é possível injetar o content script", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      chrome.runtime.lastError = { message: "Receiver unavailable" };
+      callback();
+      chrome.runtime.lastError = null;
+    });
+    delete chrome.scripting.executeScript;
+
+    click("#scan-fields-button");
+    await nextTick();
+
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("Não foi possível ler esta página. Recarregue-a e tente novamente.");
+  });
+
+  it("não interrompe a fila quando um waiter falha após a injeção", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockClear();
+    chrome.scripting.executeScript.mockClear();
+
+    let sendCalls = 0;
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      chrome.runtime.lastError = null;
+      sendCalls += 1;
+      if (sendCalls <= 2) {
+        chrome.runtime.lastError = { message: "Could not establish connection" };
+        callback();
+        chrome.runtime.lastError = null;
+        return;
+      }
+      if (sendCalls === 3) throw new Error("sendMessage indisponível");
+      callback({ fields: clone(scannedFields) });
+    });
+    let injectionCallback = null;
+    chrome.scripting.executeScript.mockImplementation((details, callback) => {
+      injectionCallback = callback;
+    });
+
+    click("#scan-fields-button");
+    click("#scan-fields-button");
+    expect(injectionCallback).toEqual(expect.any(Function));
+
+    injectionCallback();
+    await nextTick();
+
+    expect(document.querySelectorAll(".page-field")).toHaveLength(2);
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("2 campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.");
+  });
+
+  it("reporta inválido quando não há página ativa no playground", async () => {
+    setupChromeMock({ openTabs: [{ id: 1, url: "chrome://settings/", active: true }] });
+    await loadApp();
+    click("#playground-mapping-tab");
+
+    const input = document.querySelector("#selector-playground-input");
+    input.value = ".campo";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+
+    expect(document.querySelector("#selector-playground-count").textContent).toBe("Inválido");
+    expect(document.querySelector("#selector-playground-mark").disabled).toBe(true);
+  });
+
+  it("desmarca o seletor anterior ao trocar o valor do playground", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      sentMessages.push({ tabId, message: clone(message) });
+      if (message.action === ACTIONS.SCAN_FIELDS) { callback({ fields: clone(scannedFields) }); return; }
+      if (message.action === ACTIONS.COUNT_SELECTOR_MATCHES) { callback({ count: 2 }); return; }
+      if (message.action === ACTIONS.MARK_SELECTOR_MATCHES) { callback({ count: 2 }); return; }
+      if (message.action === ACTIONS.UNMARK_SELECTOR_MATCHES) { callback({ count: 0 }); return; }
+      callback({});
+    });
+    click("#playground-mapping-tab");
+    const input = document.querySelector("#selector-playground-input");
+    input.value = ".field";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    click("#selector-playground-mark");
+    expect(document.querySelector("#page-fields-status").textContent).toBe("2 elemento(s) encontrado(s) marcado(s).");
+
+    input.value = ".outro";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+
+    const unmark = sentMessages.find((item) => item.message.action === ACTIONS.UNMARK_SELECTOR_MATCHES);
+    expect(unmark.message.selector).toBe(".field");
+    expect(document.querySelector("#selector-playground-count").textContent).toBe("2 encontrado(s)");
+  });
+
+  it("reporta falha ao alternar marcações do playground", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      sentMessages.push({ tabId, message: clone(message) });
+      if (message.action === ACTIONS.COUNT_SELECTOR_MATCHES) { callback({ count: 2 }); return; }
+      if (message.action === ACTIONS.MARK_SELECTOR_MATCHES) { callback(null); return; }
+      callback({});
+    });
+    click("#playground-mapping-tab");
+    const input = document.querySelector("#selector-playground-input");
+    input.value = ".field";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(document.querySelector("#selector-playground-mark").disabled).toBe(false);
+
+    click("#selector-playground-mark");
+
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("Não foi possível atualizar as marcações do seletor.");
+  });
+
+  it("reporta falha ao capturar seletor no playground", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      if (message.action === ACTIONS.CAPTURE_NEXT_CLICK) { callback(null); return; }
+      callback({});
+    });
+    click("#playground-mapping-tab");
+
+    click("#selector-playground-target");
+
+    expect(document.querySelector("#selector-playground-count").textContent).toBe("Não capturado");
+  });
+
+  it("valida confirmação do modal sem manipulador pendente", async () => {
+    await loadApp();
+
+    click("#mapping-modal-confirm");
+
+    expect(document.querySelector("#mapping-modal-error").textContent).toBe("Informe um nome para continuar.");
+  });
+
+  it("valida nome vazio ao renomear marca e permite cancelar", async () => {
+    setupChromeMock({
+      vehicleCatalog: [{ marca: "Toyota", modelos: ["Corolla"] }]
+    });
+    await loadApp();
+    click("[data-type='vehicle']");
+    click("#open-vehicle-catalog-button");
+    click("[data-edit-brand='Toyota']");
+    await nextTick();
+
+    document.querySelector("#mapping-name-input").value = "";
+    click("#mapping-modal-confirm");
+    expect(document.querySelector("#mapping-modal-error").textContent).toBe("Informe um nome para continuar.");
+
+    click("#mapping-modal-cancel");
+    await nextTick();
+    expect(storageData["fakedata-vehicle-catalog"][0].marca).toBe("Toyota");
+  });
+
+  it("remapeia todos os campos quando solicitado", async () => {
+    await loadApp();
+    sentMessages = [];
+
+    click("#remap-all-button");
+    await nextTick();
+
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.SCAN_FIELDS)).toBe(true);
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("2 campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.");
+  });
+
+  it("confirma a edição do nome do campo com Enter", async () => {
+    await loadApp();
+    click(".page-field-edit-label");
+    const editor = document.querySelector(".page-field-label-editor");
+    editor.value = "Nome confirmado";
+
+    editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+
+    expect(document.querySelector(".page-field-label").textContent).toBe("Nome confirmado");
+  });
+
+  it("reporta seletor não encontrado e alterna a marcação do campo", async () => {
+    await loadApp();
+    click(".page-field [data-action='highlight']");
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("Seletor não encontrado na página. Ajuste o seletor e tente novamente.");
+
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      sentMessages.push({ tabId, message: clone(message) });
+      if (message.action === ACTIONS.SCAN_FIELDS) { callback({ fields: clone(scannedFields) }); return; }
+      if (message.action === ACTIONS.MARK_FIELD) { callback({ marked: true }); return; }
+      if (message.action === ACTIONS.UNMARK_FIELD) { callback({ unmarked: true }); return; }
+      callback({});
+    });
+
+    click(".page-field [data-action='highlight']");
+    expect(document.querySelector("#page-fields-status").textContent).toBe("E-mail marcado.");
+
+    click(".page-field [data-action='highlight']");
+    expect(document.querySelector("#page-fields-status").textContent).toBe("E-mail desmarcado.");
+  });
+
+  it("refaz o escaneamento ao adicionar seletor sem página acessível", async () => {
+    setupChromeMock({ openTabs: [{ id: 1, url: "chrome://settings/", active: true }] });
+    await loadApp();
+    chrome.tabs.query.mockClear();
+    sentMessages = [];
+
+    click("#add-selector-button");
+    await nextTick();
+
+    // Sem página acessível o fluxo reescaneia a aba em vez de pedir captura de clique.
+    expect(chrome.tabs.query).toHaveBeenCalled();
+    expect(sentMessages.some((item) => item.message.action === ACTIONS.CAPTURE_NEXT_CLICK)).toBe(false);
+    expect(document.querySelector("#page-fields-status").textContent).toBe("A página ativa não permite acesso a formulários.");
+  });
+
+  it("adiciona um novo seletor capturado à lista de campos", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      sentMessages.push({ tabId, message: clone(message) });
+      if (message.action === ACTIONS.SCAN_FIELDS) { callback({ fields: clone(scannedFields) }); return; }
+      if (message.action === ACTIONS.CAPTURE_NEXT_CLICK) {
+        callback({ captured: true, field: { selector: "#novo", label: "Novo campo", inferredType: "phone" } });
+        return;
+      }
+      callback({});
+    });
+
+    click("#add-selector-button");
+    await nextTick();
+
+    expect(document.querySelectorAll(".page-field")).toHaveLength(3);
+    expect([...document.querySelectorAll(".page-field-selector")].pop().value).toBe("#novo");
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("Seletor adicionado. Salve os seletores para mantê-lo no perfil.");
+  });
+
+  it("informa ausência de campos ao marcar todos", async () => {
+    setupChromeMock({ scanFields: [] });
+    await loadApp();
+
+    click("#mark-all-button");
+
+    expect(document.querySelector("#page-fields-status").textContent).toBe("Nenhum campo encontrado para marcar.");
+  });
+
+  it("informa quando nenhum campo possui seletor utilizável", async () => {
+    setupChromeMock({ scanFields: [{ ...scannedFields[0], selector: "" }] });
+    await loadApp();
+
+    click("#mark-all-button");
+
+    expect(document.querySelector("#page-fields-status").textContent).toBe("Nenhum campo possui seletor utilizável para marcar.");
+  });
+
+  it("reporta falha de comunicação ao marcar todos os campos", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      chrome.runtime.lastError = { message: "Receiver unavailable" };
+      callback();
+      chrome.runtime.lastError = null;
+    });
+    chrome.scripting.executeScript.mockImplementation((details, callback) => {
+      chrome.runtime.lastError = { message: "Cannot access contents" };
+      callback();
+      chrome.runtime.lastError = null;
+    });
+
+    click("#mark-all-button");
+    await nextTick();
+
+    expect(document.querySelector("#page-fields-status").textContent).toBe("Não foi possível atualizar as marcações.");
+  });
+
+  it("limpa os valores preenchidos de todos os campos", async () => {
+    await loadApp();
+    click("#fill-all-button");
+    const filledValues = [...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value);
+    expect(filledValues.every((value) => value.length > 0)).toBe(true);
+
+    click("#clear-all-button");
+
+    expect(document.querySelector("#page-fields-status").textContent).toBe("2 campo(s) limpado(s).");
+    expect([...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value)).toEqual(["", ""]);
+  });
+
+  it("informa quando não há preenchimentos para limpar", async () => {
+    setupChromeMock({ scanFields: [] });
+    await loadApp();
+
+    click("#clear-all-button");
+
+    expect(document.querySelector("#page-fields-status").textContent).toBe("Nenhum preenchimento para limpar.");
+  });
+
+  it("preenche campo sob demanda pelo controle flutuante e reporta falhas", async () => {
+    await loadApp();
+    sentMessages = [];
+    let response = null;
+    const request = { action: ACTIONS.PAGE_FIELD_FILL_REQUEST, key: "#email::0", selector: "#email" };
+
+    appMessageListener(request, { tab: { id: activeTab.id } }, (value) => { response = value; });
+
+    expect(response).toEqual({ filled: true });
+    const fillMessage = sentMessages.find((item) =>
+      item.message.action === ACTIONS.FILL_FIELD && item.tabId === activeTab.id);
+    expect(fillMessage).toBeTruthy();
+    expect(fillMessage.message.selector).toBe("#email");
+    expect(typeof fillMessage.message.value).toBe("string");
+    expect(fillMessage.message.value.length).toBeGreaterThan(0);
+    expect(document.querySelector(".page-field-fixed-value").value).toBe(fillMessage.message.value);
+
+    appMessageListener(
+      { action: ACTIONS.PAGE_FIELD_FILL_REQUEST, key: "#ausente", selector: "#ausente" },
+      { tab: { id: activeTab.id } },
+      (value) => { response = value; }
+    );
+    expect(response).toEqual({ filled: false });
+
+    appMessageListener(request, {}, (value) => { response = value; });
+    expect(response).toEqual({ filled: false });
+
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      if (message.action === ACTIONS.FILL_FIELD) {
+        chrome.runtime.lastError = { message: "Receiver unavailable" };
+        callback();
+        chrome.runtime.lastError = null;
+        return;
+      }
+      callback({});
+    });
+    appMessageListener(request, { tab: { id: activeTab.id } }, (value) => { response = value; });
+    expect(response).toEqual({ filled: false });
+  });
+
+  it("usa o valor fixo na solicitação do controle flutuante", async () => {
+    setupChromeMock({
+      profiles: [{
+        id: "profile-1",
+        name: "Cadastro salvo",
+        pageUrl: "https://sistema.example.test/cadastro",
+        fields: [{ ...scannedFields[0], dataType: "email", fixed: true, fixedValue: "fixo@example.test" }]
+      }]
+    });
+    await loadApp();
+    sentMessages = [];
+    let response = null;
+
+    appMessageListener(
+      { action: ACTIONS.PAGE_FIELD_FILL_REQUEST, key: "#email::0", selector: "#email" },
+      { tab: { id: activeTab.id } },
+      (value) => { response = value; }
+    );
+
+    expect(response).toEqual({ filled: true });
+    const fillMessage = sentMessages.find((item) => item.message.action === ACTIONS.FILL_FIELD);
+    expect(fillMessage.message.value).toBe("fixo@example.test");
+  });
 });

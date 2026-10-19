@@ -352,4 +352,142 @@ describe("content script", () => {
 
     expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(2);
   });
+
+  it("reinstala quando o probe lança e o dispose da instalação anterior também falha", async () => {
+    const previousInstall = () => {
+      throw new Error("contexto invalidado");
+    };
+    previousInstall.dispose = () => {
+      throw new Error("limpeza impossível");
+    };
+    window.__fakedataContentInstalled = previousInstall;
+
+    await loadContentScript();
+
+    expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(2);
+    const response = await sendContentMessage({ action: ACTIONS.SCAN_FIELDS });
+    expect(response.fields.map((field) => field.selector)).toEqual(["#email", "#cpf", "#uf"]);
+  });
+
+  it("ignora falha do runtime ao remover o listener durante o dispose", async () => {
+    const probe = window.__fakedataContentInstalled;
+    chrome.runtime.onMessage.removeListener = vi.fn(() => {
+      throw new Error("runtime já invalidado");
+    });
+
+    expect(() => probe.dispose()).not.toThrow();
+    expect(probe()).toBe(false);
+  });
+
+  it("resolve o select nativo do select2 por aria-labelledby e pelo container anterior", async () => {
+    document.body.insertAdjacentHTML("beforeend", `
+      <div id="combo-wrapper"><input role="combobox" aria-labelledby="select2-city-container"></div>
+      <select id="city"><option value="RIO">Rio de Janeiro</option></select>
+      <span id="select2-city-container"></span>
+      <select id="native-prev"><option value="CE">Ceará</option></select>
+      <span id="visual-prev" class="select2-container"><input role="combobox"></span>
+    `);
+
+    expect((await sendContentMessage({ action: ACTIONS.FILL_FIELD, selector: "#combo-wrapper", value: "Rio de Janeiro" })).filled).toBe(true);
+    expect(document.querySelector("#city").value).toBe("RIO");
+    expect((await sendContentMessage({ action: ACTIONS.FILL_FIELD, selector: "#visual-prev", value: "Ceará" })).filled).toBe(true);
+    expect(document.querySelector("#native-prev").value).toBe("CE");
+  });
+
+  it("destaca o componente visual de selects select2 marcados", async () => {
+    document.body.insertAdjacentHTML("beforeend", `
+      <select id="sel2-a" class="select2-hidden-accessible"><option value="BR">Brasil</option></select>
+      <span id="select2-sel2-a-container" class="select2-selection"></span>
+      <select id="sel2-b" class="select2-hidden-accessible"><option value="BR">Brasil</option></select>
+      <span class="select2-container"></span>
+    `);
+
+    expect((await sendContentMessage({ action: ACTIONS.MARK_FIELD, selector: "#sel2-a" })).marked).toBe(true);
+    expect(document.querySelector("#select2-sel2-a-container").style.outline).toContain("#ef4444");
+    expect((await sendContentMessage({ action: ACTIONS.MARK_FIELD, selector: "#sel2-b" })).marked).toBe(true);
+    expect((await sendContentMessage({ action: ACTIONS.UNMARK_FIELD, selector: "#sel2-b" })).unmarked).toBe(true);
+  });
+
+  it("marca o contêiner agrupador quando o campo está oculto", async () => {
+    document.body.insertAdjacentHTML("beforeend", `
+      <fieldset id="grupo"><input id="oculto" style="display: none"></fieldset>
+    `);
+
+    expect((await sendContentMessage({ action: ACTIONS.MARK_FIELD, selector: "#oculto" })).marked).toBe(true);
+    expect(document.querySelector("#grupo").style.outline).toContain("#ef4444");
+    expect((await sendContentMessage({ action: ACTIONS.UNMARK_FIELD, selector: "#oculto" })).unmarked).toBe(true);
+  });
+
+  it("preenche input mesmo sem descritor de valor no protótipo", async () => {
+    const prototype = dom.window.HTMLInputElement.prototype;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+    delete prototype.value;
+    try {
+      expect((await sendContentMessage({ action: ACTIONS.FILL_FIELD, selector: "#email", value: "sem-acessor" })).filled).toBe(true);
+      expect(document.querySelector("#email").value).toBe("sem-acessor");
+    } finally {
+      Object.defineProperty(prototype, "value", descriptor);
+    }
+  });
+
+  it("trata seletor inválido no playground e desmarca campo nunca marcado", async () => {
+    expect(await sendContentMessage({ action: ACTIONS.MARK_SELECTOR_MATCHES, selector: "[" }))
+      .toEqual({ invalid: true, count: 0 });
+    expect(await sendContentMessage({ action: ACTIONS.UNMARK_FIELD, selector: "#email" }))
+      .toEqual({ unmarked: true });
+  });
+
+  it("restaura o título do botão quando o preenchimento é bem-sucedido", async () => {
+    chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+      if (typeof callback === "function") callback({ filled: true });
+    });
+    await sendContentMessage({
+      action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS,
+      fields: [{ key: "email-field", selector: "#email", label: "E-mail" }]
+    });
+
+    document.querySelector(".fakedata-page-fill").click();
+    await new Promise((resolveTick) => setTimeout(resolveTick, 0));
+
+    expect(document.querySelector(".fakedata-page-fill").title).toBe("Preencher E-mail");
+  });
+
+  it("reexibe controles pela ação de visibilidade e os remove no UPDATE com visible falso", async () => {
+    await sendContentMessage({
+      action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS,
+      fields: [{ key: "email-field", selector: "#email", label: "E-mail" }]
+    });
+
+    expect(await sendContentMessage({ action: ACTIONS.SET_PAGE_FIELD_CONTROLS_VISIBILITY, visible: true }))
+      .toEqual({ updated: true, count: 1 });
+    expect(document.querySelectorAll(".fakedata-page-fill")).toHaveLength(1);
+
+    expect(await sendContentMessage({ action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS, visible: false, fields: [] }))
+      .toEqual({ updated: true, count: 0 });
+    expect(document.querySelectorAll(".fakedata-page-fill")).toHaveLength(0);
+  });
+
+  it("coleta falhas individuais no preenchimento em lote", async () => {
+    const email = document.querySelector("#email");
+    Object.defineProperty(email, "disabled", {
+      configurable: true,
+      get() {
+        throw new Error("explosão");
+      }
+    });
+
+    const response = await sendContentMessage({
+      action: ACTIONS.FILL_ALL,
+      fields: [
+        { selector: "#email", value: "falha" },
+        { selector: "#cpf", value: "ok" }
+      ]
+    });
+
+    expect(response).toEqual({
+      filled: 1,
+      total: 2,
+      failed: [{ selector: "#email", error: "explosão" }]
+    });
+  });
 });
