@@ -14,6 +14,7 @@ let selectedBaseUrl = "";
 let savedProfiles = [];
 let selectedProfileId = "";
 let mappingModalResolver = null;
+let mappingModalConfirmHandler = null;
 let pageFields = [];
 let markedSelectors = new Set();
 let vehicleCatalog = [];
@@ -241,11 +242,11 @@ function renderVehicleCatalog() {
     });
   });
   vehicleCatalogList.querySelectorAll("[data-edit-brand]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const next = window.prompt("Novo nome da marca:", button.dataset.editBrand);
-      if (next == null) return;
+    button.addEventListener("click", async () => {
+      const newName = await openRenameBrandModal(button.dataset.editBrand);
+      if (!newName) return;
       try {
-        vehicleCatalog = renameVehicleBrand(vehicleCatalog, button.dataset.editBrand, next);
+        vehicleCatalog = renameVehicleBrand(vehicleCatalog, button.dataset.editBrand, newName);
         saveVehicleCatalog();
       } catch (error) {
         vehicleCatalogStatus.textContent = error.message;
@@ -263,7 +264,7 @@ function renderVehicleCatalog() {
   });
   vehicleCatalogList.querySelectorAll("[data-remove-model]").forEach((button) => {
     button.addEventListener("click", () => {
-      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.removeBrand, button.dataset.model);
+      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.removeModel, button.dataset.model);
       saveVehicleCatalog();
     });
   });
@@ -403,7 +404,10 @@ if (selectorPlaygroundMark) selectorPlaygroundMark.addEventListener("click", tog
 if (copyAuditButton) copyAuditButton.addEventListener("click", copyMappingAudit);
 if (automaticMappingTab) automaticMappingTab.addEventListener("click", () => activateMappingSubtab("automatic"));
 if (playgroundMappingTab) playgroundMappingTab.addEventListener("click", () => activateMappingSubtab("playground"));
-if (mappingModalConfirm) mappingModalConfirm.addEventListener("click", confirmMappingModal);
+if (mappingModalConfirm) mappingModalConfirm.addEventListener("click", () => {
+  if (mappingModalConfirmHandler) mappingModalConfirmHandler();
+  else confirmMappingModal();
+});
 if (mappingModalCancel) mappingModalCancel.addEventListener("click", () => closeMappingModal(""));
 if (mappingModal) mappingModal.querySelector("[data-modal-close]").addEventListener("click", () => closeMappingModal(""));
 if (mappingNameInput) mappingNameInput.addEventListener("keydown", (event) => {
@@ -511,8 +515,6 @@ function generate() {
   const definition = data[selectedType];
   const context = definition.context ? definition.context() : {};
   currentResult = Object.fromEntries(definition.fields.map(([label, create]) => [label, create(context)]));
-
-  autovalidar(currentResult);
 
   resultTitle.textContent = definition.title;
   resultFields.innerHTML = definition.fields.map(([label]) => `
@@ -797,7 +799,7 @@ function getCurrentProfile(profiles) {
   return profiles.find((profile) => profile.id === selectedProfileId);
 }
 
-function openMappingModal(initialName, title) {
+function openMappingModal(initialName, title, confirmHandler = confirmMappingModal) {
   if (!mappingModal || !mappingNameInput) return Promise.resolve("");
   mappingModal.querySelector("#mapping-modal-title").textContent = title;
   mappingNameInput.value = initialName || "";
@@ -805,6 +807,7 @@ function openMappingModal(initialName, title) {
   mappingModal.hidden = false;
   mappingNameInput.focus();
   mappingNameInput.select();
+  mappingModalConfirmHandler = confirmHandler;
   return new Promise((resolve) => {
     mappingModalResolver = resolve;
   });
@@ -815,10 +818,25 @@ function closeMappingModal(value) {
   mappingModal.hidden = true;
   const resolve = mappingModalResolver;
   mappingModalResolver = null;
+  mappingModalConfirmHandler = null;
   resolve(value);
 }
 
 function confirmMappingModal() {
+  const name = mappingNameInput ? mappingNameInput.value.trim() : "";
+  if (!name) {
+    if (mappingModalError) mappingModalError.textContent = "Informe um nome para continuar.";
+    if (mappingNameInput) mappingNameInput.focus();
+    return;
+  }
+  closeMappingModal(name);
+}
+
+function openRenameBrandModal(currentName) {
+  return openMappingModal(currentName, "Renomear marca", confirmRenameBrandModal);
+}
+
+function confirmRenameBrandModal() {
   const name = mappingNameInput ? mappingNameInput.value.trim() : "";
   if (!name) {
     if (mappingModalError) mappingModalError.textContent = "Informe um nome para continuar.";

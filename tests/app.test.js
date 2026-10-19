@@ -202,6 +202,21 @@ describe("popup app", () => {
     expect(["Ka", "Ranger"]).toContain(values[1]);
   });
 
+  it("respeita a UF selecionada", async () => {
+    await loadApp();
+
+    const ufSelect = document.querySelector("#uf-select");
+    ufSelect.value = "SP";
+    ufSelect.dispatchEvent(new Event("change"));
+
+    for (let tentativa = 0; tentativa < 3; tentativa += 1) {
+      click("#generate-button");
+      const estadoField = [...document.querySelectorAll("#result-fields .result-field")]
+        .find((row) => row.querySelector(".field-label").textContent === "Estado");
+      expect(estadoField.querySelector(".field-value").textContent).toBe("SP - São Paulo");
+    }
+  });
+
   it("exibe o cadastro de veículos em modal somente no tipo Veículo", async () => {
     await loadApp();
 
@@ -582,12 +597,18 @@ describe("popup app", () => {
     expect(storageData["fakedata-vehicle-catalog"]).toEqual([{ marca: "Toyota", modelos: ["Corolla"] }]);
     expect(document.querySelector("#vehicle-catalog-status").textContent).toBe("Veículo cadastrado.");
 
-    vi.spyOn(window, "prompt").mockReturnValue("Lexus");
     click("[data-edit-brand='Toyota']");
+    await nextTick();
+    expect(document.querySelector("#mapping-modal").hidden).toBe(false);
+    expect(document.querySelector("#mapping-modal-title").textContent).toBe("Renomear marca");
+    document.querySelector("#mapping-name-input").value = "Lexus";
+    click("#mapping-modal-confirm");
+    await nextTick();
     await nextTick();
     expect(storageData["fakedata-vehicle-catalog"][0].marca).toBe("Lexus");
 
     click("[data-edit-model][data-model='Corolla']");
+    expect(document.querySelector("#mapping-modal").hidden).toBe(true);
     await nextTick();
     expect(document.querySelector("#vehicle-brand-input").value).toBe("Lexus");
     expect(document.querySelector("#vehicle-model-input").value).toBe("Corolla");
@@ -598,6 +619,37 @@ describe("popup app", () => {
     click("[data-remove-brand='Lexus']");
     await nextTick();
     expect(storageData["fakedata-vehicle-catalog"]).toEqual([]);
+  });
+
+  it("remove apenas o modelo selecionado", async () => {
+    setupChromeMock({
+      vehicleCatalog: [{ marca: "Toyota", modelos: ["Corolla", "Etios"] }]
+    });
+    await loadApp();
+    click("[data-type='vehicle']");
+    click("#open-vehicle-catalog-button");
+
+    click("[data-remove-model='Toyota'][data-model='Corolla']");
+    await nextTick();
+
+    expect(storageData["fakedata-vehicle-catalog"]).toEqual([{ marca: "Toyota", modelos: ["Etios"] }]);
+    expect(document.querySelector("#vehicle-catalog-list").textContent).not.toContain("Corolla");
+  });
+
+  it("cancelar renomeação de marca não exibe erro", async () => {
+    setupChromeMock({
+      vehicleCatalog: [{ marca: "Toyota", modelos: ["Corolla"] }]
+    });
+    await loadApp();
+    click("[data-type='vehicle']");
+    click("#open-vehicle-catalog-button");
+
+    click("[data-edit-brand='Toyota']");
+    click("#mapping-modal-cancel");
+    await nextTick();
+
+    expect(document.querySelector("#vehicle-catalog-status").textContent).not.toContain("Informe uma marca.");
+    expect(storageData["fakedata-vehicle-catalog"][0].marca).toBe("Toyota");
   });
 
   it("valida nome do mapeamento e permite cancelar o modal", async () => {
