@@ -1,17 +1,17 @@
 (() => {
-  "use strict";
+  'use strict';
 
   const modulesReady = Promise.all([
-    import(chrome.runtime.getURL("src/scripts/selector-engine.js")),
-    import(chrome.runtime.getURL("src/scripts/messages.js"))
+    import(chrome.runtime.getURL('src/scripts/selector-engine.js')),
+    import(chrome.runtime.getURL('src/scripts/messages.js')),
   ]);
   let selectorEngine = null;
   let actions = null;
   const markedFields = new Map();
   const pageControls = new Map();
   let pageControlFields = [];
-  const controlStyle = document.createElement("style");
-  controlStyle.id = "fakedata-page-control-style";
+  const controlStyle = document.createElement('style');
+  controlStyle.id = 'fakedata-page-control-style';
   controlStyle.textContent = `
     .fakedata-page-fill {
       position: absolute;
@@ -47,48 +47,48 @@
 
   // Selector discovery and inference live in selector-engine.js.
   function find(selector) {
-    if (typeof selector !== "string" || !selector.trim()) return null;
+    if (typeof selector !== 'string' || !selector.trim()) return null;
     try {
       const element = document.querySelector(selector);
       return element instanceof Element ? element : null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
 
   function select2NativeField(element) {
     if (!element) return null;
-    if (element.matches("select.select2-hidden-accessible")) return element;
+    if (element.matches('select.select2-hidden-accessible')) return element;
 
     const combobox = element.matches("[role='combobox']")
       ? element
       : element.querySelector("[role='combobox']");
     if (!combobox) return null;
 
-    const labelledBy = combobox.getAttribute("aria-labelledby") || "";
-    const renderedId = labelledBy.split(/\s+/).find((id) => id.startsWith("select2-") && id.endsWith("-container"));
+    const labelledBy = combobox.getAttribute('aria-labelledby') || '';
+    const renderedId = labelledBy.split(/\s+/).find((id) => id.startsWith('select2-') && id.endsWith('-container'));
     if (renderedId) {
-      const id = renderedId.slice("select2-".length, -"-container".length);
+      const id = renderedId.slice('select2-'.length, -'-container'.length);
       const field = document.getElementById(id);
-      if (field && field.matches("select")) return field;
+      if (field && field.matches('select')) return field;
     }
 
-    const container = element.closest(".select2-container") || combobox.closest(".select2-container");
+    const container = element.closest('.select2-container') || combobox.closest('.select2-container');
     if (container) {
       const previous = container.previousElementSibling;
-      if (previous && previous.matches("select")) return previous;
+      if (previous && previous.matches('select')) return previous;
     }
     return null;
   }
 
   function visualTarget(element) {
     if (!element) return null;
-    if (element.matches("select.select2-hidden-accessible")) {
+    if (element.matches('select.select2-hidden-accessible')) {
       const container = document.getElementById(`select2-${element.id}-container`);
-      const selection = container && container.closest(".select2-selection");
+      const selection = container && container.closest('.select2-selection');
       if (selection && selectorEngine.visible(selection)) return selection;
       const select2Container = element.nextElementSibling;
-      if (select2Container && select2Container.matches(".select2-container") && selectorEngine.visible(select2Container)) {
+      if (select2Container && select2Container.matches('.select2-container') && selectorEngine.visible(select2Container)) {
         return select2Container;
       }
     }
@@ -106,7 +106,7 @@
     return new Promise((resolve) => {
       const check = () => {
         const options = Array.from(element.options).filter((option) =>
-          !option.disabled && option.value.trim() !== "" && option.textContent.trim() !== ""
+          !option.disabled && option.value.trim() !== '' && option.textContent.trim() !== '',
         );
         if (options.length || Date.now() - startedAt >= timeout) {
           resolve(options);
@@ -125,29 +125,29 @@
       const wanted = selectorEngine.normalize(value);
       const matchingOption = options.find((option) =>
         selectorEngine.normalize(option.value) === wanted || selectorEngine.normalize(option.textContent) === wanted ||
-        selectorEngine.normalize(option.textContent).includes(wanted) || wanted.includes(selectorEngine.normalize(option.textContent))
+        selectorEngine.normalize(option.textContent).includes(wanted) || wanted.includes(selectorEngine.normalize(option.textContent)),
       );
       const option = matchingOption || options[Math.floor(Math.random() * options.length)];
       element.value = option.value;
-      element.dispatchEvent(new Event("input", { bubbles: true }));
-      element.dispatchEvent(new Event("change", { bubbles: true }));
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     });
   }
 
   function closeCustomMenus() {
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-    document.querySelectorAll("multi-select > div, .ui-autocomplete-multiselect + div").forEach((menu) => {
-      if (menu.querySelector("li[list-select]")) menu.style.display = "none";
+    document.querySelectorAll('multi-select > div, .ui-autocomplete-multiselect + div').forEach((menu) => {
+      if (menu.querySelector('li[list-select]')) menu.style.display = 'none';
     });
   }
 
   function closeCustomMenu(element) {
-    const menu = element.querySelector("div > ul.ui-autocomplete, ul.ui-autocomplete");
+    const menu = element.querySelector('div > ul.ui-autocomplete, ul.ui-autocomplete');
     if (menu) {
       const wrapper = menu.parentElement;
-      if (wrapper) wrapper.style.display = "none";
+      if (wrapper) wrapper.style.display = 'none';
     }
     closeCustomMenus();
   }
@@ -171,20 +171,20 @@
   }
 
   function setNativeValue(element, value) {
-    const prototype = element.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype :
-      element.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
-    const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+    const prototype = element.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype :
+      element.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
     if (descriptor && descriptor.set) descriptor.set.call(element, String(value));
     else element.value = String(value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   async function fill(selector, value) {
     const mappedElement = find(selector);
     const element = select2NativeField(mappedElement) || mappedElement;
     if (!element || element.disabled) return false;
-    if (element.type === "checkbox" || element.type === "radio") {
+    if (element.type === 'checkbox' || element.type === 'radio') {
       const shouldBeChecked = Boolean(value);
       if (element.checked !== shouldBeChecked) element.click();
       return true;
@@ -192,20 +192,20 @@
     if (selectorEngine.isCustomSelect(element)) {
       return fillCustomSelect(element, value);
     }
-    if (element.tagName === "SELECT") {
+    if (element.tagName === 'SELECT') {
       return await fillSelect(element, value);
     }
-    if (element.type === "date" && /^\d{2}\/\d{2}\/\d{4}$/.test(String(value))) {
-      const parts = String(value).split("/");
+    if (element.type === 'date' && /^\d{2}\/\d{2}\/\d{4}$/.test(String(value))) {
+      const parts = String(value).split('/');
       value = `${parts[2]}-${parts[1]}-${parts[0]}`;
-    } else if (element.type === "month" && /^\d{2}\/\d{2}\/\d{4}$/.test(String(value))) {
-      const parts = String(value).split("/");
+    } else if (element.type === 'month' && /^\d{2}\/\d{2}\/\d{4}$/.test(String(value))) {
+      const parts = String(value).split('/');
       value = `${parts[2]}-${parts[1]}`;
-    } else if (element.type === "number" && /^\D*[\d.,]+/.test(String(value))) {
-      value = String(value).replace(/[^\d,.-]/g, "");
+    } else if (element.type === 'number' && /^\D*[\d.,]+/.test(String(value))) {
+      value = String(value).replace(/[^\d,.-]/g, '');
       value = /,\d{1,2}$/.test(value)
-        ? value.replace(/\./g, "").replace(",", ".")
-        : value.replace(/[^\d-]/g, "");
+        ? value.replace(/\./g, '').replace(',', '.')
+        : value.replace(/[^\d-]/g, '');
     }
     setNativeValue(element, value);
     return true;
@@ -217,11 +217,11 @@
     const target = selectorEngine.isCustomSelect(element)
       ? (element.querySelector("input, [role='combobox'], .ui-autocomplete-multiselect") || element)
       : element;
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const previousOutline = target.style.outline;
     const previousOffset = target.style.outlineOffset;
-    target.style.outline = "3px solid #ef4444";
-    target.style.outlineOffset = "2px";
+    target.style.outline = '3px solid #ef4444';
+    target.style.outlineOffset = '2px';
     setTimeout(() => {
       target.style.outline = previousOutline;
       target.style.outlineOffset = previousOffset;
@@ -246,16 +246,16 @@
     }
     const previousOutline = target.style.outline;
     const previousOffset = target.style.outlineOffset;
-    const previousOutlinePriority = target.style.getPropertyPriority("outline");
-    const previousOffsetPriority = target.style.getPropertyPriority("outline-offset");
-    target.style.setProperty("outline", "3px solid #ef4444", "important");
-    target.style.setProperty("outline-offset", "2px", "important");
+    const previousOutlinePriority = target.style.getPropertyPriority('outline');
+    const previousOffsetPriority = target.style.getPropertyPriority('outline-offset');
+    target.style.setProperty('outline', '3px solid #ef4444', 'important');
+    target.style.setProperty('outline-offset', '2px', 'important');
     markedFields.set(key, {
       target,
       previousOutline,
       previousOffset,
       previousOutlinePriority,
-      previousOffsetPriority
+      previousOffsetPriority,
     });
     return true;
   }
@@ -264,7 +264,7 @@
     let elements;
     try {
       elements = Array.from(document.querySelectorAll(selector));
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
     return elements.map((element, index) => ({ element, key: `${keyPrefix}${index}` }));
@@ -290,16 +290,16 @@
       markedFields.delete(selector);
       const stillMarked = Array.from(markedFields.values()).some((item) => item.target === marked.target);
       if (!stillMarked) {
-        marked.target.style.setProperty("outline", marked.previousOutline, marked.previousOutlinePriority);
-        marked.target.style.setProperty("outline-offset", marked.previousOffset, marked.previousOffsetPriority);
+        marked.target.style.setProperty('outline', marked.previousOutline, marked.previousOutlinePriority);
+        marked.target.style.setProperty('outline-offset', marked.previousOffset, marked.previousOffsetPriority);
       }
       return true;
     }
     const element = find(selector);
     const target = visualTarget(element);
     if (target) {
-      target.style.removeProperty("outline");
-      target.style.removeProperty("outline-offset");
+      target.style.removeProperty('outline');
+      target.style.removeProperty('outline-offset');
     }
     return true;
   }
@@ -307,8 +307,8 @@
   function clearMarks() {
     const uniqueMarks = new Set(markedFields.values());
     uniqueMarks.forEach((marked) => {
-      marked.target.style.setProperty("outline", marked.previousOutline, marked.previousOutlinePriority);
-      marked.target.style.setProperty("outline-offset", marked.previousOffset, marked.previousOffsetPriority);
+      marked.target.style.setProperty('outline', marked.previousOutline, marked.previousOutlinePriority);
+      marked.target.style.setProperty('outline-offset', marked.previousOffset, marked.previousOffsetPriority);
     });
     markedFields.clear();
   }
@@ -325,31 +325,31 @@
       const element = find(field.selector);
       if (!element) return;
       const target = visualTarget(element) || element;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "fakedata-page-fill";
-      button.dataset.fakedataControl = "true";
-      button.title = `Preencher ${field.label || "campo"}`;
-      button.setAttribute("aria-label", button.title);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'fakedata-page-fill';
+      button.dataset.fakedataControl = 'true';
+      button.title = `Preencher ${field.label || 'campo'}`;
+      button.setAttribute('aria-label', button.title);
       button.innerHTML = `
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M8 4h8v3H8zM6 7h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"></path>
           <path d="M8 13h8M13 10l3 3-3 3"></path>
         </svg>`;
-      button.addEventListener("click", (event) => {
+      button.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
         button.disabled = true;
         chrome.runtime.sendMessage({
           action: actions.PAGE_FIELD_FILL_REQUEST,
           key: field.key,
-          selector: field.selector
+          selector: field.selector,
         }, (response) => {
           button.disabled = false;
           if (chrome.runtime.lastError || !response || !response.filled) {
-            button.title = "Não foi possível preencher este campo";
+            button.title = 'Não foi possível preencher este campo';
           } else {
-            button.title = `Preencher ${field.label || "campo"}`;
+            button.title = `Preencher ${field.label || 'campo'}`;
           }
         });
       });
@@ -419,7 +419,7 @@
         marked: selectors.length - failed.length,
         total: selectors.length,
         selectors: selectors.filter((selector) => !failed.includes(selector)),
-        failed
+        failed,
       });
     }
     if (message.action === actions.UNMARK_ALL_FIELDS) {
@@ -430,13 +430,13 @@
     }
     if (message.action === actions.COUNT_SELECTOR_MATCHES) {
       try {
-        sendResponse({ count: document.querySelectorAll(message.selector || "").length });
-      } catch (error) {
+        sendResponse({ count: document.querySelectorAll(message.selector || '').length });
+      } catch (_error) {
         sendResponse({ invalid: true, count: 0 });
       }
     }
-    if (message.action === actions.MARK_SELECTOR_MATCHES) sendResponse(markSelectorMatches(message.selector || ""));
-    if (message.action === actions.UNMARK_SELECTOR_MATCHES) sendResponse(unmarkSelectorMatches(message.selector || ""));
+    if (message.action === actions.MARK_SELECTOR_MATCHES) sendResponse(markSelectorMatches(message.selector || ''));
+    if (message.action === actions.UNMARK_SELECTOR_MATCHES) sendResponse(unmarkSelectorMatches(message.selector || ''));
     if (message.action === actions.CAPTURE_NEXT_CLICK) {
       modulesReady.then(() => selectorEngine.captureNextClick(sendResponse));
       return true;
@@ -447,7 +447,7 @@
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     modulesReady
       .then(() => handleMessage(message, sender, sendResponse))
-      .catch(() => sendResponse({ error: "Não foi possível carregar o motor de mapeamento." }));
+      .catch(() => sendResponse({ error: 'Não foi possível carregar o motor de mapeamento.' }));
     return true;
   });
 

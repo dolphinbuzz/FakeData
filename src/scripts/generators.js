@@ -1,38 +1,38 @@
-import { DDDS, ESTADOS } from "./data/estados.js";
-import { pickVehicle } from "./data/vehicle-catalog.js";
+import { DDDS, ESTADOS } from './data/estados.js';
+import { pickVehicle } from './data/vehicle-catalog.js';
 
-const DEFAULT_PROVIDERS = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
-const VIN_ALPHABET = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789";
+const DEFAULT_PROVIDERS = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com'];
+const VIN_ALPHABET = 'ABCDEFGHJKLMNPRSTUVWXYZ0123456789';
 const VIN_WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2];
 const VIN_VALUES = {
   A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7, H: 8,
   J: 1, K: 2, L: 3, M: 4, N: 5, P: 7, R: 9, S: 2,
   T: 3, U: 4, V: 5, W: 6, X: 7, Y: 8, Z: 9,
-  0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9
+  0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9,
 };
 const RENAVAM_WEIGHTS = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 const PERSON_FIRST_NAMES = [
-  "Ana Beatriz", "Carlos Eduardo", "Mariana", "Rafael", "Julia", "Lucas",
-  "Beatriz", "Pedro Henrique", "Camila", "Gustavo", "Larissa", "Felipe",
-  "Isabela", "Thiago", "Aline", "Bruno", "Leticia", "Mateus", "Sofia",
-  "Joao Vitor", "Helena", "Diego", "Manuela", "Vinicius", "Amanda",
-  "Arthur", "Bianca", "Caio", "Daniel", "Eduarda", "Enzo", "Fabiana",
-  "Gabriel", "Giovana", "Henrique", "Igor", "Joaquim", "Karen", "Leonardo",
-  "Livia", "Marcelo", "Nicole", "Otavio", "Priscila", "Rodrigo", "Samuel",
-  "Talita", "Valentina", "Vitoria", "Wesley", "Yasmin", "Alice Maria",
-  "Joao Gabriel", "Maria Clara", "Maria Eduarda", "Luiz Felipe", "Alessandra",
-  "Bernardo", "Cecilia", "Davi", "Emanuel", "Fernando", "Heloisa", "Isadora",
-  "Joana", "Laura", "Miguel", "Nicolas", "Raquel", "Sara", "Theo", "Yuri"
+  'Ana Beatriz', 'Carlos Eduardo', 'Mariana', 'Rafael', 'Julia', 'Lucas',
+  'Beatriz', 'Pedro Henrique', 'Camila', 'Gustavo', 'Larissa', 'Felipe',
+  'Isabela', 'Thiago', 'Aline', 'Bruno', 'Leticia', 'Mateus', 'Sofia',
+  'Joao Vitor', 'Helena', 'Diego', 'Manuela', 'Vinicius', 'Amanda',
+  'Arthur', 'Bianca', 'Caio', 'Daniel', 'Eduarda', 'Enzo', 'Fabiana',
+  'Gabriel', 'Giovana', 'Henrique', 'Igor', 'Joaquim', 'Karen', 'Leonardo',
+  'Livia', 'Marcelo', 'Nicole', 'Otavio', 'Priscila', 'Rodrigo', 'Samuel',
+  'Talita', 'Valentina', 'Vitoria', 'Wesley', 'Yasmin', 'Alice Maria',
+  'Joao Gabriel', 'Maria Clara', 'Maria Eduarda', 'Luiz Felipe', 'Alessandra',
+  'Bernardo', 'Cecilia', 'Davi', 'Emanuel', 'Fernando', 'Heloisa', 'Isadora',
+  'Joana', 'Laura', 'Miguel', 'Nicolas', 'Raquel', 'Sara', 'Theo', 'Yuri',
 ];
 const PERSON_SURNAMES = [
-  "Ferreira", "Costa", "Ribeiro", "Gomes", "Barbosa", "Moura", "Cardoso",
-  "Nascimento", "Teixeira", "Araujo", "Monteiro", "Freitas", "Pereira",
-  "Alves", "Carvalho", "Mendes", "Lopes", "Correia", "Dias", "Moreira",
-  "Martins", "Rocha", "Santos", "Oliveira", "Souza", "Goncalves", "Melo",
-  "Pinto", "Macedo", "Barros", "Nogueira", "Batista", "Campos", "Cavalcanti",
-  "Andrade", "Rezende", "Borges", "Duarte", "Farias", "Leal", "Miranda",
-  "Ramos", "Moraes", "Vieira", "Fonseca", "Matos", "Siqueira", "Tavares",
-  "Peixoto", "Coelho", "Neves", "Assis", "Braga", "Macedo", "Vasconcelos"
+  'Ferreira', 'Costa', 'Ribeiro', 'Gomes', 'Barbosa', 'Moura', 'Cardoso',
+  'Nascimento', 'Teixeira', 'Araujo', 'Monteiro', 'Freitas', 'Pereira',
+  'Alves', 'Carvalho', 'Mendes', 'Lopes', 'Correia', 'Dias', 'Moreira',
+  'Martins', 'Rocha', 'Santos', 'Oliveira', 'Souza', 'Goncalves', 'Melo',
+  'Pinto', 'Macedo', 'Barros', 'Nogueira', 'Batista', 'Campos', 'Cavalcanti',
+  'Andrade', 'Rezende', 'Borges', 'Duarte', 'Farias', 'Leal', 'Miranda',
+  'Ramos', 'Moraes', 'Vieira', 'Fonseca', 'Matos', 'Siqueira', 'Tavares',
+  'Peixoto', 'Coelho', 'Neves', 'Assis', 'Braga', 'Macedo', 'Vasconcelos',
 ];
 
 function pickDistinct(items, count) {
@@ -42,7 +42,7 @@ function pickDistinct(items, count) {
   while (selected.length < count && available.length) {
     const index = Math.floor(Math.random() * available.length);
     const item = available.splice(index, 1)[0];
-    const key = String(item).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+    const key = String(item).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
     if (!selectedKeys.has(key)) {
       selected.push(item);
       selectedKeys.add(key);
@@ -60,28 +60,28 @@ export function randomInt(min, max) {
 }
 
 export function digits(length) {
-  return Array.from({ length }, () => randomInt(0, 9)).join("");
+  return Array.from({ length }, () => randomInt(0, 9)).join('');
 }
 
 export function letters(length) {
-  return Array.from({ length }, () => String.fromCharCode(randomInt(65, 90))).join("");
+  return Array.from({ length }, () => String.fromCharCode(randomInt(65, 90))).join('');
 }
 
 export function randomWord() {
-  return pick(["acme", "qa-lab", "teste", "sandbox", "exemplo"]) + randomInt(10, 99);
+  return pick(['acme', 'qa-lab', 'teste', 'sandbox', 'exemplo']) + randomInt(10, 99);
 }
 
 export function pad(value) {
-  return String(value).padStart(2, "0");
+  return String(value).padStart(2, '0');
 }
 
 export function normalizar(texto) {
-  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
 export function gerarEmailPessoa(nome, sobrenome) {
-  const primeiroNome = normalizar(nome.split(" ")[0]);
-  const sobrenomeNorm = normalizar(sobrenome).replace(/\s+/g, ".");
+  const primeiroNome = normalizar(nome.split(' ')[0]);
+  const sobrenomeNorm = normalizar(sobrenome).replace(/\s+/g, '.');
   return `${primeiroNome}.${sobrenomeNorm}${randomInt(1, 999)}@${pick(DEFAULT_PROVIDERS)}`;
 }
 
@@ -90,7 +90,7 @@ export function gerarEmailEmpresa() {
 }
 
 export function gerarSite(nome) {
-  return `https://www.${normalizar(nome).replace(/\s+/g, "")}${randomInt(1, 99)}.com.br`;
+  return `https://www.${normalizar(nome).replace(/\s+/g, '')}${randomInt(1, 99)}.com.br`;
 }
 
 export function gerarInscricaoEstadual() {
@@ -103,13 +103,13 @@ export function gerarDataAbertura() {
 
 export function gerarNomeFiliacao() {
   const nomes = [
-    "Maria Aparecida", "Jose Antonio", "Sandra Regina", "Roberto Carlos",
-    "Patricia Cristina", "Marcos Aurelio", "Luciana Maria", "Antonio Carlos",
-    "Claudia Regina", "Fernando Luiz", "Adriana Cristina", "Paulo Roberto",
-    "Ana Lucia", "Jose Carlos", "Maria Helena", "Luiz Fernando", "Regina Celia",
-    "Francisco Jose", "Tereza Cristina", "Carlos Alberto"
+    'Maria Aparecida', 'Jose Antonio', 'Sandra Regina', 'Roberto Carlos',
+    'Patricia Cristina', 'Marcos Aurelio', 'Luciana Maria', 'Antonio Carlos',
+    'Claudia Regina', 'Fernando Luiz', 'Adriana Cristina', 'Paulo Roberto',
+    'Ana Lucia', 'Jose Carlos', 'Maria Helena', 'Luiz Fernando', 'Regina Celia',
+    'Francisco Jose', 'Tereza Cristina', 'Carlos Alberto',
   ];
-  return `${pick(nomes)} ${pickDistinct(PERSON_SURNAMES, 2).join(" ")}`;
+  return `${pick(nomes)} ${pickDistinct(PERSON_SURNAMES, 2).join(' ')}`;
 }
 
 export function gerarRG() {
@@ -128,11 +128,11 @@ export function gerarPlaca() {
   return Math.random() < 0.6
     ? `${letters(3)}${digits(1)}${letters(1)}${digits(2)}`   // Mercosul: ABC1D23
     : `${letters(3)}-${digits(4)}`                            // Antiga: ABC-1234
-    ;
+  ;
 }
 
 export function validarPlaca(value) {
-  const limpo = String(value || "").toUpperCase().replace(/-/g, "");
+  const limpo = String(value || '').toUpperCase().replace(/-/g, '');
   if (limpo.length !== 7) return false;
   const mercosul = /^[A-Z]{3}\d[A-Z]\d{2}$/;   // ABC1D23
   const antiga = /^[A-Z]{3}\d{4}$/;             // ABC1234
@@ -149,11 +149,11 @@ function vinCheckDigit(value) {
   const total = [...value].reduce((sum, character, index) =>
     sum + VIN_VALUES[character] * VIN_WEIGHTS[index], 0);
   const remainder = total % 11;
-  return remainder === 10 ? "X" : String(remainder);
+  return remainder === 10 ? 'X' : String(remainder);
 }
 
 export function gerarChassi() {
-  const prefix = `9BW${Array.from({ length: 5 }, () => pick(VIN_ALPHABET)).join("")}`;
+  const prefix = `9BW${Array.from({ length: 5 }, () => pick(VIN_ALPHABET)).join('')}`;
   const yearAndPlant = `${pick(VIN_ALPHABET)}${pick(VIN_ALPHABET)}`;
   const serial = digits(6);
   const withoutCheckDigit = `${prefix}${pick(VIN_ALPHABET)}${yearAndPlant}${serial}`;
@@ -161,7 +161,7 @@ export function gerarChassi() {
 }
 
 export function validarChassi(value) {
-  const normalized = String(value || "").toUpperCase();
+  const normalized = String(value || '').toUpperCase();
   if (normalized.length !== 17 || !new RegExp(`^[${VIN_ALPHABET}]{17}$`).test(normalized)) return false;
   return normalized[8] === vinCheckDigit(normalized);
 }
@@ -180,14 +180,14 @@ export function cpf(formatado = true) {
   const numeros = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));
   const dv1 = calcularDigito(numeros);
   const dv2 = calcularDigito([...numeros, dv1]);
-  const numeroCompleto = [...numeros, dv1, dv2].join("");
-  return formatado ? numeroCompleto.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") : numeroCompleto;
+  const numeroCompleto = [...numeros, dv1, dv2].join('');
+  return formatado ? numeroCompleto.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : numeroCompleto;
 }
 
 export function validarCPF(valor) {
-  const numeros = String(valor).replace(/\D/g, "");
+  const numeros = String(valor).replace(/\D/g, '');
   if (numeros.length !== 11 || /^(\d)\1{10}$/.test(numeros)) return false;
-  const digitosBase = numeros.slice(0, 9).split("").map(Number);
+  const digitosBase = numeros.slice(0, 9).split('').map(Number);
   const calcularDigito = (digitos) => {
     let soma = 0;
     let peso = digitos.length + 1;
@@ -200,11 +200,11 @@ export function validarCPF(valor) {
   };
   const dv1 = calcularDigito(digitosBase);
   const dv2 = calcularDigito([...digitosBase, dv1]);
-  return numeros === [...digitosBase, dv1, dv2].join("");
+  return numeros === [...digitosBase, dv1, dv2].join('');
 }
 
 export function cnpj(formatado = true, alfanumerico = false) {
-  const alfabetoValido = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const alfabetoValido = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   const valorCaractere = (c) => c.charCodeAt(0) - 48;
   const gerarPosicao = () => alfanumerico
     ? alfabetoValido[randomInt(0, alfabetoValido.length - 1)]
@@ -217,16 +217,16 @@ export function cnpj(formatado = true, alfanumerico = false) {
   const base = Array.from({ length: 12 }, gerarPosicao);
   const dv1 = calcularDigito(base, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
   const dv2 = calcularDigito([...base, dv1], [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
-  const numeroCompleto = [...base, dv1, dv2].join("");
-  return formatado ? numeroCompleto.replace(/(.{2})(.{3})(.{3})(.{4})(.{2})/, "$1.$2.$3/$4-$5") : numeroCompleto;
+  const numeroCompleto = [...base, dv1, dv2].join('');
+  return formatado ? numeroCompleto.replace(/(.{2})(.{3})(.{3})(.{4})(.{2})/, '$1.$2.$3/$4-$5') : numeroCompleto;
 }
 
 export function validarCNPJ(valor) {
-  const limpo = String(valor).replace(/[.\-/]/g, "").toUpperCase();
+  const limpo = String(valor).replace(/[.\-/]/g, '').toUpperCase();
   if (limpo.length !== 14 || !/^[A-Z0-9]{12}\d{2}$/.test(limpo)) return false;
   const valorCaractere = (c) => c.charCodeAt(0) - 48;
-  const base = limpo.slice(0, 12).split("");
-  const [dv1Informado, dv2Informado] = limpo.slice(12).split("");
+  const base = limpo.slice(0, 12).split('');
+  const [dv1Informado, dv2Informado] = limpo.slice(12).split('');
   const calcularDigito = (caracteres, pesos) => {
     const soma = caracteres.reduce((acc, c, i) => acc + valorCaractere(c) * pesos[i], 0);
     const resto = soma % 11;
@@ -242,14 +242,14 @@ export function gerarRenavam(formatado = true) {
   const soma = base.reduce((acc, digito, i) => acc + digito * RENAVAM_WEIGHTS[i], 0);
   const resto = soma % 11;
   const dv = resto < 2 ? 0 : 11 - resto;
-  const numeroCompleto = [...base, dv].join("");
-  return formatado ? numeroCompleto.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") : numeroCompleto;
+  const numeroCompleto = [...base, dv].join('');
+  return formatado ? numeroCompleto.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : numeroCompleto;
 }
 
 export function validarRenavam(valor) {
-  const numeros = String(valor).replace(/\D/g, "");
+  const numeros = String(valor).replace(/\D/g, '');
   if (numeros.length !== 11) return false;
-  const base = numeros.slice(0, 10).split("").map(Number);
+  const base = numeros.slice(0, 10).split('').map(Number);
   const dvInformado = Number(numeros[10]);
   const soma = base.reduce((acc, digito, i) => acc + digito * RENAVAM_WEIGHTS[i], 0);
   const resto = soma % 11;
@@ -264,83 +264,83 @@ export function createGeneratorData({
   getCnpjFormatted = () => true,
   getCnpjAlphanumeric = () => false,
   getRenavamFormatted = () => true,
-  getVehicleCatalog = () => []
+  getVehicleCatalog = () => [],
 } = {}) {
   return {
     person: {
-      title: "Pessoa gerada",
-      label: "Pessoa",
+      title: 'Pessoa gerada',
+      label: 'Pessoa',
       context: () => {
         const nome = pick(PERSON_FIRST_NAMES);
-        const sobrenome = pickDistinct(PERSON_SURNAMES, 2).join(" ");
-        const sexo = pick(["Feminino", "Masculino"]);
+        const sobrenome = pickDistinct(PERSON_SURNAMES, 2).join(' ');
+        const sexo = pick(['Feminino', 'Masculino']);
         const estado = getState();
         return {
           nome, sobrenome, sexo, mae: gerarNomeFiliacao(), pai: gerarNomeFiliacao(),
           cep: `${digits(5)}-${digits(3)}`,
-          endereco: pick(["Rua das Flores", "Avenida Brasil", "Rua das Acácias", "Avenida Central", "Rua do Comércio"]),
+          endereco: pick(['Rua das Flores', 'Avenida Brasil', 'Rua das Acácias', 'Avenida Central', 'Rua do Comércio']),
           numero: String(randomInt(10, 1999)),
-          bairro: pick(["Centro", "Jardim América", "Vila Nova", "Bela Vista", "Jardim Paulista"]),
-          cidade: pick(estado.cidades), estado
+          bairro: pick(['Centro', 'Jardim América', 'Vila Nova', 'Bela Vista', 'Jardim Paulista']),
+          cidade: pick(estado.cidades), estado,
         };
       },
       fields: [
-        ["Nome", (ctx) => `${ctx.nome} ${ctx.sobrenome}`],
-        ["CPF", () => cpf(getCpfFormatted())],
-        ["RG", () => gerarRG()],
-        ["Sexo", (ctx) => ctx.sexo],
-        ["E-mail", (ctx) => gerarEmailPessoa(ctx.nome, ctx.sobrenome)],
-        ["Telefone", (ctx) => gerarTelefoneCelular(ctx.estado, ddds)],
-        ["Data nasc.", () => `${pad(randomInt(1, 28))}/${pad(randomInt(1, 12))}/${randomInt(1970, 2003)}`],
-        ["Mãe", (ctx) => ctx.mae], ["Pai", (ctx) => ctx.pai], ["CEP", (ctx) => ctx.cep],
-        ["Endereço", (ctx) => ctx.endereco], ["Número", (ctx) => ctx.numero], ["Bairro", (ctx) => ctx.bairro],
-        ["Cidade", (ctx) => ctx.cidade], ["Estado", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`],
-        ["Profissão", () => pick(["Analista de QA", "Desenvolvedor(a)", "Designer", "Gerente de projetos", "Contador(a)", "Enfermeiro(a)", "Professor(a)", "Advogado(a)", "Arquiteto(a)", "Administrador(a)", "Jornalista", "Engenheiro(a)", "Vendedor(a)", "Nutricionista", "Fotógrafo(a)"])],
-        ["Renda mensal", () => `R$ ${randomInt(1800, 18000).toLocaleString("pt-BR")},00`]
-      ]
+        ['Nome', (ctx) => `${ctx.nome} ${ctx.sobrenome}`],
+        ['CPF', () => cpf(getCpfFormatted())],
+        ['RG', () => gerarRG()],
+        ['Sexo', (ctx) => ctx.sexo],
+        ['E-mail', (ctx) => gerarEmailPessoa(ctx.nome, ctx.sobrenome)],
+        ['Telefone', (ctx) => gerarTelefoneCelular(ctx.estado, ddds)],
+        ['Data nasc.', () => `${pad(randomInt(1, 28))}/${pad(randomInt(1, 12))}/${randomInt(1970, 2003)}`],
+        ['Mãe', (ctx) => ctx.mae], ['Pai', (ctx) => ctx.pai], ['CEP', (ctx) => ctx.cep],
+        ['Endereço', (ctx) => ctx.endereco], ['Número', (ctx) => ctx.numero], ['Bairro', (ctx) => ctx.bairro],
+        ['Cidade', (ctx) => ctx.cidade], ['Estado', (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`],
+        ['Profissão', () => pick(['Analista de QA', 'Desenvolvedor(a)', 'Designer', 'Gerente de projetos', 'Contador(a)', 'Enfermeiro(a)', 'Professor(a)', 'Advogado(a)', 'Arquiteto(a)', 'Administrador(a)', 'Jornalista', 'Engenheiro(a)', 'Vendedor(a)', 'Nutricionista', 'Fotógrafo(a)'])],
+        ['Renda mensal', () => `R$ ${randomInt(1800, 18000).toLocaleString('pt-BR')},00`],
+      ],
     },
     vehicle: {
-      title: "Veículo gerado", label: "Veículo",
+      title: 'Veículo gerado', label: 'Veículo',
       context: () => ({ estado: getState(), ...pickVehicle(getVehicleCatalog(), pick) }),
       fields: [
-        ["Marca", (ctx) => ctx.marca],
-        ["Modelo", (ctx) => ctx.modelo],
-        ["Placa", () => gerarPlaca()], ["Chassi", () => gerarChassi()], ["Ano", () => gerarAno()],
-        ["Renavam", () => gerarRenavam(getRenavamFormatted())],
-        ["Cor", () => pick(["Preto", "Branco", "Prata", "Azul", "Vermelho", "Cinza", "Verde"])],
-        ["UF", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`]
-      ]
+        ['Marca', (ctx) => ctx.marca],
+        ['Modelo', (ctx) => ctx.modelo],
+        ['Placa', () => gerarPlaca()], ['Chassi', () => gerarChassi()], ['Ano', () => gerarAno()],
+        ['Renavam', () => gerarRenavam(getRenavamFormatted())],
+        ['Cor', () => pick(['Preto', 'Branco', 'Prata', 'Azul', 'Vermelho', 'Cinza', 'Verde'])],
+        ['UF', (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`],
+      ],
     },
     company: {
-      title: "Empresa gerada", label: "Empresa",
+      title: 'Empresa gerada', label: 'Empresa',
       context: () => {
-        const nome = pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma", "Conecta", "Aliança", "Pleno", "Vértice", "Origem", "Soma", "Mosaico"]);
-        const segmento = pick(["Tecnologia", "Varejo", "Consultoria", "Educação", "Saúde", "Logística", "Construção", "Alimentos", "Finanças", "Marketing"]);
+        const nome = pick(['Horizonte', 'Norte', 'Ponto', 'Viva', 'Nexo', 'Aurora', 'Integra', 'Prisma', 'Conecta', 'Aliança', 'Pleno', 'Vértice', 'Origem', 'Soma', 'Mosaico']);
+        const segmento = pick(['Tecnologia', 'Varejo', 'Consultoria', 'Educação', 'Saúde', 'Logística', 'Construção', 'Alimentos', 'Finanças', 'Marketing']);
         const estado = getState();
         return {
           nome, segmento, estado, cidade: pick(estado.cidades),
-          endereco: pick(["Rua das Flores", "Avenida Brasil", "Rua das Acácias", "Avenida Central", "Rua do Comércio"]),
-          numero: String(randomInt(10, 1999)), bairro: pick(["Centro", "Jardim América", "Vila Nova", "Bela Vista", "Jardim Paulista"]),
-          cep: `${digits(5)}-${digits(3)}`
+          endereco: pick(['Rua das Flores', 'Avenida Brasil', 'Rua das Acácias', 'Avenida Central', 'Rua do Comércio']),
+          numero: String(randomInt(10, 1999)), bairro: pick(['Centro', 'Jardim América', 'Vila Nova', 'Bela Vista', 'Jardim Paulista']),
+          cep: `${digits(5)}-${digits(3)}`,
         };
       },
       fields: [
-        ["Razão social", (ctx) => `${ctx.nome} ${pick(["Tecnologia", "Soluções", "Serviços", "Comércio", "Digital", "Inovação", "Negócios", "Logística"])} ${pick(["Ltda.", "S.A.", "e Participações Ltda.", " do Brasil Ltda."])}`],
-        ["CNPJ", () => cnpj(getCnpjFormatted(), getCnpjAlphanumeric())],
-        ["Inscrição Estadual", () => gerarInscricaoEstadual()], ["Data de abertura", () => gerarDataAbertura()],
-        ["E-mail", () => gerarEmailEmpresa()], ["Site", (ctx) => gerarSite(ctx.nome)],
-        ["Telefone", (ctx) => gerarTelefoneFixo(ctx.estado, ddds)], ["Segmento", (ctx) => ctx.segmento],
-        ["CEP", (ctx) => ctx.cep], ["Endereço", (ctx) => ctx.endereco], ["Número", (ctx) => ctx.numero],
-        ["Bairro", (ctx) => ctx.bairro], ["Cidade", (ctx) => ctx.cidade],
-        ["Estado", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`]
-      ]
-    }
+        ['Razão social', (ctx) => `${ctx.nome} ${pick(['Tecnologia', 'Soluções', 'Serviços', 'Comércio', 'Digital', 'Inovação', 'Negócios', 'Logística'])} ${pick(['Ltda.', 'S.A.', 'e Participações Ltda.', ' do Brasil Ltda.'])}`],
+        ['CNPJ', () => cnpj(getCnpjFormatted(), getCnpjAlphanumeric())],
+        ['Inscrição Estadual', () => gerarInscricaoEstadual()], ['Data de abertura', () => gerarDataAbertura()],
+        ['E-mail', () => gerarEmailEmpresa()], ['Site', (ctx) => gerarSite(ctx.nome)],
+        ['Telefone', (ctx) => gerarTelefoneFixo(ctx.estado, ddds)], ['Segmento', (ctx) => ctx.segmento],
+        ['CEP', (ctx) => ctx.cep], ['Endereço', (ctx) => ctx.endereco], ['Número', (ctx) => ctx.numero],
+        ['Bairro', (ctx) => ctx.bairro], ['Cidade', (ctx) => ctx.cidade],
+        ['Estado', (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`],
+      ],
+    },
   };
 }
 
-export function generateMappedValue(type, context, inputType = "", options = {}) {
-  if (inputType === "checkbox") return Math.random() >= 0.35;
-  if (inputType === "radio") return true;
+export function generateMappedValue(type, context, inputType = '', options = {}) {
+  if (inputType === 'checkbox') return Math.random() >= 0.35;
+  if (inputType === 'radio') return true;
   const data = createGeneratorData(options);
   const resolvedContext = context || data.person.context();
   const vehicle = options.vehicleContext ||
@@ -352,17 +352,17 @@ export function generateMappedValue(type, context, inputType = "", options = {})
     email: gerarEmailPessoa(resolvedContext.nome, resolvedContext.sobrenome),
     phone: gerarTelefoneCelular(resolvedContext.estado, options.ddds || []),
     birthDate: `${pad(randomInt(1, 28))}/${pad(randomInt(1, 12))}/${randomInt(1970, 2003)}`,
-    gender: pick(["Feminino", "Masculino"]), mother: resolvedContext.mae, father: resolvedContext.pai,
+    gender: pick(['Feminino', 'Masculino']), mother: resolvedContext.mae, father: resolvedContext.pai,
     cep: resolvedContext.cep, address: resolvedContext.endereco, number: resolvedContext.numero,
     neighborhood: resolvedContext.bairro, city: resolvedContext.cidade,
     state: `${resolvedContext.estado.sigla} - ${resolvedContext.estado.nome}`,
-    profession: pick(["Analista de QA", "Desenvolvedor(a)", "Designer", "Gerente de projetos", "Contador(a)", "Professor(a)", "Engenheiro(a)"]),
-    income: `R$ ${randomInt(1800, 18000).toLocaleString("pt-BR")},00`,
-    company: `${pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma", "Conecta", "Aliança", "Pleno", "Vértice"])} Tecnologia Ltda.`,
+    profession: pick(['Analista de QA', 'Desenvolvedor(a)', 'Designer', 'Gerente de projetos', 'Contador(a)', 'Professor(a)', 'Engenheiro(a)']),
+    income: `R$ ${randomInt(1800, 18000).toLocaleString('pt-BR')},00`,
+    company: `${pick(['Horizonte', 'Norte', 'Ponto', 'Viva', 'Nexo', 'Aurora', 'Integra', 'Prisma', 'Conecta', 'Aliança', 'Pleno', 'Vértice'])} Tecnologia Ltda.`,
     cnpj: cnpj(options.getCnpjFormatted ? options.getCnpjFormatted() : true, options.getCnpjAlphanumeric ? options.getCnpjAlphanumeric() : false),
     brand: vehicle.marca, model: vehicle.modelo, year: gerarAno(),
     plate: gerarPlaca(), chassi: gerarChassi(), renavam: gerarRenavam(options.getRenavamFormatted ? options.getRenavamFormatted() : false),
-    website: gerarSite(pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma"])), text: randomWord()
+    website: gerarSite(pick(['Horizonte', 'Norte', 'Ponto', 'Viva', 'Nexo', 'Aurora', 'Integra', 'Prisma'])), text: randomWord(),
   };
   return personValues[type] || personValues.text;
 }

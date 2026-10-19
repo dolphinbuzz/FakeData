@@ -140,9 +140,13 @@ Instale as dependências e execute:
 npm ci
 npm test
 npm run test:coverage
+npm run lint          # Verifica estilo e qualidade do código
+npm run lint:fix      # Corrige automaticamente problemas de estilo
 ```
 
 `npm test` executa a suíte Vitest. `npm run test:coverage` gera os relatórios texto e HTML e exige pelo menos 90% de Lines globalmente e nos principais módulos de produção. O CI usa Node.js 22.x, executa `npm ci` e `npm run test:coverage` em cada push e pull request para `main`. O relatório é publicado como artefato do workflow.
+
+`npm run lint` executa o ESLint com configuração flat config (ESM, browser, webextensions). O hook `pre-commit` roda o lint automaticamente antes de cada commit.
 
 ## Solução de problemas
 

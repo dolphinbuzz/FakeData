@@ -1,16 +1,16 @@
 export const DEFAULT_VEHICLE_CATALOG = [
-  { marca: "Toyota", modelos: ["Corolla"] },
-  { marca: "Volkswagen", modelos: ["T-Cross"] },
-  { marca: "Chevrolet", modelos: ["Onix"] },
-  { marca: "Honda", modelos: ["Civic"] },
-  { marca: "Fiat", modelos: ["Argo"] },
-  { marca: "Hyundai", modelos: ["HB20"] },
-  { marca: "Nissan", modelos: ["Kicks"] },
-  { marca: "Renault", modelos: ["Kwid"] },
-  { marca: "Ford", modelos: ["Ranger"] },
-  { marca: "Jeep", modelos: ["Compass"] },
-  { marca: "Kia", modelos: ["Sportage"] },
-  { marca: "BYD", modelos: ["Dolphin"] }
+  { marca: 'Toyota', modelos: ['Corolla'] },
+  { marca: 'Volkswagen', modelos: ['T-Cross'] },
+  { marca: 'Chevrolet', modelos: ['Onix'] },
+  { marca: 'Honda', modelos: ['Civic'] },
+  { marca: 'Fiat', modelos: ['Argo'] },
+  { marca: 'Hyundai', modelos: ['HB20'] },
+  { marca: 'Nissan', modelos: ['Kicks'] },
+  { marca: 'Renault', modelos: ['Kwid'] },
+  { marca: 'Ford', modelos: ['Ranger'] },
+  { marca: 'Jeep', modelos: ['Compass'] },
+  { marca: 'Kia', modelos: ['Sportage'] },
+  { marca: 'BYD', modelos: ['Dolphin'] },
 ];
 
 export function normalizeVehicleCatalog(value) {
@@ -18,13 +18,13 @@ export function normalizeVehicleCatalog(value) {
   const brands = [];
   const seenBrands = new Set();
   value.forEach((entry) => {
-    const marca = String(entry && (entry.marca || entry.brand) || "").trim();
+    const marca = String(entry && (entry.marca || entry.brand) || '').trim();
     if (!marca) return;
     const brandKey = marca.toLocaleLowerCase();
     if (seenBrands.has(brandKey)) return;
     const modelos = Array.isArray(entry.modelos || entry.models) ? entry.modelos || entry.models : [];
     const uniqueModels = [...new Map(modelos
-      .map((model) => String(model || "").trim())
+      .map((model) => String(model || '').trim())
       .filter(Boolean)
       .map((model) => [model.toLocaleLowerCase(), model])).values()];
     seenBrands.add(brandKey);
@@ -34,11 +34,11 @@ export function normalizeVehicleCatalog(value) {
 }
 
 export function validateVehicleEntry(marca, modelo) {
-  const brand = String(marca || "").trim();
-  const model = String(modelo || "").trim();
-  if (!brand) return "Informe uma marca.";
-  if (!model) return "Informe um modelo.";
-  return "";
+  const brand = String(marca || '').trim();
+  const model = String(modelo || '').trim();
+  if (!brand) return 'Informe uma marca.';
+  if (!model) return 'Informe um modelo.';
+  return '';
 }
 
 export function addVehicleModel(catalog, marca, modelo) {
@@ -72,27 +72,27 @@ export function removeVehicleBrand(catalog, marca) {
 }
 
 export function renameVehicleBrand(catalog, marca, novoNome) {
-  const name = String(novoNome || "").trim();
-  if (!name) throw new Error("Informe uma marca.");
+  const name = String(novoNome || '').trim();
+  if (!name) throw new Error('Informe uma marca.');
   const current = normalizeVehicleCatalog(catalog);
   const target = current.find((entry) => entry.marca.toLocaleLowerCase() === String(marca).toLocaleLowerCase());
   if (!target) return current;
   if (current.some((entry) => entry !== target && entry.marca.toLocaleLowerCase() === name.toLocaleLowerCase())) {
-    throw new Error("Essa marca já está cadastrada.");
+    throw new Error('Essa marca já está cadastrada.');
   }
   target.marca = name;
   return current;
 }
 
 export function renameVehicleModel(catalog, marca, modelo, novoModelo) {
-  const name = String(novoModelo || "").trim();
-  if (!name) throw new Error("Informe um modelo.");
+  const name = String(novoModelo || '').trim();
+  if (!name) throw new Error('Informe um modelo.');
   const current = normalizeVehicleCatalog(catalog);
   const target = current.find((entry) => entry.marca.toLocaleLowerCase() === String(marca).toLocaleLowerCase());
   if (!target) return current;
   if (target.modelos.some((item) => item.toLocaleLowerCase() === name.toLocaleLowerCase() &&
     item.toLocaleLowerCase() !== String(modelo).toLocaleLowerCase())) {
-    throw new Error("Esse modelo já está cadastrado para a marca.");
+    throw new Error('Esse modelo já está cadastrado para a marca.');
   }
   target.modelos = target.modelos.map((item) =>
     item.toLocaleLowerCase() === String(modelo).toLocaleLowerCase() ? name : item);
