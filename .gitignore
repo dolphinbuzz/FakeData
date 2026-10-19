@@ -111,6 +111,7 @@ docs/api/
 docs/generated/
 site/
 public/
+plan/*
 
 # ----------------------------------------------------------------------
 # Certificates & Keys
@@ -166,7 +167,7 @@ public/
 # Arquivos locais de planejamento (NUNCA COMMITAR)
 # ----------------------------------------------------------------------
 TODO.md
-CODE-REVIEW-*.md
+CODE-REVIEW*.md
 IMPLEMENTATION-PLAN.md
 
 # Arquivos que DEVEM ser versionados (exceções explícitas)
