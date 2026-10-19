@@ -1,11 +1,11 @@
-# Spec: Armazenamento e Persistência
+# Spec: Perfis de Mapeamento
 
 ## Visão Geral
-Estratégia de armazenamento local-only (sem backend). Usa `chrome.storage.local` para dados estruturados e `localStorage` para preferências de UI.
+Sistema de persistência e gerenciamento de mapeamentos de campos por URL base. Permite salvar, carregar, renomear e excluir perfis com valores fixos.
 
-## Chrome Storage (chrome.storage.local)
+## Estrutura de Armazenamento
 
-### Chaves Principais
+### chrome.storage.local
 
 #### `fakedata-field-mappings`
 Estrutura hierárquica por Base URL:
@@ -50,8 +50,9 @@ chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
 #### writeProfiles(baseUrl, profiles, callback)
 ```javascript
 chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
-  result["fakedata-field-mappings"] = { ...result, [baseUrl]: { pages: profiles } };
-  chrome.storage.local.set({ "fakedata-field-mappings": result }, callback);
+  const stored = result["fakedata-field-mappings"] || {};
+  stored[baseUrl] = { pages: profiles };
+  chrome.storage.local.set({ "fakedata-field-mappings": stored }, callback);
 });
 ```
 
@@ -112,6 +113,7 @@ Ex: `https://exemplo.com/page::1700000000000::abc123`
 ```javascript
 // app.exemplo.com.br + api.exemplo.com.br → https://exemplo.com.br
 // Tratamento especial .com.br (3 níveis) e .com (2 níveis)
+// Porta incluída se não padrão
 ```
 
 ### normalizePageUrl(url)
@@ -121,35 +123,44 @@ Ex: `https://exemplo.com/page::1700000000000::abc123`
 ```
 
 ## Migração Legada (v1 → v2)
-```javascript
-// Detecta formato antigo: fakedata-field-mappings[url] = fields[]
-// Converte para: fakedata-field-mappings[baseUrl].pages[]
-// Gera legacyId: "${url}::legacy"
-// Preserva todos os dados, não perde mapeamentos
-```
+- Formato antigo: `fakedata-field-mappings[url] = fields[]`
+- Formato novo: `fakedata-field-mappings[baseUrl].pages[]`
+- Executa na inicialização (`migrateLegacyProfiles`)
+- Gera `legacyId` para cada mapeamento antigo: `${url}::legacy`
+- Preserva todos os dados, não perde mapeamentos
 
-## Padrões de Código
+## Auditoria
+`getMappingAudit()` gera relatório:
+- Status: `estável` / `frágil — requer atenção manual`
+- Sugestões para seletores frágeis
+- Detecção de colisão de `locatorName`
 
-### Callbacks (não Promises)
-```javascript
-chrome.storage.local.get({ key: default }, (result) => { ... });
-chrome.storage.local.set({ key: value }, () => { ... });
-// Sempre verifica chrome.runtime.lastError
-```
+## Campo Fixo vs Gerado
+| Configuração | Comportamento |
+|-------------|---------------|
+| `fixed=false` | Gera novo valor a cada preenchimento |
+| `fixed=true` | Usa `fixedValue` (persistido) |
+| Após preenchimento | `value` e `fixedValue` atualizados (mesmo se não fixo) |
 
-### Deep Clone
-```javascript
-// Ao modificar objetos do storage
-{ ...field, fixed: Boolean(field.fixed), fixedValue: field.fixedValue || "" }
-```
+## Fluxos Principais
 
-## Segurança
-- Zero dados enviados para servidores
-- Tudo local no navegador
-- Permissões mínimas: `storage`, `activeTab`, `scripting`, `sidePanel`
-- CSP: `script-src 'self'; object-src 'self'`
+### Salvar Mapeamento
+1. Se perfil selecionado → atualiza (`existingId`)
+2. Se novo → modal nome → `profileId()` → cria novo
+3. Persiste em `chrome.storage.local`
+4. Atualiza dropdown `savedMappingsSelect`
+
+### Carregar Perfil
+1. Usuário seleciona no dropdown
+2. `loadSavedProfile(id)` → popula `pageFields`
+3. `fixed` → Boolean, `fixedValue` default ""
+4. Re-render UI
+
+### Renomear/Excluir
+- **Renomear**: Modal com nome atual → atualiza storage
+- **Excluir**: Confirmação → remove do array `pages`
 
 ## Arquivos Relacionados
-- `src/scripts/app.js` - Toda lógica de storage/profile
-- `manifest.json` - Permissões storage
-- `src/scripts/content.js` - Floating controls sync
+- `src/scripts/app.js` - Toda lógica de storage/profile/migration
+- `src/scripts/messages.js` - ACTIONS (PAGE_FIELD_FILL_REQUEST)
+- `src/scripts/content.js` - floating button click → PAGE_FIELD_FILL_REQUEST

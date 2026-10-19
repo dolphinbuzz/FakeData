@@ -55,9 +55,9 @@ chrome.windows.getCurrent((win) => {
 ## Mapear Campos (Aba Mapping)
 
 ### Automático
-- **URL Base**: Dropdown agrupado por domínio base
+- **URL Base**: Dropdown agrupado por domínio base (`getBaseUrl()`)
 - **Escanear**: `SCAN_FIELDS` → lista campos com tipo inferido
-- **Linha de campo**: Label (editável), Tipo (select 29 opções), Seletor (editável), Fixed checkbox + value, Ações
+- **Linha de campo**: Label (editável), Tipo (select 30 opções: 29 tipos + auto), Seletor (editável), Fixed checkbox + value, Ações
 - **Ações por linha**: Marcar/Desmarcar, Localizar (🔍), Capturar (🎯), Preencher (📥)
 - **Ações em lote**: Marcar todos, Preencher todos, Salvar seletores
 - **Botões flutuantes**: Toggle persiste em `localStorage` + `chrome.storage`
@@ -86,7 +86,7 @@ chrome.windows.getCurrent((win) => {
 - `tabIndex` management (ativo=0, inativo=-1)
 - Focus management em modais (trap, restore)
 - Escape para fechar modais
-- Atalhos bloqueados em inputs/editáveis
+- Atalhos bloqueados em inputs/editáveis (`isEditableTarget`)
 
 ## Atalhos de Teclado (`Alt+Shift+`)
 | Tecla | Ação | Seletor |
@@ -96,6 +96,7 @@ chrome.windows.getCurrent((win) => {
 | `F` | Toggle flutuantes | `#floating-controls-toggle` |
 | `L` | Salvar seletores | `#save-mappings-button` |
 | `M` | Marcar todos | `#mark-all-button` |
+| `C` | Limpar todos | `#clear-all-button` |
 
 ## Estados de UI
 - `hidden` attribute (não `display:none`)
@@ -106,5 +107,6 @@ chrome.windows.getCurrent((win) => {
 ## Arquivos Relacionados
 - `src/popup.html` - Estrutura completa
 - `src/styles/popup.css` - CSS custom properties, responsivo
-- `src/scripts/app.js` - Toda lógica de UI, modais, tabs, eventos
+- `src/scripts/app.js` - Toda lógica de UI, modais, tabs, eventos, shortcuts
 - `src/privacy.html` + `src/styles/privacy.css` - Página privacidade
+- `src/scripts/privacy.js` - Lógica página privacidade

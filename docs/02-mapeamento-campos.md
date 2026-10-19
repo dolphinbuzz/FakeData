@@ -17,7 +17,7 @@ Sistema de descoberta, inferência e mapeamento de campos de formulário em pág
 - **Marcar/Desmarcar encontrados**: Highlight visual dos matches
 - **Copiar JSON**: Exporta `locatorName: selector`
 
-## Inferência de Tipo (29 tipos)
+## Inferência de Tipo (29 tipos + `auto`)
 
 | Categoria | Tipos | Heurística |
 |-----------|-------|------------|
@@ -25,7 +25,7 @@ Sistema de descoberta, inferência e mapeamento de campos de formulário em pág
 | Contato | `email`, `phone` | type=email/tel, autocomplete, label |
 | Endereço | `cep`, `address`, `number`, `neighborhood`, `city`, `state` | autocomplete, label, select options (UF) |
 | Pessoal | `birthDate`, `gender`, `mother`, `father`, `profession`, `income` | label, type=date/month, select options |
-| Veículo | `brand`, `model`, `year`, `plate`, `chassi` | label, placeholder |
+| Veículo | `brand`, `model`, `year`, `plate`, `chassi`, `renavam` | label, placeholder |
 | Empresa | `company`, `website` | autocomplete=organization, label |
 | UI | `checkbox`, `radio`, `text`, `number` | type attribute |
 
@@ -43,10 +43,13 @@ Sistema de descoberta, inferência e mapeamento de campos de formulário em pág
 | 5 | Texto estático | Label visível curto | fragile |
 | 5 | Estrutural | `form > div:nth-of-type(2) > input` | fragile |
 
+**Nota**: Atributos de teste (`data-cy`, `data-test`, `data-testid`) são verificados ANTES da detecção Angular, permitindo seletores estáveis mesmo em elementos Angular.
+
 ## Validações
 - **Unicidade**: `document.querySelectorAll(selector).length === 1`
-- **IDs dinâmicos detectados**: hashes, `ember-`, `component-`, `r123` → evitados
-- **Colisão pós-scan**: Múltiplos elementos com mesmo seletor → `fragile`
+- **IDs dinâmicos detectados**: hashes, `ember-`, `component-`, `r123`, padrões Angular (`mat-input-*`, `cdk-describedby-*`) → evitados
+- **Atributos Angular instáveis**: `ng-reflect-*`, `_ngcontent-*`, `_nghost-*`, `ng-version` → seletor marcado `fragile` com sugestão
+- **Colisão pós-scan**: Múltiplos elementos com mesmo seletor → `fragile` + sugestão
 - **Sugestões**: `data-cy` recomendado para elementos `fragile`
 
 ## Locator Names
@@ -55,13 +58,14 @@ Formato: `rota-contexto-tipo` (ex: `cadastro-email-email`)
 - Contexto: label/name/tagName sanitizado
 - Tipo: inputType ou tagName lowercased
 
-## Observação de Navegação (SPA)
-- `history.pushState/replaceState` interceptados
-- `popstate`, `hashchange` listeners
+## Observação de Navegação (SPA) — Atualizada A2
+- `history.pushState`/`replaceState` interceptados (wrappers restaurados no cleanup)
+- `popstate`, `hashchange` listeners (removidos no cleanup)
 - `MutationObserver` no body (ignora `data-fakedata-control`)
 - Debounce 250ms → notifica `PAGE_CONTENT_CHANGED`
+- **Cleanup**: `installNavigationObserver()` retorna função que desconecta observer, remove listeners, restaura `history.pushState`/`replaceState` originais, limpa timer
 
 ## Arquivos Relacionados
-- `src/scripts/selector-engine.js` - Scan, inferType, selectorFor, captureNextClick
-- `src/scripts/content.js` - captureNextClick handler, fieldFromTarget
-- `src/scripts/messages.js` - ACTIONS (SCAN_FIELDS, CAPTURE_NEXT_CLICK, etc.)
+- `src/scripts/selector-engine.js` - Scan, inferType, selectorFor, captureNextClick, installNavigationObserver (retorna cleanup), normalize, visible, isDynamicId, hasAngularAttributes
+- `src/scripts/content.js` - captureNextClick handler, fieldFromTarget, messageListener, installationProbe, dispose
+- `src/scripts/messages.js` - ACTIONS (SCAN_FIELDS, CAPTURE_NEXT_CLICK, PAGE_CONTENT_CHANGED, etc.)
