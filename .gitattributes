@@ -1,0 +1,5 @@
+# Scripts de hook são interpretados por bash e exigem LF mesmo no Windows, onde
+# core.autocrlf=true converteria os arquivos para CRLF (o que quebraria o shebang,
+# os caminhos e comandos como "exit 1"). Estes padrões mantêm LF no checkout.
+.opencode/hooks/*/*.sh text eol=lf
+.opencode/hooks/git/* text eol=lf

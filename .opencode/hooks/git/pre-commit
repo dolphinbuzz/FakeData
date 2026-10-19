@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Shim de hook do Git para o projeto FakeData.
+#
+# O Git chama este arquivo pelo nome do hook (pre-commit, pre-push, post-merge), e o shim
+# executa, em ordem alfabética, todos os scripts numerados de .opencode/hooks/<hook>/,
+# parando no primeiro que falhar (exit != 0). O diretório do hook é derivado do próprio
+# nome deste arquivo, então os três shims compartilham o mesmo conteúdo.
+#
+# Instalação (opt-in, nada é instalado automaticamente):
+#   git config core.hooksPath .opencode/hooks/git
+# Desinstalação:
+#   git config --unset core.hooksPath
+#
+# Em POSIX/macOS, garanta o bit de execução: chmod +x .opencode/hooks/git/*
+
+set -u
+
+hook_name="$(basename "${BASH_SOURCE[0]}")"
+hook_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$hook_dir/../../.." && pwd)"
+scripts_dir="$hook_dir/../$hook_name"
+
+# O Git executa hooks com o CWD na raiz do repositório; garantimos o mesmo aqui.
+cd "$repo_root" || exit 1
+
+for script in "$scripts_dir"/*.sh; do
+  [ -e "$script" ] || continue
+  echo "==> [$hook_name] $(basename "$script")"
+  bash "$script" "$@" || exit $?
+done
+
+exit 0
