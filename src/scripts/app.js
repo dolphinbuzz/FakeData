@@ -112,7 +112,7 @@ function detectPopupMode(callback) {
 }
 
 const generatorConfig = {
-  getState: () => pick(ESTADOS),
+  getState: () => gerarEstadoSelecionado(),
   ddds: DDDS,
   getCpfFormatted: () => document.querySelector("#cpf-formatted") ? document.querySelector("#cpf-formatted").checked : true,
   getCnpjFormatted: () => document.querySelector("#cnpj-formatted") ? document.querySelector("#cnpj-formatted").checked : true,
@@ -230,8 +230,8 @@ function renderVehicleCatalog() {
         <button type="button" class="copy-all-button" data-edit-brand="${escapeHtml(entry.marca)}">Editar marca</button>
         <button type="button" class="copy-all-button danger-button" data-remove-brand="${escapeHtml(entry.marca)}">Excluir marca</button>
         <div class="vehicle-models">${entry.modelos.map((model) => `<span class="vehicle-model">
-          ${escapeHtml(model)} <button type="button" aria-label="Editar ${escapeHtml(model)}" data-edit-brand="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">✎</button>
-          <button type="button" aria-label="Excluir ${escapeHtml(model)}" data-remove-brand="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">×</button>
+          ${escapeHtml(model)} <button type="button" aria-label="Editar ${escapeHtml(model)}" data-edit-model="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">✎</button>
+          <button type="button" aria-label="Excluir ${escapeHtml(model)}" data-remove-model="${escapeHtml(entry.marca)}" data-model="${escapeHtml(model)}">×</button>
         </span>`).join("")}</div>
       </div>`).join("")
     : "<span class=\"muted\">Nenhum veículo personalizado cadastrado.</span>";
@@ -244,7 +244,7 @@ function renderVehicleCatalog() {
   vehicleCatalogList.querySelectorAll("[data-edit-brand]").forEach((button) => {
     button.addEventListener("click", async () => {
       const newName = await openRenameBrandModal(button.dataset.editBrand);
-      if (newName == null) return;
+      if (!newName) return;
       try {
         vehicleCatalog = renameVehicleBrand(vehicleCatalog, button.dataset.editBrand, newName);
         saveVehicleCatalog();
@@ -253,18 +253,18 @@ function renderVehicleCatalog() {
       }
     });
   });
-  vehicleCatalogList.querySelectorAll("[data-edit-brand][data-model]").forEach((button) => {
+  vehicleCatalogList.querySelectorAll("[data-edit-model]").forEach((button) => {
     button.addEventListener("click", () => {
-      vehicleBrandInput.value = button.dataset.editBrand;
+      vehicleBrandInput.value = button.dataset.editModel;
       vehicleModelInput.value = button.dataset.model;
-      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.editBrand, button.dataset.model);
+      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.editModel, button.dataset.model);
       saveVehicleCatalog();
       vehicleModelInput.focus();
     });
   });
-  vehicleCatalogList.querySelectorAll("[data-remove-brand][data-model]").forEach((button) => {
+  vehicleCatalogList.querySelectorAll("[data-remove-model]").forEach((button) => {
     button.addEventListener("click", () => {
-      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.removeBrand, button.dataset.model);
+      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.removeModel, button.dataset.model);
       saveVehicleCatalog();
     });
   });
