@@ -770,6 +770,244 @@ describe("popup app", () => {
       .toContain("Não foi possível ler esta página");
   });
 
+  it("serializa a injeção por aba e atende chamadas concorrentes com um único executeScript", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockClear();
+    chrome.scripting.executeScript.mockClear();
+    chrome.storage.local.get.mockClear();
+
+    const actionsOf = () => chrome.tabs.sendMessage.mock.calls.map((call) => call[1] && call[1].action);
+    let failing = true;
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      // Em Chrome, lastError só existe durante o callback da própria chamada.
+      chrome.runtime.lastError = null;
+      sentMessages.push({ tabId, message: clone(message) });
+      if (failing) {
+        chrome.runtime.lastError = { message: "Could not establish connection" };
+        callback();
+        chrome.runtime.lastError = null;
+        return;
+      }
+      callback({ fields: clone(scannedFields) });
+    });
+    let injectionCallback = null;
+    chrome.scripting.executeScript.mockImplementation((details, callback) => {
+      chrome.runtime.lastError = null;
+      injectionCallback = callback;
+    });
+
+    click("#scan-fields-button");
+    click("#scan-fields-button");
+
+    // A segunda chamada entra na fila em vez de disparar outra injeção.
+    expect(actionsOf()).toEqual([ACTIONS.SCAN_FIELDS, ACTIONS.SCAN_FIELDS]);
+    expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(1);
+    expect(chrome.storage.local.get).not.toHaveBeenCalled();
+
+    failing = false;
+    injectionCallback();
+    await nextTick();
+
+    // Cada chamada aguardando a injeção reenviou a mensagem e recebeu a resposta.
+    expect(actionsOf().filter((action) => action === ACTIONS.SCAN_FIELDS)).toHaveLength(4);
+    expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(1);
+    expect(chrome.storage.local.get).toHaveBeenCalledTimes(2);
+    expect(document.querySelectorAll(".page-field")).toHaveLength(2);
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("2 campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.");
+  });
+
+  it("fluxo de sucesso: injeta, reenvia a mensagem e renderiza os campos", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockClear();
+    chrome.scripting.executeScript.mockClear();
+
+    const actionsOf = () => chrome.tabs.sendMessage.mock.calls.map((call) => call[1] && call[1].action);
+    let attempts = 0;
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      chrome.runtime.lastError = null;
+      attempts += 1;
+      if (attempts === 1) {
+        chrome.runtime.lastError = { message: "Could not establish connection" };
+        callback();
+        chrome.runtime.lastError = null;
+        return;
+      }
+      callback({ fields: clone(scannedFields) });
+    });
+    chrome.scripting.executeScript.mockImplementation((details, callback) => {
+      chrome.runtime.lastError = null;
+      callback();
+    });
+
+    click("#scan-fields-button");
+    await nextTick();
+
+    expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(1);
+    expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
+      { target: { tabId: activeTab.id }, files: ["src/scripts/content.js"] },
+      expect.any(Function)
+    );
+    expect(actionsOf().filter((action) => action === ACTIONS.SCAN_FIELDS)).toHaveLength(2);
+    expect(document.querySelectorAll(".page-field")).toHaveLength(2);
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("2 campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.");
+  });
+
+  it("mantém filas separadas por aba: uma injeção por aba e resposta nas duas", async () => {
+    setupChromeMock({
+      openTabs: [
+        { id: 10, url: "https://sistema.example.test/cadastro", active: true },
+        { id: 11, url: "https://outro.example.test/login", active: false }
+      ]
+    });
+    await loadApp();
+    chrome.tabs.sendMessage.mockClear();
+    chrome.scripting.executeScript.mockClear();
+    chrome.storage.local.get.mockClear();
+
+    let contentInstalled = false;
+    const injectionCallbacks = new Map();
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      chrome.runtime.lastError = null;
+      if (!contentInstalled) {
+        chrome.runtime.lastError = { message: "Could not establish connection" };
+        callback();
+        chrome.runtime.lastError = null;
+        return;
+      }
+      callback({ fields: clone(scannedFields) });
+    });
+    chrome.scripting.executeScript.mockImplementation((details, callback) => {
+      chrome.runtime.lastError = null;
+      injectionCallbacks.set(details.target.tabId, callback);
+    });
+
+    click("#scan-fields-button");
+    const baseUrlSelect = document.querySelector("#base-url-select");
+    baseUrlSelect.value = "https://outro.example.test";
+    baseUrlSelect.dispatchEvent(new Event("change", { bubbles: true }));
+
+    // Cada aba tem sua própria injeção em andamento (não compartilham fila).
+    expect(Array.from(injectionCallbacks.keys())).toEqual([10, 11]);
+    expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(2);
+    expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
+      { target: { tabId: 10 }, files: ["src/scripts/content.js"] },
+      expect.any(Function)
+    );
+    expect(chrome.scripting.executeScript).toHaveBeenCalledWith(
+      { target: { tabId: 11 }, files: ["src/scripts/content.js"] },
+      expect.any(Function)
+    );
+
+    contentInstalled = true;
+    injectionCallbacks.get(10)();
+
+    // Concluir a aba 10 não reinjeta nem antecipa a notificação da aba 11.
+    expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(2);
+    expect(injectionCallbacks.has(11)).toBe(true);
+
+    injectionCallbacks.get(11)();
+    await nextTick();
+
+    // As duas abas reenviaram a mensagem e receberam a resposta.
+    expect(chrome.tabs.sendMessage.mock.calls
+      .filter((call) => call[1] && call[1].action === ACTIONS.SCAN_FIELDS)
+      .map((call) => call[0])).toEqual([10, 11, 10, 11]);
+    expect(chrome.storage.local.get).toHaveBeenCalledTimes(2);
+    expect(document.querySelectorAll(".page-field")).toHaveLength(2);
+  });
+
+  it("limpa a fila após erro de injeção e volta a injetar na chamada seguinte", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockClear();
+    chrome.scripting.executeScript.mockClear();
+
+    let contentInstalled = false;
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      chrome.runtime.lastError = null;
+      if (!contentInstalled && message && message.action === ACTIONS.SCAN_FIELDS) {
+        chrome.runtime.lastError = { message: "Could not establish connection" };
+        callback();
+        chrome.runtime.lastError = null;
+        return;
+      }
+      callback({ fields: clone(scannedFields) });
+    });
+    let injectionAttempts = 0;
+    chrome.scripting.executeScript.mockImplementation((details, callback) => {
+      chrome.runtime.lastError = null;
+      injectionAttempts += 1;
+      if (injectionAttempts === 1) {
+        chrome.runtime.lastError = { message: "Cannot access contents of the page" };
+        callback();
+        chrome.runtime.lastError = null;
+        return;
+      }
+      contentInstalled = true;
+      callback();
+    });
+
+    click("#scan-fields-button");
+    await nextTick();
+
+    expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toContain("Não foi possível ler esta página");
+
+    // A entrada do Map foi removida no erro: a próxima chamada inicia uma NOVA injeção.
+    click("#scan-fields-button");
+    await nextTick();
+
+    expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(2);
+    expect(document.querySelectorAll(".page-field")).toHaveLength(2);
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("2 campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.");
+  });
+
+  it("trata throw síncrono do executeScript sem deixar a fila órfã", async () => {
+    await loadApp();
+    chrome.tabs.sendMessage.mockClear();
+    chrome.scripting.executeScript.mockClear();
+
+    let contentInstalled = false;
+    chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      chrome.runtime.lastError = null;
+      if (!contentInstalled && message && message.action === ACTIONS.SCAN_FIELDS) {
+        chrome.runtime.lastError = { message: "Could not establish connection" };
+        callback();
+        chrome.runtime.lastError = null;
+        return;
+      }
+      callback({ fields: clone(scannedFields) });
+    });
+    let throwOnInjection = true;
+    chrome.scripting.executeScript.mockImplementation((details, callback) => {
+      chrome.runtime.lastError = null;
+      if (throwOnInjection) throw new Error("Extension context invalidated");
+      contentInstalled = true;
+      callback();
+    });
+
+    click("#scan-fields-button");
+    await nextTick();
+
+    // O waiter recebeu o erro e a entrada do Map foi removida.
+    expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toContain("Não foi possível ler esta página");
+
+    throwOnInjection = false;
+    click("#scan-fields-button");
+    await nextTick();
+
+    // Sem entrada órfã, a chamada seguinte tenta injetar de novo e conclui.
+    expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(2);
+    expect(document.querySelectorAll(".page-field")).toHaveLength(2);
+    expect(document.querySelector("#page-fields-status").textContent)
+      .toBe("2 campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.");
+  });
+
   it("mostra estados de erro para marcação, localização e preenchimento", async () => {
     await loadApp();
     chrome.tabs.sendMessage.mockImplementation((tabId, message, callback) => {

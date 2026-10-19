@@ -1,6 +1,21 @@
 (() => {
   "use strict";
 
+  // Guarda de re-injeção: o script pode ser reinjetado pelo popup/painel ou após reload completo
+  // da página; navegação SPA same-document NÃO reinjeta. A flag é uma função de vivacidade da
+  // instalação anterior: se ela responder "viva", esta execução apenas sai; se lançar (contexto
+  // invalidado por update/reload da extensão) ou responder falsy (runtime sem id), reinstala.
+  const previousInstall = window.__fakedataContentInstalled;
+  if (previousInstall) {
+    if (typeof previousInstall !== "function") return; // guarda antiga (booleana), presumida viva
+    try {
+      if (previousInstall()) return;
+    } catch (_error) {
+      // Contexto invalidado: segue para a reinstalação autoritativa.
+    }
+  }
+  window.__fakedataContentInstalled = () => Boolean(chrome.runtime && chrome.runtime.id);
+
   const modulesReady = Promise.all([
     import(chrome.runtime.getURL("src/scripts/selector-engine.js")),
     import(chrome.runtime.getURL("src/scripts/messages.js"))

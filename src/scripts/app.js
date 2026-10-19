@@ -19,6 +19,10 @@ let pageFields = [];
 let markedSelectors = new Set();
 let vehicleCatalog = [];
 let floatingControlsVisible = true;
+// Injeções em andamento por aba (tabId -> callbacks aguardando o fim da injeção).
+// Serializa a injeção sob demanda: chamadas concorrentes na mesma aba compartilham
+// uma única execução de content.js e são notificadas juntas ao terminar.
+const pendingInjections = new Map();
 
 const resultSection = document.querySelector("#result-section");
 const resultFields = document.querySelector("#result-fields");
@@ -621,11 +625,7 @@ function sendMessageToTab(tabId, message, callback, allowInjection) {
       callback(null, error);
       return;
     }
-    chrome.scripting.executeScript({
-      target: { tabId },
-      files: ["src/scripts/content.js"]
-    }, () => {
-      const injectionError = chrome.runtime.lastError;
+    injectContentScript(tabId, (injectionError) => {
       if (injectionError) {
         callback(null, injectionError);
         return;
@@ -633,6 +633,43 @@ function sendMessageToTab(tabId, message, callback, allowInjection) {
       sendMessageToTab(tabId, message, callback, false);
     });
   });
+}
+
+function injectContentScript(tabId, callback) {
+  const waiters = pendingInjections.get(tabId);
+  if (waiters) {
+    waiters.push(callback);
+    return;
+  }
+  pendingInjections.set(tabId, [callback]);
+
+  // Remove a entrada do Map ANTES de notificar: libera a aba para uma nova injeção e evita
+  // que um waiter com exceção impeça a notificação dos demais.
+  const notifyWaiters = (injectionError) => {
+    const pendingWaiters = pendingInjections.get(tabId) || [];
+    pendingInjections.delete(tabId);
+    pendingWaiters.forEach((waiter) => {
+      try {
+        waiter(injectionError);
+      } catch (_error) {
+        // Waiter já invalidado (ex.: popup fechado); segue notificando os restantes.
+      }
+    });
+  };
+
+  try {
+    chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["src/scripts/content.js"]
+    }, () => {
+      // lastError só está disponível de forma síncrona dentro deste callback.
+      notifyWaiters(chrome.runtime.lastError || null);
+    });
+  } catch (error) {
+    // executeScript pode lançar de forma síncrona (ex.: contexto da extensão invalidado);
+    // sem este catch a entrada do Map ficaria órfã e a aba nunca mais seria injetada.
+    notifyWaiters(error);
+  }
 }
 
 function checkSelectorMatches() {

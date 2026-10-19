@@ -42,6 +42,7 @@ function setupChromeMock() {
   messageListener = null;
   globalThis.chrome = {
     runtime: {
+      id: "test-extension-id",
       getURL: vi.fn((filePath) => pathToFileURL(resolve(filePath)).href),
       sendMessage: vi.fn((message, callback) => {
         if (typeof callback === "function") callback({ filled: false });
@@ -300,5 +301,49 @@ describe("content script", () => {
     await new Promise((resolveTick) => setTimeout(resolveTick, 0));
     chrome.runtime.lastError = null;
     expect(document.querySelector(".fakedata-page-fill").title).toBe("Não foi possível preencher este campo");
+  });
+
+  it("não duplica listeners nem estilo quando o script é injetado duas vezes na mesma página", async () => {
+    // O beforeEach já executou content.js uma vez nesta página.
+    expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("#fakedata-page-control-style")).toHaveLength(1);
+
+    await loadContentScript();
+
+    expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("#fakedata-page-control-style")).toHaveLength(1);
+    // A instância original continua ativa e respondendo normalmente.
+    const response = await sendContentMessage({ action: ACTIONS.SCAN_FIELDS });
+    expect(response.fields.map((field) => field.selector)).toEqual(["#email", "#cpf", "#uf"]);
+  });
+
+  it("presume viva a instalação anterior com guarda booleana (formato antigo)", async () => {
+    window.__fakedataContentInstalled = true;
+
+    await loadContentScript();
+
+    expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(1);
+  });
+
+  it("reinstala quando o contexto da instalação anterior foi invalidado", async () => {
+    // Simula o que acontece após reload/update da extensão: o probe antigo lança.
+    window.__fakedataContentInstalled = () => {
+      throw new Error("Extension context invalidated");
+    };
+
+    await loadContentScript();
+
+    expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(2);
+    // A nova instalação responde normalmente (reparo efetivo da página).
+    const response = await sendContentMessage({ action: ACTIONS.SCAN_FIELDS });
+    expect(response.fields.map((field) => field.selector)).toEqual(["#email", "#cpf", "#uf"]);
+  });
+
+  it("reinstala quando o probe da instalação anterior responde falso (runtime sem id)", async () => {
+    chrome.runtime.id = undefined;
+
+    await loadContentScript();
+
+    expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(2);
   });
 });
