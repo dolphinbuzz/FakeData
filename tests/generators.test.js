@@ -19,6 +19,7 @@ import {
   validarCNPJ,
   validarCPF,
   validarChassi,
+  validarPlaca,
   validarRenavam
 } from "../src/scripts/generators.js";
 
@@ -92,6 +93,16 @@ describe("geradores", () => {
     expect(pad(7)).toBe("07");
     expect(normalizar("João Áureo")).toBe("joao aureo");
     expect(gerarPlaca()).toMatch(/^[A-Z]{3}(?:\d[A-Z]\d{2}|-\d{4})$/);
+    expect(validarPlaca("ABC1D23")).toBe(true);
+    expect(validarPlaca("ABC-1234")).toBe(true);
+    expect(validarPlaca("XYZ9K88")).toBe(true);
+    expect(validarPlaca("ABC1234")).toBe(true);
+    expect(validarPlaca("")).toBe(false);
+    expect(validarPlaca(null)).toBe(false);
+    expect(validarPlaca("ABC123")).toBe(false);
+    expect(validarPlaca("ABC1D234")).toBe(false);
+    expect(validarPlaca("abc1d23")).toBe(true);
+    expect(validarPlaca("ABC-123")).toBe(false);
     expect(gerarAno()).toMatch(/^20\d{2}\/20\d{2}$/);
     expect(gerarChassi()).toMatch(/^[A-HJ-NPR-Z0-9]{17}$/);
     expect(gerarSite("São Paulo Teste")).toMatch(/^https:\/\/www\.saopauloteste\d{1,2}\.com\.br$/);

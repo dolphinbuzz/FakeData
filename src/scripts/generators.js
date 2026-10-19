@@ -126,8 +126,17 @@ export function gerarTelefoneFixo(estado, ddds = DDDS) {
 
 export function gerarPlaca() {
   return Math.random() < 0.6
-    ? `${letters(3)}${digits(1)}${letters(1)}${digits(2)}`
-    : `${letters(3)}-${digits(4)}`;
+    ? `${letters(3)}${digits(1)}${letters(1)}${digits(2)}`   // Mercosul: ABC1D23
+    : `${letters(3)}-${digits(4)}`                            // Antiga: ABC-1234
+    ;
+}
+
+export function validarPlaca(value) {
+  const limpo = String(value || "").toUpperCase().replace(/-/g, "");
+  if (limpo.length !== 7) return false;
+  const mercosul = /^[A-Z]{3}\d[A-Z]\d{2}$/;   // ABC1D23
+  const antiga = /^[A-Z]{3}\d{4}$/;             // ABC1234
+  return mercosul.test(limpo) || antiga.test(limpo);
 }
 
 export function gerarAno() {

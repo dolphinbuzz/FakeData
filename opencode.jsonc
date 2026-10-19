@@ -1,0 +1,173 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "project": {
+    "name": "FakeData",
+    "type": "chrome-extension",
+    "language": "javascript",
+    "packageManager": "npm"
+  },
+  "model": {
+    "provider": "opencode",
+    "id": "nemotron-3-ultra-free",
+    "temperature": 0.3,
+    "maxTokens": 8192
+  },
+  "agents": {},
+  "skills": {
+    "fakedata-architect": {
+      "description": "Architectural decisions and ADR management for FakeData extension",
+      "model": "opencode/nemotron-3-ultra-free",
+      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
+      "system_prompt_file": ".opencode/skills/fakedata-architect.md"
+    },
+    "fakedata-generator": {
+      "description": "Data generation logic for FakeData",
+      "model": "opencode/nemotron-3-ultra-free",
+      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
+      "system_prompt_file": ".opencode/skills/fakedata-generator.md"
+    },
+    "fakedata-selector-engine": {
+      "description": "Selector engine for field mapping",
+      "model": "opencode/nemotron-3-ultra-free",
+      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
+      "system_prompt_file": ".opencode/skills/fakedata-selector-engine.md"
+    },
+    "fakedata-content-script": {
+      "description": "Content script injection and page interaction",
+      "model": "opencode/nemotron-3-ultra-free",
+      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
+      "system_prompt_file": ".opencode/skills/fakedata-content-script.md"
+    },
+    "fakedata-messaging": {
+      "description": "Messaging protocol between popup and content script",
+      "model": "opencode/nemotron-3-ultra-free",
+      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
+      "system_prompt_file": ".opencode/skills/fakedata-messaging.md"
+    },
+    "fakedata-storage-profile": {
+      "description": "Storage management and profile handling",
+      "model": "opencode/nemotron-3-ultra-free",
+      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
+      "system_prompt_file": ".opencode/skills/fakedata-storage-profile.md"
+    },
+    "fakedata-testing": {
+      "description": "Testing strategies and Vitest configuration",
+      "model": "opencode/nemotron-3-ultra-free",
+      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
+      "system_prompt_file": ".opencode/skills/fakedata-testing.md"
+    },
+    "fakedata-devops": {
+      "description": "DevOps, CI/CD, and build configuration",
+      "model": "opencode/nemotron-3-ultra-free",
+      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
+      "system_prompt_file": ".opencode/skills/fakedata-devops.md"
+    },
+    "fakedata-documentation": {
+      "description": "Documentation generation and maintenance",
+      "model": "opencode/nemotron-3-ultra-free",
+      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
+      "system_prompt_file": ".opencode/skills/fakedata-documentation.md"
+    },
+    "fakedata-ui-ux": {
+      "description": "UI/UX design and implementation",
+      "model": "opencode/nemotron-3-ultra-free",
+      "tools": ["read", "write", "edit", "glob", "grep", "shell", "question"],
+      "system_prompt_file": ".opencode/skills/fakedata-ui-ux.md"
+    }
+  },
+  "hooks": {
+    "pre-commit": [
+      ".opencode/hooks/pre-commit/01-lint.sh",
+      ".opencode/hooks/pre-commit/02-test-changed.sh"
+    ],
+    "pre-push": [
+      ".opencode/hooks/pre-push/01-full-test.sh",
+      ".opencode/hooks/pre-push/02-version-check.sh"
+    ],
+    "post-merge": [
+      ".opencode/hooks/post-merge/01-install-deps.sh",
+      ".opencode/hooks/post-merge/02-clear-cache.sh"
+    ],
+    "session-start": [
+      ".opencode/hooks/session-start/01-load-context.sh"
+    ],
+    "session-end": [
+      ".opencode/hooks/session-end/01-save-memory.sh"
+    ]
+  },
+  "workflows": [
+    "feature-development",
+    "bug-fix",
+    "refactoring",
+    "cross-cutting-change",
+    "release-preparation"
+  ],
+  "context": [
+    ".opencode/context/architecture-decisions.md",
+    ".opencode/context/api-contracts.md",
+    ".opencode/context/coding-standards.md",
+    ".opencode/context/testing-strategy.md"
+  ],
+  "memory": {
+    "enabled": true,
+    "directory": ".opencode/memory",
+    "perAgent": true
+  },
+  "testing": {
+    "framework": "vitest",
+    "environment": "jsdom",
+    "coverage": {
+      "provider": "v8",
+      "thresholds": {
+        "lines": 90,
+        "functions": 90,
+        "branches": 80,
+        "statements": 90
+      }
+    },
+    "commands": {
+      "test": "npm test",
+      "coverage": "npm run test:coverage"
+    }
+  },
+  "build": {
+    "type": "chrome-extension",
+    "manifest": "manifest.json",
+    "output": "dist/",
+    "packageExclude": [
+      "node_modules/**",
+      "tests/**",
+      "coverage/**",
+      ".git/**",
+      ".opencode/**",
+      "*.md",
+      "vitest.config.js",
+      "package*.json",
+      ".github/**"
+    ]
+  },
+  "git": {
+    "hooksEnabled": true,
+    "conventionalCommits": true,
+    "branchPrefixes": [
+      "feature/",
+      "fix/",
+      "refactor/",
+      "docs/",
+      "chore/"
+    ]
+  },
+  "ide": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": "source.fixAll"
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "language": "pt-BR"
+}
