@@ -392,20 +392,25 @@ function schedulePageChangeNotification(domChanged = false) {
 function installNavigationObserver() {
   const originalPushState = history.pushState;
   const originalReplaceState = history.replaceState;
-  history.pushState = function (...args) {
+  const onPushState = function (...args) {
     const result = originalPushState.apply(this, args);
     schedulePageChangeNotification();
     return result;
   };
-  history.replaceState = function (...args) {
+  const onReplaceState = function (...args) {
     const result = originalReplaceState.apply(this, args);
     schedulePageChangeNotification();
     return result;
   };
-  window.addEventListener("popstate", schedulePageChangeNotification);
-  window.addEventListener("hashchange", schedulePageChangeNotification);
+  history.pushState = onPushState;
+  history.replaceState = onReplaceState;
+  const onPopState = () => schedulePageChangeNotification();
+  const onHashChange = () => schedulePageChangeNotification();
+  window.addEventListener("popstate", onPopState);
+  window.addEventListener("hashchange", onHashChange);
+  let observer = null;
   if (document.body) {
-    new MutationObserver((records) => {
+    observer = new MutationObserver((records) => {
       const relevant = records.some((record) => {
         if (record.target instanceof Element && record.target.closest("[data-fakedata-control]")) return false;
         return Array.from(record.addedNodes).some((node) =>
@@ -414,12 +419,21 @@ function installNavigationObserver() {
         );
       });
       if (relevant) schedulePageChangeNotification(true);
-    }).observe(document.body, {
+    });
+    observer.observe(document.body, {
       childList: true,
       subtree: true
     });
   }
   lastPageSignature = pageSignature();
+  return () => {
+    observer?.disconnect();
+    window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("hashchange", onHashChange);
+    if (history.pushState === onPushState) history.pushState = originalPushState;
+    if (history.replaceState === onReplaceState) history.replaceState = originalReplaceState;
+    clearTimeout(pageChangeTimer);
+  };
 }
 
 

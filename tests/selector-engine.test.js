@@ -276,6 +276,26 @@ describe("selector engine", () => {
     expect(sendMessage).not.toHaveBeenCalled();
   });
 
+  it("cobre replaceState, hashchange e cleanup do observador de navegação", async () => {
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+    const cleanup = installNavigationObserver();
+
+    history.replaceState({}, "", "/substituida");
+    window.dispatchEvent(new dom.window.Event("hashchange"));
+    await new Promise((resolveTick) => setTimeout(resolveTick, 300));
+
+    cleanup();
+    expect(history.pushState).toBe(originalPushState);
+    expect(history.replaceState).toBe(originalReplaceState);
+    expect(window.location.pathname).toBe("/substituida");
+
+    sendMessage.mockClear();
+    history.pushState({}, "", "/depois-do-cleanup");
+    await new Promise((resolveTick) => setTimeout(resolveTick, 300));
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
   it("detecta IDs dinâmicos e evita usá-los", () => {
     // O regex detecta: prefixo r/component/ember/headlessui seguido de [-_], ou hash/numéricos longos
     expect(isDynamicId("r_123456")).toBe(true);

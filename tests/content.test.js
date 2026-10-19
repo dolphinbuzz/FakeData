@@ -50,6 +50,9 @@ function setupChromeMock() {
       onMessage: {
         addListener: vi.fn((listener) => {
           messageListener = listener;
+        }),
+        removeListener: vi.fn((listener) => {
+          if (messageListener === listener) messageListener = null;
         })
       }
     }
@@ -325,15 +328,18 @@ describe("content script", () => {
     expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(1);
   });
 
-  it("reinstala quando o contexto da instalação anterior foi invalidado", async () => {
-    // Simula o que acontece após reload/update da extensão: o probe antigo lança.
-    window.__fakedataContentInstalled = () => {
-      throw new Error("Extension context invalidated");
-    };
+  it("desmonta a instalação anterior antes de reinstalar após contexto invalidado", async () => {
+    const originalPushState = history.pushState;
+    const previousInstall = window.__fakedataContentInstalled;
+    chrome.runtime.id = undefined;
 
     await loadContentScript();
 
     expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(2);
+    expect(chrome.runtime.onMessage.removeListener).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("#fakedata-page-control-style")).toHaveLength(1);
+    expect(history.pushState).not.toBe(originalPushState);
+    expect(previousInstall()).toBe(false);
     // A nova instalação responde normalmente (reparo efetivo da página).
     const response = await sendContentMessage({ action: ACTIONS.SCAN_FIELDS });
     expect(response.fields.map((field) => field.selector)).toEqual(["#email", "#cpf", "#uf"]);
