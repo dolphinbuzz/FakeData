@@ -81,6 +81,7 @@
       ".opencode/hooks/pre-commit/02-test-changed.sh"
     ],
     "pre-push": [
+      ".opencode/hooks/pre-push/00-confirm-push.sh",
       ".opencode/hooks/pre-push/01-full-test.sh",
       ".opencode/hooks/pre-push/02-version-check.sh"
     ],
@@ -155,7 +156,8 @@
       "refactor/",
       "docs/",
       "chore/"
-    ]
+    ],
+    "requireManualPush": true
   },
   "ide": {
     "vscode": {
