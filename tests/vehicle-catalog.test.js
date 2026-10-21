@@ -67,4 +67,37 @@ describe("catálogo de veículos", () => {
     expect(renameVehicleBrand(catalog, "Chevrolet", "Ford")).toEqual(catalog);
     expect(renameVehicleModel(catalog, "Chevrolet", "Onix", "Ka")).toEqual(catalog);
   });
+
+  it("retorna lista vazia para valores que não são array", () => {
+    expect(normalizeVehicleCatalog(null)).toEqual([]);
+    expect(normalizeVehicleCatalog(undefined)).toEqual([]);
+    expect(normalizeVehicleCatalog("Ford")).toEqual([]);
+  });
+
+  it("ignora modelos não-array e valores vazios", () => {
+    expect(normalizeVehicleCatalog([
+      { marca: "Ford", modelos: "Ka" },
+      { marca: "Fiat", models: [null, "", "  ", "Argo"] }
+    ])).toEqual([
+      { marca: "Ford", modelos: [] },
+      { marca: "Fiat", modelos: ["Argo"] }
+    ]);
+  });
+
+  it("remove modelo somente da marca informada", () => {
+    const catalog = [
+      { marca: "Ford", modelos: ["Ka", "Ranger"] },
+      { marca: "Fiat", modelos: ["Argo"] }
+    ];
+    expect(removeVehicleModel(catalog, "Ford", "Ka")).toEqual([
+      { marca: "Ford", modelos: ["Ranger"] },
+      { marca: "Fiat", modelos: ["Argo"] }
+    ]);
+  });
+
+  it("rejeita nomes vazios ao renomear marca ou modelo", () => {
+    const catalog = [{ marca: "Ford", modelos: ["Ka"] }];
+    expect(() => renameVehicleBrand(catalog, "Ford", "")).toThrow("Informe uma marca.");
+    expect(() => renameVehicleModel(catalog, "Ford", "Ka", "")).toThrow("Informe um modelo.");
+  });
 });

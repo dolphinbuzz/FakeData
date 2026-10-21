@@ -85,5 +85,5 @@
 **Consequences**:
 - CI falha se coverage < 90%
 - Funções puras exportadas = fácil testar
-- `app.js`/`content.js` mais difíceis - meta 85%
+- `app.js`/`content.js` mais difíceis - meta 90%
 **Alternatives Considered**: Jest - rejeitado por config ESM complexa. Playwright - overkill para unit.

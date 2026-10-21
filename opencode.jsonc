@@ -75,27 +75,29 @@
       "system_prompt_file": ".opencode/skills/fakedata-ui-ux.md"
     }
   },
-  "hooks": {
-    "pre-commit": [
-      ".opencode/hooks/pre-commit/01-lint.sh",
-      ".opencode/hooks/pre-commit/02-test-changed.sh"
-    ],
-    "pre-push": [
-      ".opencode/hooks/pre-push/00-confirm-push.sh",
-      ".opencode/hooks/pre-push/01-full-test.sh",
-      ".opencode/hooks/pre-push/02-version-check.sh"
-    ],
-    "post-merge": [
-      ".opencode/hooks/post-merge/01-install-deps.sh",
-      ".opencode/hooks/post-merge/02-clear-cache.sh"
-    ],
-    "session-start": [
-      ".opencode/hooks/session-start/01-load-context.sh"
-    ],
-    "session-end": [
-      ".opencode/hooks/session-end/01-save-memory.sh"
-    ]
-  },
+  // Gate de push do OpenCode V2 (a chave legada "hooks" não é suportada no V2 e foi removida).
+  // Matching (https://opencode.ai/v2/docs/permissions): a regra é comparada com a string crua
+  // do comando produzida pelo scanner de shell, usando curingas de valor inteiro ("*" = zero ou
+  // mais caracteres, inclusive "/"; "?" = um caractere). A ÚLTIMA regra que casa vence. Um
+  // pattern terminado em " *" também casa o comando sem argumentos. Sem regra que case, vale a
+  // política base (allow), por isso as variações de push abaixo são declaradas explicitamente.
+  "permissions": [
+    // Comando isolado: "git push", "git push origin main", "git push --force-with-lease", etc.
+    { "action": "shell", "resource": "git push *", "effect": "ask" },
+    // Comando prefixado/composto, como no Windows/PowerShell:
+    // "$env:CONFIRM_PUSH='true'; git push origin main" (o scanner pode reportar a string inteira,
+    // então "*git push*" casa "git push" em qualquer posição do comando).
+    { "action": "shell", "resource": "*git push*", "effect": "ask" },
+    // Variações de invocação que não começam com "git push": git -C <dir>, git -c <chave>=<valor>,
+    // o executável com extensão (git.exe/git.cmd) e o caminho absoluto para o binário.
+    { "action": "shell", "resource": "*git -C * push*", "effect": "ask" },
+    { "action": "shell", "resource": "*git -c * push*", "effect": "ask" },
+    { "action": "shell", "resource": "*git.exe*push*", "effect": "ask" },
+    { "action": "shell", "resource": "*git.cmd*push*", "effect": "ask" },
+    // Limitação residual: aliases do próprio git (ex.: "git p" apontando para push) não são
+    // reconhecíveis por pattern de texto. A evolução estrutural recomendada pela doc é inverter a
+    // política base: "ask" por padrão + allowlist estreita dos comandos rotineiros (git status etc.).
+  ],
   "workflows": [
     "feature-development",
     "bug-fix",
@@ -128,7 +130,8 @@
     },
     "commands": {
       "test": "npm test",
-      "coverage": "npm run test:coverage"
+      "coverage": "npm run test:coverage",
+      "mutation": "npm run test:mutation"
     }
   },
   "build": {
@@ -143,12 +146,13 @@
       ".opencode/**",
       "*.md",
       "vitest.config.js",
+      "stryker.config.json",
       "package*.json",
       ".github/**"
     ]
   },
+  // Bloco legado: não é um campo suportado do OpenCode V2; mantido como convenção do time.
   "git": {
-    "hooksEnabled": true,
     "conventionalCommits": true,
     "branchPrefixes": [
       "feature/",

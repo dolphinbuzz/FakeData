@@ -47,4 +47,4 @@ Navegação SPA/mudança DOM -> PAGE_CONTENT_CHANGED {url, changeType}
 
 ## Testes
 - Target: 100% para messages.test.js
-- Arquivo de teste: tests/messages.test.js, tests/app.test.js, tests/content.test.js
+- Arquivo de teste: tests/messages.test.js, tests/app-*.test.js, tests/content.test.js

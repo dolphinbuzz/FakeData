@@ -73,23 +73,9 @@ Object.defineProperty(window, "CSS", {
   writable: true
 });
 
-// Element methods - use defineProperty for read-only properties
-Object.defineProperty(Element.prototype, "matches", {
-  value: vi.fn((selector) => true),
-  writable: true
-});
-Object.defineProperty(Element.prototype, "closest", {
-  value: vi.fn((selector) => null),
-  writable: true
-});
-Object.defineProperty(Element.prototype, "querySelector", {
-  value: vi.fn(() => null),
-  writable: true
-});
-Object.defineProperty(Element.prototype, "querySelectorAll", {
-  value: vi.fn(() => []),
-  writable: true
-});
+// Element methods - delegate to native jsdom implementation (no mocks)
+// This ensures tests validate real DOM behavior, not fake mocks
+// If a test needs specific behavior, it should set up real DOM in beforeEach
 Object.defineProperty(Element.prototype, "getBoundingClientRect", {
   value: vi.fn(() => ({
     top: 0,
@@ -288,15 +274,8 @@ Object.defineProperty(window, "location", {
 
 // document
 // document.documentElement and document.head are read-only in jsdom
+// Delegate to native jsdom implementation - no mocks
 document.body = document.body || document.createElement("body");
-document.querySelector = vi.fn(() => null);
-document.querySelectorAll = vi.fn(() => []);
-document.getElementById = vi.fn(() => null);
-document.createElement = vi.fn((tag) => {
-  const el = document.createElement(tag);
-  return el;
-});
-document.createTextNode = vi.fn((text) => document.createTextNode(text));
 
 // Console (suppress in tests unless needed)
 const originalConsole = global.console;

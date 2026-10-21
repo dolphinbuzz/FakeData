@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
+  "disableTypeChecks": false,
+  "mutate": [
+    "src/scripts/selector-engine.js",
+    "src/scripts/generators.js",
+    "src/scripts/data/vehicle-catalog.js"
+  ],
+  "reporters": ["clear-text", "progress", "html"],
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": 60
+  },
+  "timeoutMS": 20000
+}

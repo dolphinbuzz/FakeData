@@ -1,27 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { JSDOM } from "jsdom";
-import {
-  captureNextClick,
-  inferType,
-  installNavigationObserver,
-  isCustomSelect,
-  normalize,
-  notifyPageChanged,
-  pageSignature,
-  scan,
-  selectorFor,
-  isDynamicId,
-  isAngularAttribute,
-  isAngularClass,
-  hasAngularAttributes,
-  fieldFromTarget,
-  visible
-} from "../src/scripts/selector-engine.js";
 
+// O módulo mantém estado interno (última assinatura da página e flag de contexto
+// invalidado). Recarregamos o módulo a cada teste para isolar esse estado — sem
+// isso, o teste de contexto invalidado silencia as notificações de todos os
+// testes seguintes, que passariam sem exercitar nada.
 let dom;
 let sendMessage;
+let captureNextClick;
+let inferType;
+let installNavigationObserver;
+let isCustomSelect;
+let normalize;
+let notifyPageChanged;
+let pageSignature;
+let scan;
+let selectorFor;
+let isDynamicId;
+let isAngularAttribute;
+let isAngularClass;
+let hasAngularAttributes;
+let fieldFromTarget;
+let visible;
+let uniqueCandidate;
 
-beforeEach(() => {
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+beforeEach(async () => {
   dom = new JSDOM(`<!doctype html><body>
     <label for="email">E-mail</label><input id="email" type="email" autocomplete="email">
     <label for="uf">Estado</label><select id="uf"><option>SP</option><option>RJ</option></select>
@@ -36,6 +41,26 @@ beforeEach(() => {
   globalThis.chrome = { runtime: { sendMessage } };
   globalThis.HTMLElement = dom.window.HTMLElement;
   dom.window.HTMLElement.prototype.getClientRects = () => [{ width: 10, height: 10 }];
+
+  vi.resetModules();
+  ({
+    captureNextClick,
+    inferType,
+    installNavigationObserver,
+    isCustomSelect,
+    normalize,
+    notifyPageChanged,
+    pageSignature,
+    scan,
+    selectorFor,
+    isDynamicId,
+    isAngularAttribute,
+    isAngularClass,
+    hasAngularAttributes,
+    fieldFromTarget,
+    visible,
+    uniqueCandidate
+  } = await import("../src/scripts/selector-engine.js"));
 });
 
 afterEach(() => {
@@ -187,6 +212,12 @@ describe("selector engine", () => {
       <input id="numeric" type="number">
       <input id="date" type="date">
       <input id="month" type="month">
+      <input id="tel" type="tel">
+      <input id="site" type="url">
+      <input id="autocomplete-house" autocomplete="house">
+      <input id="autocomplete-org" autocomplete="company-name">
+      <input id="autocomplete-family" autocomplete="family-name">
+      <input id="autocomplete-name" autocomplete="name">
       <input id="plain">
     `;
     expect(inferType(document.querySelector("#rg"))).toBe("rg");
@@ -204,6 +235,12 @@ describe("selector engine", () => {
     expect(inferType(document.querySelector("#numeric"))).toBe("number");
     expect(inferType(document.querySelector("#date"))).toBe("birthDate");
     expect(inferType(document.querySelector("#month"))).toBe("birthDate");
+    expect(inferType(document.querySelector("#tel"))).toBe("phone");
+    expect(inferType(document.querySelector("#site"))).toBe("website");
+    expect(inferType(document.querySelector("#autocomplete-house"))).toBe("number");
+    expect(inferType(document.querySelector("#autocomplete-org"))).toBe("company");
+    expect(inferType(document.querySelector("#autocomplete-family"))).toBe("name");
+    expect(inferType(document.querySelector("#autocomplete-name"))).toBe("name");
     expect(inferType(document.querySelector("#plain"))).toBe("text");
   });
 
@@ -235,6 +272,19 @@ describe("selector engine", () => {
     button.click();
     expect(buttonCapture).toHaveBeenCalledWith(expect.objectContaining({ captured: true }));
 
+    const linkCapture = vi.fn();
+    captureNextClick(linkCapture);
+    const link = document.createElement("a");
+    link.href = "#detalhes";
+    link.id = "action-link";
+    link.textContent = "Ver detalhes";
+    document.body.appendChild(link);
+    link.click();
+    expect(linkCapture).toHaveBeenCalledWith(expect.objectContaining({
+      captured: true,
+      field: expect.objectContaining({ selector: "#action-link", tagName: "a" })
+    }));
+
     const emptyCapture = vi.fn();
     captureNextClick(emptyCapture);
     document.body.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
@@ -254,6 +304,14 @@ describe("selector engine", () => {
     });
   });
 
+  it("não envia notificação quando o runtime da extensão não está disponível", () => {
+    delete globalThis.chrome;
+    document.body.appendChild(document.createElement("input"));
+
+    expect(() => notifyPageChanged()).not.toThrow();
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
   it("não lança quando o contexto da extensão é invalidado", () => {
     sendMessage.mockImplementationOnce(() => {
       throw new Error("Uncaught Error: Extension context invalidated.");
@@ -266,13 +324,52 @@ describe("selector engine", () => {
     expect(sendMessage).toHaveBeenCalledTimes(1);
   });
 
-  it("instala observador de navegação e ignora controles da extensão", async () => {
+  it("notifica uma única vez a mudança de rota capturada por pushState e popstate", async () => {
     installNavigationObserver();
+
     history.pushState({}, "", "/outra");
     window.dispatchEvent(new dom.window.Event("popstate"));
-    document.body.insertAdjacentHTML("beforeend", '<div data-fakedata-control="true"><input></div>');
-    await new Promise((resolveTick) => setTimeout(resolveTick, 300));
+    await wait(300);
+
     expect(window.location.pathname).toBe("/outra");
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith({
+      action: "PAGE_CONTENT_CHANGED",
+      url: "https://example.test/outra",
+      changeType: "route"
+    });
+
+    window.dispatchEvent(new dom.window.Event("popstate"));
+    await wait(300);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("cobre replaceState, hashchange e cleanup do observador de navegação", async () => {
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+    const cleanup = installNavigationObserver();
+
+    history.replaceState({}, "", "/substituida");
+    await wait(300);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith({
+      action: "PAGE_CONTENT_CHANGED",
+      url: "https://example.test/substituida",
+      changeType: "route"
+    });
+
+    window.dispatchEvent(new dom.window.Event("hashchange"));
+    await wait(300);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+
+    cleanup();
+    expect(history.pushState).toBe(originalPushState);
+    expect(history.replaceState).toBe(originalReplaceState);
+    expect(window.location.pathname).toBe("/substituida");
+
+    sendMessage.mockClear();
+    history.pushState({}, "", "/depois-do-cleanup");
+    await wait(300);
     expect(sendMessage).not.toHaveBeenCalled();
   });
 
@@ -289,40 +386,17 @@ describe("selector engine", () => {
     expect(isDynamicId(null)).toBe(true);
   });
 
-  it("testa fallbackSelector com seletores estruturais", () => {
-    document.body.innerHTML = `
-      <form>
-        <div>
-          <input>
-          <input>
-        </div>
-      </form>
-    `;
-    const input = document.querySelector("input:nth-of-type(2)");
-    // Testa o fallbackSelector indiretamente via selectorFor
-    const result = selectorFor(input);
-    expect(result.status).toBe("fragile");
-    expect(result.selector).toContain(":nth-of-type");
-  });
-
-  it("testa seletor por texto estático visível - fallback quando não há atributos", () => {
+  it("usa fallback estrutural quando o input não tem atributos estáveis", () => {
     document.body.innerHTML = `
       <label>Nome do usuário</label>
       <input>
     `;
     const input = document.querySelector("input");
-    // Remove todos atributos que poderiam gerar seletor estável
-    input.removeAttribute("id");
-    input.removeAttribute("name");
-    input.removeAttribute("type");
-    input.removeAttribute("placeholder");
-    input.removeAttribute("value");
-    input.removeAttribute("autocomplete");
-    input.removeAttribute("aria-label");
     const result = selectorFor(input);
+
     expect(result.status).toBe("fragile");
-    // Com label, o seletor pode usar o texto do label ou fallback estrutural
-    expect(result.selector).toBeTruthy();
+    expect(result.rule).toBe("fallback proibido");
+    expect(result.selector).toBe("input");
   });
 
   it("testa fallback proibido quando não há texto estático", () => {
@@ -339,17 +413,23 @@ describe("selector engine", () => {
     expect(result.rule).toBe("fallback proibido");
   });
 
-  it("testa combinações de seletores estáveis", () => {
+  it("prioriza name + type + value mesmo com ng-model presente", () => {
     document.body.innerHTML = `
       <input ng-model="user.name" name="username" type="text" value="test">
       <input ng-model="user.email" name="email" type="email" value="test@test.com">
     `;
     const inputs = document.querySelectorAll("input");
-    const result1 = selectorFor(inputs[0]);
-    const result2 = selectorFor(inputs[1]);
-    // value tem prioridade 3, ng-model também prioridade 3, mas value vem primeiro
-    expect(result1.status).toBe("stable");
-    expect(result2.status).toBe("stable");
+
+    expect(selectorFor(inputs[0])).toMatchObject({
+      selector: 'input[name="username"][type="text"][value="test"]',
+      rule: "name + type + value",
+      status: "stable"
+    });
+    expect(selectorFor(inputs[1])).toMatchObject({
+      selector: 'input[name="email"][type="email"][value="test@test.com"]',
+      rule: "name + type + value",
+      status: "stable"
+    });
   });
 
   it("testa fieldFromTarget com label for", () => {
@@ -388,30 +468,6 @@ describe("selector engine", () => {
     expect(result.id).toBe("form-input");
   });
 
-  it("testa captureNextClick com button e link", async () => {
-    document.body.innerHTML = `
-      <button id="test-btn">Botão</button>
-      <a id="test-link" href="#">Link</a>
-    `;
-    
-    const buttonCapture = vi.fn();
-    captureNextClick(buttonCapture);
-    document.querySelector("#test-btn").click();
-    expect(buttonCapture).toHaveBeenCalledWith(expect.objectContaining({ captured: true }));
-    
-    const linkCapture = vi.fn();
-    captureNextClick(linkCapture);
-    document.querySelector("#test-link").click();
-    expect(linkCapture).toHaveBeenCalledWith(expect.objectContaining({ captured: true }));
-  });
-
-  it("testa captureNextClick com clique no body (sem elemento)", () => {
-    const emptyCapture = vi.fn();
-    captureNextClick(emptyCapture);
-    document.body.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
-    expect(emptyCapture).toHaveBeenCalledWith({ captured: false });
-  });
-
   it("testa pageSignature com mudança de rota", () => {
     const initialSig = pageSignature();
     // Simula navegação
@@ -433,64 +489,39 @@ describe("selector engine", () => {
     expect(isCustomSelect(document.querySelector("#normal-input"))).toBe(false);
   });
 
-  it("testa inferType para address, number, plate, chassi, brand, model, year, website, company", () => {
+  it("gera seletores estruturais distintos para campos idênticos sem atributos", () => {
     document.body.innerHTML = `
-      <input id="addr" autocomplete="street-address">
-      <input id="num" autocomplete="house">
-      <input id="plate" placeholder="Placa">
-      <input id="chassi" placeholder="Chassi">
-      <input id="brand" placeholder="Marca">
-      <input id="model" placeholder="Modelo">
-      <input id="year" placeholder="Ano">
-      <input id="website" placeholder="Website">
-      <input id="company" autocomplete="company-name">
-      <input id="name1" autocomplete="given-name">
-      <input id="name2" autocomplete="family-name">
-      <input id="name3" autocomplete="name">
-      <input id="number" type="number">
-      <input id="date" type="date">
-      <input id="month" type="month">
-      <input id="plain">
-    `;
-    expect(inferType(document.querySelector("#addr"))).toBe("address");
-    expect(inferType(document.querySelector("#num"))).toBe("number");
-    expect(inferType(document.querySelector("#plate"))).toBe("plate");
-    expect(inferType(document.querySelector("#chassi"))).toBe("chassi");
-    expect(inferType(document.querySelector("#brand"))).toBe("brand");
-    expect(inferType(document.querySelector("#model"))).toBe("model");
-    expect(inferType(document.querySelector("#year"))).toBe("year");
-    expect(inferType(document.querySelector("#website"))).toBe("website");
-    expect(inferType(document.querySelector("#company"))).toBe("company");
-    expect(inferType(document.querySelector("#name1"))).toBe("name");
-    expect(inferType(document.querySelector("#name2"))).toBe("name");
-    expect(inferType(document.querySelector("#name3"))).toBe("name");
-    expect(inferType(document.querySelector("#number"))).toBe("number");
-    expect(inferType(document.querySelector("#date"))).toBe("birthDate");
-    expect(inferType(document.querySelector("#month"))).toBe("birthDate");
-    expect(inferType(document.querySelector("#plain"))).toBe("text");
-  });
-
-  it("testa scan com colisão após fallback", () => {
-    document.body.innerHTML = `
-      <form>
-        <div><input></div>
-        <div><input></div>
-      </form>
+      <div><input><input></div>
+      <div><input><input></div>
     `;
     const fields = scan();
-    expect(fields.length).toBe(2);
-    expect(fields.every((f) => f.selectorStatus === "fragile")).toBe(true);
-    // A colisão é detectada após o scan, mas o seletor gerado é fallback proibido
-    // como ambos têm o mesmo seletor estrutural
+
+    expect(fields).toHaveLength(4);
+    expect(fields.map((field) => field.selector)).toEqual([
+      "div:nth-of-type(1) > input:nth-of-type(1)",
+      "div:nth-of-type(1) > input:nth-of-type(2)",
+      "div:nth-of-type(2) > input:nth-of-type(1)",
+      "div:nth-of-type(2) > input:nth-of-type(2)"
+    ]);
+    expect(fields.every((field) => field.selectorStatus === "fragile")).toBe(true);
+    expect(fields.every((field) => field.selectorRule === "fallback proibido")).toBe(true);
   });
 
-  it("testa notifyPageChanged ignora MutationObserver em controles da extensão", () => {
+  it("ignora mutações em controles da extensão e notifica mutações reais do DOM", async () => {
     installNavigationObserver();
+
     document.body.insertAdjacentHTML("beforeend", '<div data-fakedata-control="true"><input></div>');
-    // Força o processamento do MutationObserver
-    document.body.querySelector("[data-fakedata-control]").dispatchEvent(new dom.window.Event("click"));
-    // Não deve notificar mudança
+    await wait(300);
     expect(sendMessage).not.toHaveBeenCalled();
+
+    document.body.appendChild(document.createElement("input"));
+    await wait(300);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith({
+      action: "PAGE_CONTENT_CHANGED",
+      url: "https://example.test/form",
+      changeType: "dom"
+    });
   });
 
   it("testa visible retorna false para display:none e visibility:hidden", () => {
@@ -510,64 +541,46 @@ describe("selector engine", () => {
     expect(visible(noRects)).toBe(false);
   });
 
-  it("testa uniqueCandidate com seletor inválido (catch)", () => {
-    document.body.innerHTML = `<input id="test">`;
-    const input = document.querySelector("#test");
-    // Mock querySelectorAll para lançar erro
-    const originalQSA = document.querySelectorAll;
-    document.querySelectorAll = vi.fn(() => { throw new Error("Invalid selector"); });
-    // uniqueCandidate é interno, testamos indiretamente via selectorFor com seletor inválido
-    // Como não podemos chamar uniqueCandidate diretamente, testamos o fluxo que usa
-    document.querySelectorAll = originalQSA;
-  });
-
-  it("testa staticText com texto vazio, longo e template", () => {
+  it("uniqueCandidate aceita seletor único e rejeita duplicado, divergente ou inválido", () => {
     document.body.innerHTML = `
-      <div id="empty"></div>
-      <div id="long">${"x".repeat(100)}</div>
-      <div id="template">{{variable}}</div>
-      <div id="normal">Texto normal</div>
+      <input id="unico">
+      <input name="dup">
+      <input name="dup">
     `;
-    // Testamos indiretamente via selectorFor
-    // Elemento com texto vazio
-    const empty = document.querySelector("#empty");
-    const long = document.querySelector("#long");
-    const template = document.querySelector("#template");
-    const normal = document.querySelector("#normal");
-    
-    // Removemos atributos para forçar fallback para staticText
-    [empty, long, template, normal].forEach(el => {
-      el.removeAttribute("id");
-      el.removeAttribute("name");
-      el.removeAttribute("type");
-      el.removeAttribute("placeholder");
-      el.removeAttribute("value");
-      el.removeAttribute("autocomplete");
-      el.removeAttribute("aria-label");
-    });
-    
-    // staticText retorna "" para vazio, longo, e template
-    // O selectorFor deve ir para fallback proibido
-    const resultEmpty = selectorFor(empty);
-    const resultLong = selectorFor(long);
-    const resultTemplate = selectorFor(template);
-    const resultNormal = selectorFor(normal);
-    
-    expect(resultEmpty.rule).toBe("fallback proibido");
-    expect(resultLong.rule).toBe("fallback proibido");
-    expect(resultTemplate.rule).toBe("fallback proibido");
-    // Texto normal curto deve usar "texto visível estático" se for único
-    // Mas como temos múltiplos divs, será fallback proibido
+    const unico = document.querySelector("#unico");
+    const dup = document.querySelector("[name='dup']");
+
+    expect(uniqueCandidate(unico, "#unico")).toBe(true);
+    expect(uniqueCandidate(unico, "input")).toBe(false);
+    expect(uniqueCandidate(dup, "#unico")).toBe(false);
+    expect(uniqueCandidate(dup, "[name='dup']")).toBe(false);
+    expect(uniqueCandidate(unico, "%%% seletor inválido %%%")).toBe(false);
   });
 
-  it("testa candidatos sem valor (continue no loop)", () => {
-    document.body.innerHTML = `<input>`;
-    const input = document.querySelector("input");
-    // Sem id, data-cy, data-test, data-testid, role, aria-label, aria-labelledby, value, ng-model, name, type
-    // Todos os candidatos falham no if (!value) continue
-    const result = selectorFor(input);
+  it("usa texto visível estático quando o campo tem texto curto e literal", () => {
+    document.body.innerHTML = `<select><option>Escolha o estado</option><option>SP</option></select>`;
+    const select = document.querySelector("select");
+
+    const result = selectorFor(select);
+
     expect(result.status).toBe("fragile");
-    expect(result.rule).toBe("fallback proibido");
+    expect(result.rule).toBe("texto visível estático");
+    expect(result.selector).toBe("select");
+    expect(result.suggestion).toContain("Escolha o estado");
+  });
+
+  it("não usa texto vazio, longo ou com template como seletor estático", () => {
+    document.body.innerHTML = `
+      <select id="vazio"></select>
+      <select id="longo"><option>${"x".repeat(90)}</option></select>
+      <select id="template"><option>{{valor}}</option></select>
+    `;
+
+    ["vazio", "longo", "template"].forEach((id) => {
+      const select = document.querySelector(`#${id}`);
+      select.removeAttribute("id");
+      expect(selectorFor(select).rule).toBe("fallback proibido");
+    });
   });
 
   it("testa combinações sem valor (continue no loop)", () => {
@@ -598,66 +611,27 @@ describe("selector engine", () => {
     expect(inferType(input)).toBe("cpf");
   });
 
-  it("testa uniqueCandidate com erro no querySelectorAll (catch)", () => {
-    document.body.innerHTML = `<input id="test">`;
-    const input = document.querySelector("#test");
-    // Força erro no querySelectorAll para testar o catch
-    const originalQSA = document.querySelectorAll.bind(document);
-    document.querySelectorAll = vi.fn(() => { throw new Error("Invalid selector"); });
-    
-    // Testa indiretamente via selectorFor - se o seletor causar erro, uniqueCandidate retorna false
-    // e o loop continua para o próximo candidato
-    const result = selectorFor(input);
-    expect(result).toBeDefined();
-    
-    document.querySelectorAll = originalQSA;
-  });
-
-  it("testa staticText com template detection", () => {
-    // Testa indiretamente criando elementos com texto de template
-    document.body.innerHTML = `
-      <input id="t1" value="{{variable}}">
-      <input id="t2" value="template">
-      <input id="t3" value="code">
-      <input id="t4" value="texto normal">
-    `;
-    // Remove todos atributos para forçar uso de staticText
-    ["t1", "t2", "t3", "t4"].forEach(id => {
-      const el = document.querySelector(`#${id}`);
-      el.removeAttribute("id");
-      el.removeAttribute("name");
-      el.removeAttribute("type");
-      el.removeAttribute("placeholder");
-      el.removeAttribute("value");
-      el.removeAttribute("autocomplete");
-      el.removeAttribute("aria-label");
+  it("ignora candidato quando o navegador rejeita o seletor gerado e segue para o próximo", () => {
+    document.body.innerHTML = `<input id="seguro" data-testid="campo-invalido">`;
+    const input = document.querySelector("#seguro");
+    const originalQuerySelectorAll = document.querySelectorAll.bind(document);
+    const qsaSpy = vi.spyOn(document, "querySelectorAll").mockImplementation((selector) => {
+      if (String(selector).includes("[data-testid=")) {
+        throw new DOMException("seletor inválido neste navegador", "SyntaxError");
+      }
+      return originalQuerySelectorAll(selector);
     });
-    
-    // Seleciona os inputs restantes (agora sem atributos)
-    const inputs = document.querySelectorAll("input");
-    const results = Array.from(inputs).map(el => selectorFor(el));
-    
-    // Todos devem ir para fallback proibido pois têm template ou são múltiplos
-    results.forEach(r => {
-      expect(r.rule).toBe("fallback proibido");
-    });
-  });
 
-  it("testa combinações - name + type + value tem prioridade", () => {
-    document.body.innerHTML = `
-      <input name="username" type="text" value="test">
-      <input name="email" type="email" value="test@test.com">
-    `;
-    // Combinações rodam primeiro: name + type + value (priority 1) é mais específico
-    const inputs = document.querySelectorAll("input");
-    const result1 = selectorFor(inputs[0]);
-    const result2 = selectorFor(inputs[1]);
-    
-    // Deve usar name + type + value como prioridade 1 estável
-    expect(result1.rule).toBe("name + type + value");
-    expect(result1.status).toBe("stable");
-    expect(result2.rule).toBe("name + type + value");
-    expect(result2.status).toBe("stable");
+    let result;
+    try {
+      result = selectorFor(input);
+    } finally {
+      qsaSpy.mockRestore();
+    }
+
+    expect(result.selector).toBe("#seguro");
+    expect(result.rule).toBe("id");
+    expect(result.status).toBe("stable");
   });
 
   it("testa fallbackSelector percorre árvore até body", () => {
@@ -701,19 +675,6 @@ describe("selector engine", () => {
     // Pelo menos um campo deve ser fragile (os duplicados)
     const fragileFields = fields.filter(f => f.selectorStatus === "fragile");
     expect(fragileFields.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("testa inferType com type=number e type=email específicos", () => {
-    document.body.innerHTML = `
-      <input id="num" type="number">
-      <input id="email" type="email">
-      <input id="tel" type="tel">
-      <input id="url" type="url">
-    `;
-    expect(inferType(document.querySelector("#num"))).toBe("number");
-    expect(inferType(document.querySelector("#email"))).toBe("email");
-    expect(inferType(document.querySelector("#tel"))).toBe("phone");
-    expect(inferType(document.querySelector("#url"))).toBe("website"); // type=url -> website
   });
 
   it("testa labelsFor com aria-labelledby", () => {

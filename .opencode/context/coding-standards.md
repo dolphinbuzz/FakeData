@@ -72,32 +72,61 @@ chrome.storage.local.set({ "key": value }, () => {
 
 ### Messaging Pattern (Popup -> Content)
 ```javascript
-function sendMessageToTab(tabId, message, callback, allowInjection = true) {
+function sendMessageToTab(tabId, message, callback, allowInjection) {
   chrome.tabs.sendMessage(tabId, message, (response) => {
     const error = chrome.runtime.lastError;
     if (!error) {
       callback(response, null);
       return;
     }
-    
-    if (!allowInjection || !chrome.scripting?.executeScript) {
+
+    if (!allowInjection || !chrome.scripting || !chrome.scripting.executeScript) {
       callback(null, error);
       return;
     }
-    
-    chrome.scripting.executeScript({
-      target: { tabId },
-      files: ["src/scripts/content.js"]
-    }, () => {
-      const injectionError = chrome.runtime.lastError;
+    injectContentScript(tabId, (injectionError) => {
       if (injectionError) {
         callback(null, injectionError);
         return;
       }
-      // Retry once without injection
-      sendMessageToTab(tabId, message, callback, false);
+      sendMessageToTab(tabId, message, callback, false); // retry uma vez, sem injetar de novo
     });
   });
+}
+
+// Fila por aba: chamadas concorrentes compartilham UMA injeção. A entrada do Map é
+// removida ANTES de notificar (libera novas injeções) e cada waiter roda em try/catch.
+const pendingInjections = new Map(); // tabId -> [callback]
+
+function injectContentScript(tabId, callback) {
+  const waiters = pendingInjections.get(tabId);
+  if (waiters) {
+    waiters.push(callback);
+    return;
+  }
+  pendingInjections.set(tabId, [callback]);
+
+  const notifyWaiters = (injectionError) => {
+    const pendingWaiters = pendingInjections.get(tabId) || [];
+    pendingInjections.delete(tabId);
+    pendingWaiters.forEach((waiter) => {
+      try {
+        waiter(injectionError);
+      } catch (_error) {
+        // waiter já invalidado (ex.: popup fechado)
+      }
+    });
+  };
+
+  try {
+    chrome.scripting.executeScript(
+      { target: { tabId }, files: ["src/scripts/content.js"] },
+      () => notifyWaiters(chrome.runtime.lastError || null)
+    );
+  } catch (error) {
+    // throw síncrono (ex.: contexto invalidado) não pode deixar a entrada órfã
+    notifyWaiters(error);
+  }
 }
 ```
 
@@ -119,23 +148,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // content.js - IIFE with strict mode
 (() => {
   "use strict";
-  
+
+  // Guarda de re-injeção: o popup/painel pode reinjetar o script (reload completo da página
+  // também recria o contexto; navegação SPA same-document NÃO reinjeta). A execução anterior
+  // registra uma função de vivacidade: se ela lançar (contexto invalidado por update/reload da
+  // extensão) ou retornar falsy, esta execução reinstala listeners/estilo (reparo autoritativo).
+  const previousInstall = window.__fakedataContentInstalled;
+  if (previousInstall) {
+    if (typeof previousInstall !== "function") return; // guarda antiga (booleana), presumida viva
+    try {
+      if (previousInstall()) return; // instalação viva: não duplica nada
+    } catch (_error) {
+      // contexto invalidado → reinstala
+    }
+  }
+  window.__fakedataContentInstalled = () => Boolean(chrome.runtime && chrome.runtime.id);
+
   const modulesReady = Promise.all([
     import(chrome.runtime.getURL("src/scripts/selector-engine.js")),
     import(chrome.runtime.getURL("src/scripts/messages.js"))
   ]);
-  
+
   let selectorEngine = null;
   let actions = null;
-  
+
   modulesReady.then(([engine, messages]) => {
     selectorEngine = engine;
     actions = messages.ACTIONS;
   });
-  
-  // Listener registered immediately, handlers await modulesReady
+
+  // Listener registrado imediatamente; handlers aguardam modulesReady
   chrome.runtime.onMessage.addListener(handleMessage);
-  
+
   function handleMessage(message, sender, sendResponse) {
     modulesReady.then(() => {
       // actual handling
@@ -249,7 +293,7 @@ test("cpf() returns 14 chars formatted", () => {
 
 ### Chrome APIs Mocking
 ```javascript
-// Global setup (tests/setup.js or per file)
+// Per-test mock (tests/fixtures/chrome-mock.js)
 global.chrome = {
   runtime: {
     sendMessage: vi.fn((msg, cb) => cb({})),

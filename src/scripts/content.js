@@ -1,6 +1,27 @@
 (() => {
   "use strict";
 
+  // Guarda de re-injeção: o script pode ser reinjetado pelo popup/painel ou após reload completo
+  // da página; navegação SPA same-document NÃO reinjeta. A flag é uma função de vivacidade da
+  // instalação anterior: se ela responder "viva", esta execução apenas sai; se lançar (contexto
+  // invalidado por update/reload da extensão) ou responder falsy (runtime sem id), reinstala.
+  const previousInstall = window.__fakedataContentInstalled;
+  if (previousInstall) {
+    if (typeof previousInstall !== "function") return; // guarda antiga (booleana), presumida viva
+    try {
+      if (previousInstall()) return;
+    } catch (_error) {
+      // Contexto invalidado: segue para a reinstalação autoritativa.
+    }
+    try {
+      previousInstall.dispose?.();
+    } catch (_error) {
+      // A limpeza não pode impedir a recuperação após um contexto invalidado.
+    }
+  }
+  let disposed = false;
+  let disposeNavigationObserver = () => {};
+
   const modulesReady = Promise.all([
     import(chrome.runtime.getURL("src/scripts/selector-engine.js")),
     import(chrome.runtime.getURL("src/scripts/messages.js"))
@@ -318,6 +339,30 @@
     pageControls.clear();
   }
 
+  const messageListener = (message, sender, sendResponse) => {
+    if (disposed) return false;
+    modulesReady
+      .then(() => handleMessage(message, sender, sendResponse))
+      .catch(() => sendResponse({ error: "Não foi possível carregar o motor de mapeamento." }));
+    return true;
+  };
+
+  const installationProbe = () => !disposed && Boolean(chrome.runtime && chrome.runtime.id);
+  installationProbe.dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    disposeNavigationObserver();
+    clearMarks();
+    removePageControls();
+    controlStyle.remove();
+    try {
+      chrome.runtime?.onMessage?.removeListener?.(messageListener);
+    } catch (_error) {
+      // O runtime anterior pode já ter sido invalidado.
+    }
+  };
+  window.__fakedataContentInstalled = installationProbe;
+
   function updatePageControls(fields) {
     removePageControls();
     pageControlFields = Array.isArray(fields) ? fields : [];
@@ -444,12 +489,9 @@
     return true;
   }
 
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    modulesReady
-      .then(() => handleMessage(message, sender, sendResponse))
-      .catch(() => sendResponse({ error: "Não foi possível carregar o motor de mapeamento." }));
-    return true;
-  });
+  chrome.runtime.onMessage.addListener(messageListener);
 
-  modulesReady.then(() => selectorEngine.installNavigationObserver());
+  modulesReady.then(() => {
+    if (!disposed) disposeNavigationObserver = selectorEngine.installNavigationObserver();
+  });
 })();

@@ -54,6 +54,6 @@ UNMARK_SELECTOR_MATCHES, CAPTURE_NEXT_CLICK, UPDATE_PAGE_FIELD_CONTROLS,
 SET_PAGE_FIELD_CONTROLS_VISIBILITY
 
 ## Testes
-- Target: 85%+ coverage
+- Target: 90%+ coverage
 - Arquivo de teste: tests/content.test.js
 - Mocks complexos: chrome.runtime, DOM, MutationObserver

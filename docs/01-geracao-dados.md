@@ -47,16 +47,18 @@ Módulo responsável pela geração de dados fictícios realistas para testes de
 | Endereço completo | CEP, rua, número, bairro, cidade, estado | Igual pessoa |
 
 ## Catálogo de Veículos
-- **Padrão**: 13 marcas com 1 modelo cada
+- **Padrão**: 12 marcas com 1 modelo cada (Toyota Corolla, Volkswagen T-Cross, Chevrolet Onix, Honda Civic, Fiat Argo, Hyundai HB20, Nissan Kicks, Renault Kwid, Ford Ranger, Jeep Compass, Kia Sportage, BYD Dolphin)
 - **Customizável**: CRUD via modal (Adicionar/Editar/Excluir marca/modelo)
 - **Persistência**: `chrome.storage.local` (`fakedata-vehicle-catalog`)
 - **Fallback**: Usa catálogo padrão se custom vazio
+- **Normalização**: Case-insensitive dedup de marcas e modelos (`normalizeVehicleCatalog`)
 
 ## Configurações do Usuário
 - **UF**: 27 opções + "ALL" (persiste em `localStorage.fakedata-uf`)
-- **CPF formatado**: Checkbox (persiste via callback)
-- **CNPJ formatado**: Checkbox
-- **CNPJ alfanumérico**: Checkbox
+- **CPF formatado**: Checkbox (persiste via callback `getCpfFormatted`)
+- **CNPJ formatado**: Checkbox (`getCnpjFormatted`)
+- **CNPJ alfanumérico**: Checkbox (`getCnpjAlphanumeric`)
+- **Renavam formatado**: Checkbox (`getRenavamFormatted`)
 
 ## API Interna
 ```javascript
@@ -66,12 +68,20 @@ createGeneratorData({
   getCpfFormatted: () => boolean,
   getCnpjFormatted: () => boolean,
   getCnpjAlphanumeric: () => boolean,
+  getRenavamFormatted: () => boolean,
   getVehicleCatalog: () => VehicleCatalogEntry[]
 })
 ```
 
+Retorna objeto com `person`, `vehicle`, `company`, cada um com `context()` e `fields[]`.
+
+```javascript
+generateMappedValue(type, context, inputType, options)
+// Para preenchimento de campos mapeados (content script)
+```
+
 ## Arquivos Relacionados
-- `src/scripts/generators.js` - Lógica principal
-- `src/scripts/data/estados.js` - UFs, cidades, DDDs
-- `src/scripts/data/vehicle-catalog.js` - CRUD catálogo
-- `src/scripts/data/mapping-types.js` - 29 tipos de mapeamento
+- `src/scripts/generators.js` - Lógica principal (funções puras exportadas)
+- `src/scripts/data/estados.js` - UFs, cidades, DDDs (27 estados)
+- `src/scripts/data/vehicle-catalog.js` - CRUD catálogo (puro, sem side effects)
+- `src/scripts/data/mapping-types.js` - 29 tipos de mapeamento (MAPPING_TYPES)

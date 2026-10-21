@@ -14,10 +14,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Memory system for agent persistence
 - Comprehensive test setup with Chrome API mocking
 - GitHub Actions CI pipeline with coverage validation
+- Mutation testing with Stryker (`npm run test:mutation`, score mínimo de 60%) em `selector-engine.js`, `generators.js` e `vehicle-catalog.js`
+- Fixtures e helpers compartilhados para testes do popup (`tests/fixtures/` e `tests/helpers/`)
+- CI job de mutation testing em pushes para `main` e execução manual
 
 ### Changed
 - Updated vitest.config.js with stricter coverage thresholds (90% lines/functions/statements)
 - Improved test setup with comprehensive DOM and Chrome API mocks
+- Suíte de testes refatorada: `app.test.js` (83 testes) dividido em 9 arquivos por feature (`app-*.test.js`), totalizando 203 testes em 14 arquivos
+- `tests/setup.js` reduzido a ajustes de ambiente jsdom; mocks de Chrome API agora são explícitos por teste
+- Testes frágeis/viciados removidos ou reescritos para validar comportamento observável (DOM, storage e payload exato das mensagens)
+- Documentação de testes atualizada (`docs/09-estrategia-testes.md`, README, CONTRIBUTING e contextos dos agentes)
+
+### Fixed
+- Falsos positivos causados por mocks globais permissivos e por estado de módulo vazando entre testes (ex.: `runtimeContextInvalidated` no `selector-engine`)
 
 ## [1.0.1] - 2026-01-15
 

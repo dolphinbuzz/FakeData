@@ -21,22 +21,22 @@ export default defineConfig({
         statements: 90,
         branches: 80,
         "src/scripts/app.js": {
-          lines: 85
+          lines: 90
         },
         "src/scripts/content.js": {
-          lines: 85
+          lines: 90
         },
         "src/scripts/selector-engine.js": {
           lines: 90,
           functions: 90,
           statements: 90,
-          branches: 85
+          branches: 90
         },
         "src/scripts/data/vehicle-catalog.js": {
           lines: 90,
           functions: 90,
           statements: 90,
-          branches: 85
+          branches: 90
         },
         "src/scripts/generators.js": {
           lines: 95,

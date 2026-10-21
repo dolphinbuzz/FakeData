@@ -138,22 +138,17 @@ When Agent A needs work from Agent B:
 
 ## Tool Commands
 
+Comandos reais deste projeto:
+
 ```bash
-# Start development session
-opencode session start --agent <agent-name>
+# Suíte completa
+npm test
 
-# Run agent-specific workflow
-opencode workflow run feature-development --agent <agent-name>
+# Cobertura com thresholds (linhas/funções/statements >= 90%, branches >= 80%)
+npm run test:coverage
 
-# Validate architecture
-opencode hook run architect:pre-task
-
-# Run tests for changed files
-opencode hook run test-changed
-
-# Full coverage check
-opencode hook run coverage-check
-
-# Prepare release
-opencode workflow run release-preparation
+# Valida a estrutura do manifest.json
+npm run validate-manifest
 ```
+
+> Os workflows e agentes descritos neste diretório são **convenções documentais**. O OpenCode V2 não tem os subcomandos `opencode workflow ...` nem `opencode hook ...` (confira `opencode --help`); não existe execução automática desses fluxos. Os hooks de Git reais ficam em `.opencode/hooks/` e são instalados de forma opt-in via `core.hooksPath` — veja `.opencode/hooks/README.md`.
