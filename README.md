@@ -143,7 +143,7 @@ npm run test:coverage
 npm run test:mutation
 ```
 
-`npm test` executa a suíte Vitest (218 testes em 14 arquivos). `npm run test:coverage` gera os relatórios texto e HTML e exige pelo menos 90% de Lines globalmente e nos principais módulos de produção. `npm run test:mutation` executa o Stryker nos módulos puros (`selector-engine.js`, `generators.js` e `vehicle-catalog.js`) e falha se o mutation score ficar abaixo de 60%; o relatório HTML fica em `reports/mutation/`.
+`npm test` executa a suíte Vitest (219 testes em 14 arquivos). `npm run test:coverage` gera os relatórios texto e HTML e exige pelo menos 90% de Lines globalmente e nos principais módulos de produção. `npm run test:mutation` executa o Stryker nos módulos puros (`selector-engine.js`, `generators.js` e `vehicle-catalog.js`) e falha se o mutation score ficar abaixo de 60%; o relatório HTML fica em `reports/mutation/`.
 
 Os testes de interface usam o `src/popup.html` real e mocks explícitos das Chrome APIs em `tests/fixtures/`. O CI usa Node.js 22.x, executa `npm ci` e `npm run test:coverage` em cada push e pull request para `main`; em pushes para `main`, também executa o mutation testing. Os relatórios são publicados como artefatos do workflow.
 

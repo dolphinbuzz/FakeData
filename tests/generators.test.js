@@ -47,6 +47,9 @@ describe("geradores", () => {
     const context = data.person.context();
     const result = Object.fromEntries(data.person.fields.map(([label, create]) => [label, create(context)]));
 
+    for (const value of Object.values(result)) {
+      expect(value).toBeTruthy();
+    }
     expect(result.Estado).toBe("SP - São Paulo");
     expect(result.Nome).toBe(`${context.nome} ${context.sobrenome}`);
     expect(context.sobrenome.split(/\s+/)).toHaveLength(2);
@@ -58,6 +61,64 @@ describe("geradores", () => {
       const generatedContext = definition.context();
       definition.fields.forEach(([, create]) => expect(create(generatedContext)).toBeTruthy());
     }
+  });
+
+  it("expõe títulos, rótulos e campos estáveis para os três geradores", () => {
+    const data = createGeneratorData();
+
+    expect(data.person.title).toBe("Pessoa gerada");
+    expect(data.person.label).toBe("Pessoa");
+    expect(data.person.fields.map(([label]) => label)).toEqual([
+      "Nome",
+      "CPF",
+      "RG",
+      "Sexo",
+      "E-mail",
+      "Telefone",
+      "Data nasc.",
+      "Mãe",
+      "Pai",
+      "CEP",
+      "Endereço",
+      "Número",
+      "Bairro",
+      "Cidade",
+      "Estado",
+      "Profissão",
+      "Renda mensal"
+    ]);
+
+    expect(data.vehicle.title).toBe("Veículo gerado");
+    expect(data.vehicle.label).toBe("Veículo");
+    expect(data.vehicle.fields.map(([label]) => label)).toEqual([
+      "Marca",
+      "Modelo",
+      "Placa",
+      "Chassi",
+      "Ano",
+      "Renavam",
+      "Cor",
+      "UF"
+    ]);
+
+    expect(data.company.title).toBe("Empresa gerada");
+    expect(data.company.label).toBe("Empresa");
+    expect(data.company.fields.map(([label]) => label)).toEqual([
+      "Razão social",
+      "CNPJ",
+      "Inscrição Estadual",
+      "Data de abertura",
+      "E-mail",
+      "Site",
+      "Telefone",
+      "Segmento",
+      "CEP",
+      "Endereço",
+      "Número",
+      "Bairro",
+      "Cidade",
+      "Estado"
+    ]);
   });
 
   it("gera nomes variados com dois sobrenomes distintos", () => {

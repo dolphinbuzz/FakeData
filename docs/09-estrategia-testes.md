@@ -76,11 +76,11 @@ Consequências deliberadas:
 - Comportamentos reais do jsdom (ex.: `new Event`, `window.close`, `location`) são exercitados de verdade.
 - Mocks de Chrome APIs vivem em `tests/fixtures/chrome-mock.js` e são explícitos por teste.
 
-## Estrutura de Testes (218 testes, 14 arquivos)
+## Estrutura de Testes (219 testes, 14 arquivos)
 
 | Arquivo | Módulo alvo | Testes | Tipo |
 |---|---|---|---|
-| `generators.test.js` | `generators.js` | 11 | Funções puras |
+| `generators.test.js` | `generators.js` | 12 | Funções puras |
 | `selector-engine.test.js` | `selector-engine.js` | 74 | Funções puras + estado de módulo |
 | `vehicle-catalog.test.js` | `data/vehicle-catalog.js` | 12 | Funções puras |
 | `messages.test.js` | `messages.js` | 1 | Constantes |
@@ -94,7 +94,7 @@ Consequências deliberadas:
 | `app-panel.test.js` | `app.js` (maximizar/fechar painel) | 5 | Integração do popup |
 | `app-field-actions.test.js` | `app.js` (ações da lista de campos) | 10 | Integração do popup |
 | `app-floating-controls.test.js` | `app.js` (preenchimento sob demanda) | 2 | Integração do popup |
-| **Total** | | **218** | |
+| **Total** | | **219** | |
 
 O antigo `app.test.js` (83 testes em um único arquivo) foi desmembrado por feature e removido. A cobertura de linhas de `app.js` é idêntica antes e depois da divisão; os únicos trechos não cobertos (`setLoading` e `autovalidar`) já não eram cobertos pelo arquivo antigo.
 

@@ -40,7 +40,7 @@ FakeData/
 │           ├── estados.js      # Const: ESTADOS (27), DDDS
 │           ├── mapping-types.js # Const: MAPPING_TYPES (30 entradas: 29 tipos + auto)
 │           └── vehicle-catalog.js # CRUD catálogo veículos (puro)
-├── tests/                      # 218 testes (100% passing)
+├── tests/                      # 219 testes (100% passing)
 │   ├── setup.js               # Ambiente jsdom (sem mocks permissivos)
 │   ├── fixtures/              # chrome-mock.js, dom-factory.js
 │   ├── helpers/               # app-loader.js, interaction.js
@@ -101,7 +101,7 @@ Salva mapeamento → Nomeia → Aparece no dropdown → Seleciona → Edita/Reno
 
 ## Qualidade
 
-- **218 testes** passando (100%) em 14 arquivos
+- **219 testes** passando (100%) em 14 arquivos
 - **Coverage real**: 96.38% statements, 83.83% branches, 97.44% functions, 98.84% lines
 - **✅ Gate de coverage**: todos os thresholds atendidos (`selector-engine.js` 99.57% lines / 91.13% branches; `app.js` 97.99% lines)
 - **Thresholds**: 90% global (lines/functions/statements), 80% branches; mínimo 90% por arquivo (críticos 95-100%)
