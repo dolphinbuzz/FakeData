@@ -25,9 +25,9 @@ jobs:
         run: npm ci
 
       - name: Security audit (npm audit)
-        run: npm audit --audit-level=high || true
-        # Vulnerabilidades apenas em devDependencies (vitest, ajv-cli) não afetam o runtime da extensão.
-        # O job falha se houver vulnerabilidades de nível critical ou high em dependências de produção.
+        run: npm audit --audit-level=moderate
+        # Audita também as devDependencies (vitest, Stryker etc.).
+        # O job falha se houver qualquer vulnerabilidade moderate ou superior.
 
       - name: Run tests with coverage
         run: npm run test:coverage

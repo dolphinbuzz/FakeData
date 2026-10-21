@@ -14,7 +14,7 @@ Processo de build, versionamento, publicação na Chrome Web Store e pipeline CI
 
 ### Validação do Manifest
 ```bash
-npm run validate-manifest  # ajv-cli + chrome-manifest-schema.json
+npm run validate-manifest  # script Node + ajv 8 + chrome-manifest-schema.json
 ```
 
 ### Chrome Web Store Checklist
@@ -59,7 +59,7 @@ zip -r fakedata-v{X.Y.Z}.zip . \
 | **test** | Node 22, npm ci, npm run test:coverage, upload coverage artifact |
 | **mutation** | Node 22, npm ci, npm run test:mutation, upload reports/ (push para main e workflow_dispatch) |
 | **lint** | npm run lint --if-present |
-| **manifest-validation** | npm run validate-manifest (ajv-cli + schema local) |
+| **manifest-validation** | npm run validate-manifest (script Node + ajv 8 + schema local) |
 | **version-consistency** | Compara manifest.json version vs package.json version (falha se mismatch) |
 
 ### Triggers
@@ -102,7 +102,7 @@ zip -r fakedata-v{X.Y.Z}.zip . \
 
 ### Validar Manifest
 ```bash
-npm run validate-manifest  # usa ajv-cli com schema local
+npm run validate-manifest  # valida com ajv 8 e schema local
 ```
 
 ### Gerar Zip para Store

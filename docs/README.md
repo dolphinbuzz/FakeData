@@ -40,11 +40,11 @@ FakeData/
 │           ├── estados.js      # Const: ESTADOS (27), DDDS
 │           ├── mapping-types.js # Const: MAPPING_TYPES (30 entradas: 29 tipos + auto)
 │           └── vehicle-catalog.js # CRUD catálogo veículos (puro)
-├── tests/                      # 203 testes (100% passing)
+├── tests/                      # 219 testes (100% passing)
 │   ├── setup.js               # Ambiente jsdom (sem mocks permissivos)
 │   ├── fixtures/              # chrome-mock.js, dom-factory.js
 │   ├── helpers/               # app-loader.js, interaction.js
-│   └── *.test.js              # 14 arquivos: app-*(9 por feature), content(33), selector-engine(59), generators(11), vehicle-catalog(12), messages(1)
+│   └── *.test.js              # 14 arquivos: app-*(9 por feature), content(33), selector-engine(74), generators(11), vehicle-catalog(12), messages(1)
 ├── .github/workflows/ci.yml    # Pipeline CI (5 jobs: test, mutation, lint, manifest-validation, version-consistency)
 ├── .opencode/                  # Config agente OpenCode V2
 │   ├── context/               # ADRs, API contracts, coding standards, testing strategy
@@ -101,13 +101,13 @@ Salva mapeamento → Nomeia → Aparece no dropdown → Seleciona → Edita/Reno
 
 ## Qualidade
 
-- **203 testes** passando (100%) em 14 arquivos
-- **Coverage real**: 98.56% statements, 89.86% branches, 97.1% functions, 98.56% lines
-- **✅ Gate de coverage**: todos os thresholds atendidos (`selector-engine.js` 96.59% lines / 91.57% branches; `app.js` 98.07% lines)
+- **219 testes** passando (100%) em 14 arquivos
+- **Coverage real**: 96.38% statements, 83.83% branches, 97.44% functions, 98.84% lines
+- **✅ Gate de coverage**: todos os thresholds atendidos (`selector-engine.js` 99.57% lines / 91.13% branches; `app.js` 97.99% lines)
 - **Thresholds**: 90% global (lines/functions/statements), 80% branches; mínimo 90% por arquivo (críticos 95-100%)
 - **Mutation testing**: Stryker nos módulos puros (`selector-engine.js`, `generators.js`, `vehicle-catalog.js`) com score mínimo de 60%
 - **CI**: GitHub Actions (Node 22, npm ci, test:coverage, mutation em pushes para main, manifest-validation, version-consistency; job de lint é no-op, pois não há script lint)
-- **Manifest validation**: integrada ao pipeline (ajv-cli); lint não configurado
+- **Manifest validation**: integrada ao pipeline (script Node + `ajv@8`); lint não configurado
 
 ---
 
@@ -129,7 +129,7 @@ npm test                 # vitest run
 npm run test:coverage    # vitest run --coverage (falha se thresholds não atingidos)
 
 # Validação
-npm run validate-manifest  # ajv-cli + schema Chrome Manifest V3
+npm run validate-manifest  # script Node + ajv 8 + schema Chrome Manifest V3
 
 # Release (manual, sem script de build automatizado)
 # 1. Bump version em manifest.json + package.json (SemVer)
