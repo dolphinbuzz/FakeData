@@ -1,6 +1,8 @@
 ## Build Commands
 - npm test — roda a suíte de testes
-- npm run lint — valida convenções de código
+- npm run test:coverage — cobertura com thresholds
+- npm run test:mutation — mutation testing (Stryker)
+- npm run validate-manifest — valida manifest.json
 
 ## Code Style
 - Módulos ES nativos, sem framework de bundler

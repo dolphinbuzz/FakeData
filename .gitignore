@@ -21,6 +21,10 @@ build/
 coverage/
 .nyc_output/
 
+# Mutation testing (Stryker)
+reports/
+.stryker-tmp/
+
 # Test artifacts
 tests/*.test.js.snap
 

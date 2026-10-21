@@ -157,7 +157,7 @@ Funções puras = alta cobertura (95%+). Integração = mocks complexos (90%+).
 ## Arquivos Relacionados
 - manifest.json - Configuração principal
 - package.json - Scripts, deps, version
-- .github/workflows/ci.yml - Pipeline CI (4 jobs)
+- .github/workflows/ci.yml - Pipeline CI (5 jobs)
 - opencode.jsonc - Config OpenCode V2 (permissions, skills, workflows, context)
 - .opencode/context/architecture-decisions.md - ADRs 001-008 (A1/A2 documentados neste arquivo)
 - .opencode/hooks/git/* - Shims git (opt-in)

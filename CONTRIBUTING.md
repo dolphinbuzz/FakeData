@@ -57,9 +57,11 @@ chore: atualiza dependências de desenvolvimento
 ### Testes
 - Testes em `tests/*.test.js`
 - Cobertura mínima: 90% lines/functions/statements, 80% branches
-- Mocks de Chrome APIs em `tests/setup.js`
-- Funções puras = testes diretos
-- Integração = mocks complexos, foco happy paths
+- Mocks de Chrome APIs em `tests/fixtures/chrome-mock.js` (explícitos por teste, sem mocks globais permissivos)
+- DOM da interface em `tests/fixtures/dom-factory.js` (lê o `src/popup.html` real)
+- Interações e asserções compartilhadas em `tests/helpers/`
+- Funções puras = testes diretos; `app.js` dividido por feature em `app-*.test.js`
+- Mutation testing: `npm run test:mutation` (score mínimo de 60% em `selector-engine.js`, `generators.js` e `vehicle-catalog.js`)
 
 ## Estrutura do Projeto
 
@@ -82,17 +84,20 @@ FakeData/
 │           ├── mapping-types.js # MAPPING_TYPES (29 tipos)
 │           └── vehicle-catalog.js # Catálogo veículos
 ├── tests/
-│   ├── setup.js             # Mocks globais
+│   ├── setup.js             # Ambiente jsdom (sem mocks permissivos)
+│   ├── fixtures/            # chrome-mock.js, dom-factory.js
+│   ├── helpers/             # app-loader.js, interaction.js
+│   ├── app-*.test.js        # Integração do popup por feature
+│   ├── content.test.js
 │   ├── generators.test.js
 │   ├── selector-engine.test.js
 │   ├── vehicle-catalog.test.js
-│   ├── messages.test.js
-│   ├── content.test.js
-│   └── app.test.js
+│   └── messages.test.js
 ├── .github/workflows/ci.yml # CI pipeline
 ├── manifest.json            # Manifest V3
 ├── package.json
 ├── vitest.config.js
+├── stryker.config.json      # Mutation testing
 └── README.md
 ```
 
@@ -114,7 +119,7 @@ O projeto usa uma equipe de agentes especializados via OpenCode:
 ## Processo de Release
 
 1. Todas as checks CI passam
-2. Coverage >= 90%
+2. Coverage >= 90% e mutation score >= 60%
 3. Version bump em `manifest.json` E `package.json` (SemVer)
 4. `CHANGELOG.md` atualizado
 5. Tag git: `git tag v1.0.2`

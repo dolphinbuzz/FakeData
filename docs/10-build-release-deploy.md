@@ -52,17 +52,20 @@ zip -r fakedata-v{X.Y.Z}.zip . \
 - `manifest.json`: `"version": "1.0.1"`
 - `package.json`: `"version": "1.0.1"`
 
-## CI/CD Pipeline (.github/workflows/ci.yml) — 4 Jobs
+## CI/CD Pipeline (.github/workflows/ci.yml) — 5 Jobs
 
 | Job | Steps |
 |-----|-------|
 | **test** | Node 22, npm ci, npm run test:coverage, upload coverage artifact |
+| **mutation** | Node 22, npm ci, npm run test:mutation, upload reports/ (push para main e workflow_dispatch) |
 | **lint** | npm run lint --if-present |
 | **manifest-validation** | npm run validate-manifest (ajv-cli + schema local) |
 | **version-consistency** | Compara manifest.json version vs package.json version (falha se mismatch) |
 
 ### Triggers
 - Push/PR to main branch
+- `workflow_dispatch` para execução manual (inclui mutation testing)
+- Mutation testing roda apenas fora de pull requests (push para main ou manual)
 
 ## Privacy Policy (LGPD/GDPR)
 
@@ -80,6 +83,7 @@ zip -r fakedata-v{X.Y.Z}.zip . \
 
 - [ ] Todos os testes passam (`npm run test:coverage`)
 - [ ] Coverage: global >= 90% (lines/functions/statements) e >= 80% (branches); thresholds por arquivo >= 90% (vitest.config.js)
+- [ ] Mutation score >= 60% (`npm run test:mutation`)
 - [ ] Version bump em `manifest.json` E `package.json` (SemVer)
 - [ ] `CHANGELOG.md` atualizado (Keep a Changelog format)
 - [ ] Package zip validado
@@ -182,7 +186,8 @@ Garante LF no checkout no Windows (evita quebra de shebang/comandos com `core.au
 - `manifest.json` - Configuração principal (version 1.0.1)
 - `package.json` - Scripts, devDependencies, version 1.0.1
 - `vitest.config.js` - Test config + coverage thresholds
-- `.github/workflows/ci.yml` - Pipeline CI (4 jobs)
+- `stryker.config.json` - Mutation testing (módulos puros, score mínimo 60%)
+- `.github/workflows/ci.yml` - Pipeline CI (5 jobs)
 - `PRIVACY_POLICY.md` - Política privacidade
 - `CHANGELOG.md` - Histórico versões (precisa entradas A1/A2)
 - `README.md` - Documentação instalação/uso

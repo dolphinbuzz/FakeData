@@ -52,5 +52,5 @@ StoredField: {key, selector, label, dataType, fixed, fixedValue, selectorRule, s
 
 ## Testes
 - Target: 90%+ coverage
-- Arquivo de teste: tests/app.test.js
-- Mock chrome.storage.local.get/set
+- Arquivos de teste: tests/app-lifecycle.test.js (perfis), tests/app-mapping.test.js (mapeamento), tests/app-vehicle-catalog.test.js (catálogo)
+- Mock chrome.storage.local.get/set via `createChromeMock` (tests/fixtures/chrome-mock.js)

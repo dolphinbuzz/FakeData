@@ -130,7 +130,8 @@
     },
     "commands": {
       "test": "npm test",
-      "coverage": "npm run test:coverage"
+      "coverage": "npm run test:coverage",
+      "mutation": "npm run test:mutation"
     }
   },
   "build": {
@@ -145,6 +146,7 @@
       ".opencode/**",
       "*.md",
       "vitest.config.js",
+      "stryker.config.json",
       "package*.json",
       ".github/**"
     ]

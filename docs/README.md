@@ -14,7 +14,7 @@ Este diretório contém a documentação técnica detalhada de cada funcionalida
 | 06 | [comunicacao-mensageria.md](06-comunicacao-mensageria.md) | ACTIONS, messaging popup↔content, fila de injeção, guarda de vivacidade |
 | 07 | [armazenamento-persistencia.md](07-armazenamento-persistencia.md) | chrome.storage.local, localStorage, migração, IDs |
 | 08 | [arquitetura-decisoes.md](08-arquitetura-decisoes.md) | Manifest V3, ADRs (incl. A1/A2), módulos, segurança, performance |
-| 09 | [estrategia-testes.md](09-estrategia-testes.md) | Vitest, jsdom, coverage real, mocks, CI/CD 4 jobs |
+| 09 | [estrategia-testes.md](09-estrategia-testes.md) | Vitest, jsdom, coverage real, fixtures/helpers, mutation testing (Stryker), CI/CD 5 jobs |
 | 10 | [build-release-deploy.md](10-build-release-deploy.md) | Versionamento, CI/CD, Chrome Web Store, Privacy, hooks/permissions |
 
 ---
@@ -40,10 +40,12 @@ FakeData/
 │           ├── estados.js      # Const: ESTADOS (27), DDDS
 │           ├── mapping-types.js # Const: MAPPING_TYPES (30 entradas: 29 tipos + auto)
 │           └── vehicle-catalog.js # CRUD catálogo veículos (puro)
-├── tests/                      # 205 testes (100% passing)
-│   ├── setup.js               # Mocks globais Chrome + DOM
-│   └── *.test.js              # 6 arquivos: app(83), content(33), selector-engine(65), generators(11), vehicle-catalog(12), messages(1)
-├── .github/workflows/ci.yml    # Pipeline CI (4 jobs: test, lint, manifest-validation, version-consistency)
+├── tests/                      # 203 testes (100% passing)
+│   ├── setup.js               # Ambiente jsdom (sem mocks permissivos)
+│   ├── fixtures/              # chrome-mock.js, dom-factory.js
+│   ├── helpers/               # app-loader.js, interaction.js
+│   └── *.test.js              # 14 arquivos: app-*(9 por feature), content(33), selector-engine(59), generators(11), vehicle-catalog(12), messages(1)
+├── .github/workflows/ci.yml    # Pipeline CI (5 jobs: test, mutation, lint, manifest-validation, version-consistency)
 ├── .opencode/                  # Config agente OpenCode V2
 │   ├── context/               # ADRs, API contracts, coding standards, testing strategy
 │   ├── skills/                # 10 skills especializadas
@@ -55,8 +57,9 @@ FakeData/
 │   └── workflows/README.md
 ├── docs/                       # Esta documentação (11 arquivos)
 ├── manifest.json               # Manifest V3 (host_permissions: <all_urls>)
-├── package.json                # Scripts: test, test:coverage, validate-manifest
+├── package.json                # Scripts: test, test:coverage, test:mutation, validate-manifest
 ├── vitest.config.js            # Coverage thresholds por arquivo
+├── stryker.config.json         # Mutation testing (módulos puros, score mínimo 60%)
 ├── opencode.jsonc              # Config OpenCode V2 (permissions V2: git push = ask)
 ├── .gitattributes              # LF forçado em .opencode/hooks/**/*.sh
 ├── CHANGELOG.md                # Keep a Changelog
@@ -98,11 +101,12 @@ Salva mapeamento → Nomeia → Aparece no dropdown → Seleciona → Edita/Reno
 
 ## Qualidade
 
-- **205 testes** passando (100%)
-- **Coverage real**: 98.63% statements, 89.79% branches, 97.1% functions, 98.63% lines
-- **✅ Gate de coverage**: todos os thresholds atendidos (`selector-engine.js` functions 94.28%)
+- **203 testes** passando (100%) em 14 arquivos
+- **Coverage real**: 98.56% statements, 89.86% branches, 97.1% functions, 98.56% lines
+- **✅ Gate de coverage**: todos os thresholds atendidos (`selector-engine.js` 96.59% lines / 91.57% branches; `app.js` 98.07% lines)
 - **Thresholds**: 90% global (lines/functions/statements), 80% branches; mínimo 90% por arquivo (críticos 95-100%)
-- **CI**: GitHub Actions (Node 22, npm ci, test:coverage, manifest-validation, version-consistency; job de lint é no-op, pois não há script lint)
+- **Mutation testing**: Stryker nos módulos puros (`selector-engine.js`, `generators.js`, `vehicle-catalog.js`) com score mínimo de 60%
+- **CI**: GitHub Actions (Node 22, npm ci, test:coverage, mutation em pushes para main, manifest-validation, version-consistency; job de lint é no-op, pois não há script lint)
 - **Manifest validation**: integrada ao pipeline (ajv-cli); lint não configurado
 
 ---

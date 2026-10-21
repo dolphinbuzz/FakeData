@@ -293,7 +293,7 @@ test("cpf() returns 14 chars formatted", () => {
 
 ### Chrome APIs Mocking
 ```javascript
-// Global setup (tests/setup.js or per file)
+// Per-test mock (tests/fixtures/chrome-mock.js)
 global.chrome = {
   runtime: {
     sendMessage: vi.fn((msg, cb) => cb({})),

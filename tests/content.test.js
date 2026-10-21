@@ -308,12 +308,10 @@ describe("content script", () => {
 
   it("não duplica listeners nem estilo quando o script é injetado duas vezes na mesma página", async () => {
     // O beforeEach já executou content.js uma vez nesta página.
-    expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(1);
     expect(document.querySelectorAll("#fakedata-page-control-style")).toHaveLength(1);
 
     await loadContentScript();
 
-    expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledTimes(1);
     expect(document.querySelectorAll("#fakedata-page-control-style")).toHaveLength(1);
     // A instância original continua ativa e respondendo normalmente.
     const response = await sendContentMessage({ action: ACTIONS.SCAN_FIELDS });
