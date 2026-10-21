@@ -810,4 +810,130 @@ describe("selector engine", () => {
       expect(isDynamicId("cpf-input")).toBe(false);
     });
   });
+
+  // ===== COBERTURA ADICIONAL DE COMBINAÇÕES E ALVOS =====
+
+  describe("cobertura adicional de seletores e alvos", () => {
+    it("usa data-test quando não há atributos de maior prioridade", () => {
+      document.body.innerHTML = `<input data-test="campo-extra">`;
+      const result = selectorFor(document.querySelector("input"));
+      expect(result.rule).toBe("data-test");
+      expect(result.selector).toBe('[data-test="campo-extra"]');
+    });
+
+    it("usa a combinação name + value sem type", () => {
+      document.body.innerHTML = `<input name="nickname" value="ana">`;
+      const result = selectorFor(document.querySelector("input"));
+      expect(result.rule).toBe("name + value");
+      expect(result.selector).toBe('input[name="nickname"][value="ana"]');
+    });
+
+    it("usa a combinação name + type sem value", () => {
+      document.body.innerHTML = `<input name="nickname" type="text">`;
+      const result = selectorFor(document.querySelector("input"));
+      expect(result.rule).toBe("name + type");
+      expect(result.selector).toBe('input[name="nickname"][type="text"]');
+    });
+
+    it("usa a combinação role + aria-label", () => {
+      document.body.innerHTML = `<div role="button" aria-label="Salvar"></div>`;
+      const result = selectorFor(document.querySelector("div"));
+      expect(result.rule).toBe("role + aria-label");
+      expect(result.selector).toBe('div[role="button"][aria-label="Salvar"]');
+    });
+
+    it("usa a combinação aria-labelledby + role", () => {
+      document.body.innerHTML = `
+        <span id="rotulo">Salvar</span>
+        <div role="button" aria-labelledby="rotulo"></div>
+      `;
+      const result = selectorFor(document.querySelector("div"));
+      expect(result.rule).toBe("aria-labelledby + role");
+      expect(result.selector).toBe('div[aria-labelledby="rotulo"][role="button"]');
+    });
+
+    it("usa o candidato aria-labelledby isolado", () => {
+      document.body.innerHTML = `
+        <span id="rotulo">Nome</span>
+        <div aria-labelledby="rotulo"></div>
+      `;
+      const result = selectorFor(document.querySelector("div"));
+      expect(result.rule).toBe("aria-labelledby");
+      expect(result.selector).toBe('div[aria-labelledby="rotulo"]');
+    });
+
+    it("usa o candidato value isolado", () => {
+      document.body.innerHTML = `<input value="ana">`;
+      const result = selectorFor(document.querySelector("input"));
+      expect(result.rule).toBe("value");
+      expect(result.selector).toBe('input[value="ana"]');
+    });
+
+    it("usa o candidato type isolado", () => {
+      document.body.innerHTML = `<input type="text">`;
+      const result = selectorFor(document.querySelector("input"));
+      expect(result.rule).toBe("type");
+      expect(result.selector).toBe('input[type="text"]');
+    });
+
+    it("usa o candidato autocomplete isolado", () => {
+      document.body.innerHTML = `<input autocomplete="email">`;
+      const result = selectorFor(document.querySelector("input"));
+      expect(result.rule).toBe("autocomplete");
+      expect(result.selector).toBe('input[autocomplete="email"]');
+    });
+
+    it("usa o candidato placeholder isolado", () => {
+      document.body.innerHTML = `<input placeholder="Digite seu nome">`;
+      const result = selectorFor(document.querySelector("input"));
+      expect(result.rule).toBe("placeholder");
+      expect(result.selector).toBe('input[placeholder="Digite seu nome"]');
+    });
+
+    it("retorna o fallback quando o elemento não está no documento", () => {
+      const detached = document.createElement("input");
+      const result = selectorFor(detached);
+      expect(result.rule).toBe("fallback proibido");
+      expect(result.selector).toBe("input");
+    });
+
+    it("resolve opção de lista para o campo customizado do grupo", () => {
+      document.body.innerHTML = `
+        <div class="form-group">
+          <multi-select><input id="custom"></multi-select>
+          <div role="option">Opção</div>
+        </div>
+      `;
+      const option = document.querySelector("[role='option']");
+      expect(fieldFromTarget(option)).toBe(document.querySelector("multi-select"));
+    });
+
+    it("resolve label com campo oculto aninhado", () => {
+      document.body.innerHTML = `<label><input type="hidden" id="oculto"></label>`;
+      const label = document.querySelector("label");
+      expect(fieldFromTarget(label)).toBe(document.querySelector("#oculto"));
+    });
+
+    it("resolve label com for apontando para campo oculto", () => {
+      document.body.innerHTML = `
+        <label for="oculto">Oculto</label>
+        <input type="hidden" id="oculto">
+      `;
+      const label = document.querySelector("label");
+      expect(fieldFromTarget(label)).toBe(document.querySelector("#oculto"));
+    });
+
+    it("remove o listener de captura após 30 segundos", () => {
+      vi.useFakeTimers();
+      try {
+        const captured = vi.fn();
+        captureNextClick(captured);
+        vi.advanceTimersByTime(30000);
+        document.querySelector("#email").dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+        expect(captured).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });

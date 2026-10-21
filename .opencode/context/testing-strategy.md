@@ -195,7 +195,7 @@ jobs:
   test:                     # coverage + artifacts (all pushes/PRs)
   mutation:                 # npm run test:mutation (push to main / manual)
   lint:                     # npm run lint --if-present (no-op)
-  manifest-validation:      # ajv-cli against Chrome schema
+  manifest-validation:      # node scripts/validate-manifest.mjs (ajv 8) against Chrome schema
   version-consistency:      # manifest.json vs package.json
 ```
 

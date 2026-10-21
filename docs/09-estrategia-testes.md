@@ -76,12 +76,12 @@ Consequências deliberadas:
 - Comportamentos reais do jsdom (ex.: `new Event`, `window.close`, `location`) são exercitados de verdade.
 - Mocks de Chrome APIs vivem em `tests/fixtures/chrome-mock.js` e são explícitos por teste.
 
-## Estrutura de Testes (203 testes, 14 arquivos)
+## Estrutura de Testes (218 testes, 14 arquivos)
 
 | Arquivo | Módulo alvo | Testes | Tipo |
 |---|---|---|---|
 | `generators.test.js` | `generators.js` | 11 | Funções puras |
-| `selector-engine.test.js` | `selector-engine.js` | 59 | Funções puras + estado de módulo |
+| `selector-engine.test.js` | `selector-engine.js` | 74 | Funções puras + estado de módulo |
 | `vehicle-catalog.test.js` | `data/vehicle-catalog.js` | 12 | Funções puras |
 | `messages.test.js` | `messages.js` | 1 | Constantes |
 | `content.test.js` | `content.js` | 33 | Integração (DOM real + mock de runtime) |
@@ -94,7 +94,7 @@ Consequências deliberadas:
 | `app-panel.test.js` | `app.js` (maximizar/fechar painel) | 5 | Integração do popup |
 | `app-field-actions.test.js` | `app.js` (ações da lista de campos) | 10 | Integração do popup |
 | `app-floating-controls.test.js` | `app.js` (preenchimento sob demanda) | 2 | Integração do popup |
-| **Total** | | **203** | |
+| **Total** | | **218** | |
 
 O antigo `app.test.js` (83 testes em um único arquivo) foi desmembrado por feature e removido. A cobertura de linhas de `app.js` é idêntica antes e depois da divisão; os únicos trechos não cobertos (`setLoading` e `autovalidar`) já não eram cobertos pelo arquivo antigo.
 
@@ -192,7 +192,7 @@ chromeMock.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
 - `createGeneratorData`: contexto e fields de pessoa/veículo/empresa.
 - `generateMappedValue`: tipos mapeados e `inputType` (checkbox, radio, date, month, number).
 
-### selector-engine.test.js (59 testes)
+### selector-engine.test.js (74 testes)
 
 - `inferType`: autocomplete, labels, opções de select, patterns.
 - `selectorFor`: prioridades 1–5, detecção de ID dinâmico, combinações, fallback estrutural.
@@ -317,7 +317,7 @@ Relatório HTML em `reports/mutation/index.html` (ignorado pelo git).
 | **test** | Node 22, `npm ci`, `npm run test:coverage`, upload do coverage |
 | **mutation** | Node 22, `npm ci`, `npm run test:mutation`, upload de `reports/` — executado em push para `main` e `workflow_dispatch` |
 | **lint** | `npm run lint --if-present` (no-op: não há script lint definido) |
-| **manifest-validation** | `npm run validate-manifest` (ajv-cli + schema Chrome) |
+| **manifest-validation** | `npm run validate-manifest` (script Node + `ajv@8` + schema Chrome) |
 | **version-consistency** | Compara `manifest.json` version vs `package.json` version |
 
 - Trigger: push/PR para `main`; mutation em push para `main` (evita tempo extra em PRs).
@@ -329,13 +329,13 @@ Relatório HTML em `reports/mutation/index.html` (ignorado pelo git).
 -------------------|---------|----------|---------|---------|-------------------
 File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
 -------------------|---------|----------|---------|---------|-------------------
-All files          |   98.56 |    89.86 |    97.1 |   98.56 |
- scripts           |   98.46 |    89.31 |   96.98 |   98.46 |
-  app.js           |   98.07 |    86.89 |   95.83 |   98.07 | 339-350,1322-1335
-  content.js       |     100 |    87.72 |   96.29 |     100 | ...71,478,483-484
-  generators.js    |     100 |    96.85 |     100 |     100 | ...24,164-165,345
+All files          |   96.38 |    83.83 |   97.44 |   98.84 |
+ scripts           |   96.21 |    83.16 |   97.31 |   98.79 |
+  app.js           |   94.83 |    78.62 |   95.85 |   97.99 | 340-348,1323-1333
+  content.js       |   97.94 |    84.45 |   96.66 |   99.65 | 346
+  generators.js    |   99.51 |    93.75 |     100 |     100 | ...64-165,199,345
   messages.js      |     100 |      100 |     100 |     100 |
-  selector-engine.js|   96.59 |    91.57 |   94.28 |   96.59 | ...55-258,335-339
+  selector-engine.js|   96.36 |    91.13 |   98.64 |   99.57 | 196
  scripts/data      |     100 |      100 |     100 |     100 |
   estados.js       |     100 |      100 |     100 |     100 |
   mapping-types.js |     100 |      100 |     100 |     100 |
@@ -343,7 +343,7 @@ All files          |   98.56 |    89.86 |    97.1 |   98.56 |
 -------------------|---------|----------|---------|---------|-------------------
 ```
 
-**Gate de coverage**: todos os thresholds atendidos. `app.js` (339-350: `setLoading`; 1322-1335: `autovalidar`) não é coberto nem pelos testes antigos; `selector-engine.js` mantém lines 96.59% e branches 91.57% (≥90).
+**Gate de coverage**: todos os thresholds atendidos. `app.js` (340-348: `setLoading`; 1323-1333: `autovalidar`) não é coberto nem pelos testes antigos; `selector-engine.js` mantém lines 99.57% e branches 91.13% (≥90).
 
 ## Debugging
 
