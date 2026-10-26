@@ -33,6 +33,11 @@ export function createChromeMock(overrides = {}) {
       [ACTIONS.CAPTURE_NEXT_CLICK]: { captured: false },
       [ACTIONS.UPDATE_PAGE_FIELD_CONTROLS]: { updated: true, count: 0 },
       [ACTIONS.SET_PAGE_FIELD_CONTROLS_VISIBILITY]: { updated: true, count: 0 },
+    [ACTIONS.CLEAR_PAGE_FIELDS]: (message) => ({
+      cleared: message.selectors?.length || 0,
+      total: message.selectors?.length || 0,
+      failed: []
+    }),
     },
   } = overrides;
 

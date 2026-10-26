@@ -19,6 +19,7 @@ describe("contrato de mensagens", () => {
       "CAPTURE_NEXT_CLICK",
       "UPDATE_PAGE_FIELD_CONTROLS",
       "SET_PAGE_FIELD_CONTROLS_VISIBILITY",
+      "CLEAR_PAGE_FIELDS",
       "PAGE_FIELD_FILL_REQUEST"
     ];
 
