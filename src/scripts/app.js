@@ -513,9 +513,9 @@ function generate() {
   resultTitle.textContent = definition.title;
   resultFields.innerHTML = definition.fields.map(([label]) => `
     <div class="result-field">
-      <span class="field-label">${label}</span>
-      <span class="field-value" title="${currentResult[label]}">${currentResult[label]}</span>
-      <button class="copy-field-button" type="button" aria-label="Copiar ${label}" data-value="${currentResult[label]}">⧉</button>
+      <span class="field-label">${escapeHtml(label)}</span>
+      <span class="field-value" title="${escapeHtml(currentResult[label])}">${escapeHtml(currentResult[label])}</span>
+      <button class="copy-field-button" type="button" aria-label="Copiar ${escapeHtml(label)}" data-value="${escapeHtml(currentResult[label])}">⧉</button>
     </div>
   `).join("");
   resultFields.querySelectorAll(".copy-field-button").forEach((button) => {
