@@ -5,6 +5,7 @@ import { MAPPING_TYPES } from "./data/mapping-types.js";
 import { addVehicleModel, normalizeVehicleCatalog, pickVehicle, removeVehicleBrand, removeVehicleModel, renameVehicleBrand, renameVehicleModel } from "./data/vehicle-catalog.js";
 import { ACTIONS } from "./messages.js";
 import { normalizePageUrl, getBaseUrl } from "./domain/url-utils.js";
+import { escapeHtml } from "./domain/html-utils.js";
 
 let selectedType = "person";
 let currentResult = null;
@@ -552,15 +553,6 @@ function clearDisplayedPageFields(statusMessage) {
   selectorPlaygroundMarkedSelector = "";
   updateSelectorMarkButton(0);
   if (pageFieldsStatus) pageFieldsStatus.textContent = statusMessage;
-}
-
-function escapeHtml(value) {
-  return String(value == null ? "" : value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }
 
 function getActiveTab(callback) {
