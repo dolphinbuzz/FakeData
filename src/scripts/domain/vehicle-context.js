@@ -19,6 +19,12 @@ function fieldValue(field) {
   return String(raw ?? "").trim();
 }
 
+// Mantém o contrato { marca, modelo }: o ano coerente é responsabilidade do gerador.
+function pickBrandModel(brands, pick) {
+  const { marca, modelo } = pickVehicle(brands, pick);
+  return { marca, modelo };
+}
+
 export function resolveVehicleContext(catalog, fields, pick, targetType = "") {
   const source = normalizeVehicleCatalog(catalog).filter((entry) => entry.modelos.length);
   const brands = source.length ? source : normalizeVehicleCatalog(DEFAULT_VEHICLE_CATALOG);
@@ -42,9 +48,14 @@ export function resolveVehicleContext(catalog, fields, pick, targetType = "") {
   }
 
   // No preenchimento da marca, um modelo já informado manda na escolha do veículo.
+  // Exceção P4: se a marca do formulário também possui o modelo, ela vence a varredura do catálogo.
   if (targetType === "brand") {
+    const brandOwnedModel = brandEntry && modelKey
+      ? brandEntry.modelos.find((modelo) => compareKey(modelo) === modelKey)
+      : "";
+    if (brandOwnedModel) return { marca: brandEntry.marca, modelo: brandOwnedModel };
     if (modelOwner) return { marca: modelOwner.marca, modelo: ownedModel };
-    return pickVehicle(brands, pick);
+    return pickBrandModel(brands, pick);
   }
 
   if (brandEntry) {
@@ -52,5 +63,5 @@ export function resolveVehicleContext(catalog, fields, pick, targetType = "") {
     return { marca: brandEntry.marca, modelo: pick(brandEntry.modelos) };
   }
   if (modelOwner) return { marca: modelOwner.marca, modelo: ownedModel };
-  return pickVehicle(brands, pick);
+  return pickBrandModel(brands, pick);
 }

@@ -13,6 +13,23 @@ export const DEFAULT_VEHICLE_CATALOG = [
   { marca: "BYD", modelos: ["Dolphin"] }
 ];
 
+// P2: faixas de anos plausíveis (fabricação/modelo) por modelo default.
+// Chave normalizada "marca|modelo" em minúsculas; o catálogo em si não muda de formato.
+export const DEFAULT_MODEL_YEARS = {
+  "toyota|corolla": [2020, 2026],
+  "volkswagen|t-cross": [2020, 2026],
+  "chevrolet|onix": [2020, 2026],
+  "honda|civic": [2022, 2026],
+  "fiat|argo": [2018, 2026],
+  "hyundai|hb20": [2020, 2026],
+  "nissan|kicks": [2020, 2026],
+  "renault|kwid": [2018, 2026],
+  "ford|ranger": [2020, 2026],
+  "jeep|compass": [2017, 2026],
+  "kia|sportage": [2022, 2026],
+  "byd|dolphin": [2023, 2026]
+};
+
 export function normalizeVehicleCatalog(value) {
   if (!Array.isArray(value)) return [];
   const brands = [];
@@ -99,10 +116,25 @@ export function renameVehicleModel(catalog, marca, modelo, novoModelo) {
   return current;
 }
 
+function modelYearKey(marca, modelo) {
+  return `${String(marca ?? "").trim().toLocaleLowerCase()}|${String(modelo ?? "").trim().toLocaleLowerCase()}`;
+}
+
+export function pickModelYear(marca, modelo, pick) {
+  const range = DEFAULT_MODEL_YEARS[modelYearKey(marca, modelo)];
+  if (!Array.isArray(range) || range.length < 2) return undefined;
+  const [first, last] = range;
+  if (!Number.isInteger(first) || !Number.isInteger(last) || last < first) return undefined;
+  const years = [];
+  for (let year = first; year <= last; year += 1) years.push(year);
+  return years.length ? pick(years) : undefined;
+}
+
 export function pickVehicle(catalog, pick) {
   const source = normalizeVehicleCatalog(catalog).filter((entry) => entry.modelos.length);
   const fallback = normalizeVehicleCatalog(DEFAULT_VEHICLE_CATALOG);
   const brands = source.length ? source : fallback;
   const brand = pick(brands);
-  return { marca: brand.marca, modelo: pick(brand.modelos) };
+  const modelo = pick(brand.modelos);
+  return { marca: brand.marca, modelo, ano: pickModelYear(brand.marca, modelo, pick) };
 }

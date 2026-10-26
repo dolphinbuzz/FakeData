@@ -166,6 +166,28 @@ describe("vehicle-context", () => {
       .toEqual({ marca: "Fiat", modelo: "Argo" });
   });
 
+  // Regressão P4: modelo homônimo em duas marcas; a marca já fixada no formulário vence.
+  it("no preenchimento da marca, a marca do formulário vence quando também possui o modelo", () => {
+    const duplicated = [
+      { marca: "Fiat", modelos: ["Argo"] },
+      { marca: "Toyota", modelos: ["Argo"] },
+    ];
+    const fields = [
+      brandField("Toyota", { fixed: true, fixedValue: "Toyota" }),
+      modelField("Argo", { fixed: true, fixedValue: "Argo" }),
+    ];
+
+    expect(resolveVehicleContext(duplicated, fields, pickFirst, "brand"))
+      .toEqual({ marca: "Toyota", modelo: "Argo" });
+
+    const caseInsensitive = [
+      brandField("toyota", { fixed: true, fixedValue: "toyota" }),
+      modelField("ARGO", { fixed: true, fixedValue: "ARGO" }),
+    ];
+    expect(resolveVehicleContext(duplicated, caseInsensitive, pickFirst, "brand"))
+      .toEqual({ marca: "Toyota", modelo: "Argo" });
+  });
+
   it("ignora entradas nulas e campos sem tipo conhecido", () => {
     const fields = [null, { value: "sem tipo" }, { dataType: "auto", value: "sem inferência" }];
 
