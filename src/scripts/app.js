@@ -1,8 +1,8 @@
 // Interface e regras do gerador da extensão.
-import { createGeneratorData, generateMappedValue as generateMappedValuePure, validarCPF, validarCNPJ, validarRenavam, validarPlaca, pick } from "./generators.js";
+import { createGeneratorData, generateMappedValue as generateMappedValuePure, pick } from "./generators.js";
 import { DDDS, ESTADOS } from "./data/estados.js";
 import { MAPPING_TYPES } from "./data/mapping-types.js";
-import { addVehicleModel, normalizeVehicleCatalog, pickVehicle, removeVehicleBrand, removeVehicleModel, renameVehicleBrand, renameVehicleModel } from "./data/vehicle-catalog.js";
+import { addVehicleModel, normalizeVehicleCatalog, pickVehicle, removeVehicleBrand, removeVehicleModel, renameVehicleBrand } from "./data/vehicle-catalog.js";
 import { ACTIONS } from "./messages.js";
 import { normalizePageUrl, getBaseUrl } from "./domain/url-utils.js";
 import { escapeHtml } from "./domain/html-utils.js";
@@ -129,7 +129,6 @@ const generatorConfig = {
   getVehicleCatalog: () => vehicleCatalog
 };
 const data = createGeneratorData(generatorConfig);
-const generatorOptions = generatorConfig;
 
 ESTADOS.forEach((estado) => {
   const option = document.createElement("option");
@@ -175,8 +174,8 @@ document.querySelectorAll(".type-button").forEach((button) => {
 });
 
 generateButton.addEventListener("click", generate);
-ufSelect.addEventListener("change", generate);
 ufSelect.addEventListener("change", () => {
+  generate();
   localStorage.setItem("fakedata-uf", ufSelect.value);
 });
 copyJsonButton.addEventListener("click", () => copyText(JSON.stringify(currentResult, null, 2), copyJsonButton));
@@ -340,19 +339,6 @@ function isEditableTarget(target) {
     (target.matches("input, textarea, select") || target.isContentEditable);
 }
 
-function setLoading(button, isLoading) {
-  if (!button) return;
-  if (isLoading) {
-    button.classList.add("button--loading");
-    button.disabled = true;
-    button.setAttribute("aria-busy", "true");
-  } else {
-    button.classList.remove("button--loading");
-    button.disabled = false;
-    button.removeAttribute("aria-busy");
-  }
-}
-
 function renderEmptyState() {
   if (!emptyStateElement || !emptyStateTitle || !emptyStateSubtitle || !pageFieldsStatus) return;
 
@@ -460,7 +446,7 @@ if (chrome.runtime && chrome.runtime.onMessage) {
       }
       const value = resolveFieldValue(field, (type, inputType) => {
         const vehicleContext = resolveVehicleContext(vehicleCatalog, pageFields, pick, type);
-        return generateMappedValuePure(type, data.person.context(), inputType, { ...generatorOptions, vehicleContext });
+        return generateMappedValuePure(type, data.person.context(), inputType, { ...generatorConfig, vehicleContext });
       });
       sendMessageToTab(sender.tab.id, {
         action: ACTIONS.FILL_FIELD,
@@ -719,17 +705,7 @@ function confirmMappingModal() {
 }
 
 function openRenameBrandModal(currentName) {
-  return openMappingModal(currentName, "Renomear marca", confirmRenameBrandModal);
-}
-
-function confirmRenameBrandModal() {
-  const name = mappingNameInput ? mappingNameInput.value.trim() : "";
-  if (!name) {
-    if (mappingModalError) mappingModalError.textContent = "Informe um nome para continuar.";
-    if (mappingNameInput) mappingNameInput.focus();
-    return;
-  }
-  closeMappingModal(name);
+  return openMappingModal(currentName, "Renomear marca");
 }
 
 function remapAllFields() {
@@ -1081,7 +1057,7 @@ function fillPageField(index) {
   if (!field) return;
   const value = resolveFieldValue(field, (type, inputType) => {
     const vehicleContext = resolveVehicleContext(vehicleCatalog, pageFields, pick, type);
-    return generateMappedValuePure(type, data.person.context(), inputType, { ...generatorOptions, vehicleContext });
+    return generateMappedValuePure(type, data.person.context(), inputType, { ...generatorConfig, vehicleContext });
   });
   sendToPage({ action: ACTIONS.FILL_FIELD, selector: field.selector, value }, (response, error) => {
     if (!error && response && response.filled) {
@@ -1107,7 +1083,7 @@ function fillAllPageFields() {
   const fields = pageFields.map((field) => ({
     selector: field.selector,
     value: resolveFieldValue(field, (type, inputType) =>
-      generateMappedValuePure(type, context, inputType, { ...generatorOptions, vehicleContext }))
+      generateMappedValuePure(type, context, inputType, { ...generatorConfig, vehicleContext }))
   }));
   sendToPage({ action: ACTIONS.FILL_ALL, fields }, (response, error) => {
     if (!error && response) {
@@ -1132,23 +1108,6 @@ function gerarEstadoSelecionado() {
     return pick(ESTADOS);
   }
   return ESTADOS.find((estado) => estado.sigla === selectedUf) || pick(ESTADOS);
-}
-
-// Checagem de sanidade em desenvolvimento: garante que o próprio gerador
-// nunca produza um CPF/CNPJ/RENAVAM com dígito verificador inválido (regressão silenciosa).
-function autovalidar(resultado) {
-  if (resultado.CPF) {
-    console.assert(validarCPF(resultado.CPF), "CPF gerado é inválido:", resultado.CPF);
-  }
-  if (resultado.CNPJ) {
-    console.assert(validarCNPJ(resultado.CNPJ), "CNPJ gerado é inválido:", resultado.CNPJ);
-  }
-  if (resultado.Renavam) {
-    console.assert(validarRenavam(resultado.Renavam), "RENAVAM gerado é inválido:", resultado.Renavam);
-  }
-  if (resultado.Placa) {
-    console.assert(validarPlaca(resultado.Placa), "Placa gerada é inválida:", resultado.Placa);
-  }
 }
 
 async function copyText(value, button) {
