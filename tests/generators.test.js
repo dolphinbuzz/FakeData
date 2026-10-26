@@ -73,7 +73,7 @@ describe("geradores", () => {
 
     expect(context.ano).toBeGreaterThanOrEqual(primeiroAno);
     expect(context.ano).toBeLessThanOrEqual(ultimoAno);
-    expect(anoField[1](context)).toBe(context.ano);
+    expect(anoField[1](context)).toBe(`${context.ano}/${context.ano + 1}`);
   });
 
   it("usa gerarAno quando o catálogo do gerador não tem faixa de ano", () => {
@@ -91,7 +91,7 @@ describe("geradores", () => {
     const context = createGeneratorData().person.context();
     const vehicleContext = { marca: "Toyota", modelo: "Corolla", ano: 2024 };
 
-    expect(generateMappedValue("year", context, "", { vehicleContext })).toBe(2024);
+    expect(generateMappedValue("year", context, "", { vehicleContext })).toBe("2024/2025");
   });
 
   it("deriva o ano do modelo quando o vehicleContext não traz ano", () => {
@@ -100,8 +100,9 @@ describe("geradores", () => {
       vehicleContext: { marca: "Toyota", modelo: "Corolla" },
     });
 
-    expect(value).toBeGreaterThanOrEqual(2020);
-    expect(value).toBeLessThanOrEqual(2026);
+    const [ano] = value.split("/");
+    expect(Number(ano)).toBeGreaterThanOrEqual(2020);
+    expect(Number(ano)).toBeLessThanOrEqual(2026);
   });
 
   it("usa gerarAno em generateMappedValue quando o catálogo não tem ano", () => {

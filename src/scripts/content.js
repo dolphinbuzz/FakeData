@@ -256,22 +256,36 @@
     const hasEmptyOption = Array.from(element.options).some((option) => option.value === "");
     if (hasEmptyOption) element.value = "";
     else element.selectedIndex = -1;
+    element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   function clearCustomSelect(element) {
     closeCustomMenus();
     const trigger = element.querySelector("input, [role='combobox'], .ui-autocomplete-multiselect") || element;
-    if (trigger.matches("input, textarea")) setNativeValue(trigger, "");
-    else trigger.textContent = "";
+    if (trigger.matches("input, textarea")) {
+      // setNativeValue já dispara input + change.
+      setNativeValue(trigger, "");
+    } else {
+      trigger.textContent = "";
+      trigger.dispatchEvent(new Event("input", { bubbles: true }));
+      trigger.dispatchEvent(new Event("change", { bubbles: true }));
+    }
     closeCustomMenus();
   }
 
   function clear(selector) {
     const mappedElement = clearTarget(selector);
     const element = select2NativeField(mappedElement) || mappedElement;
-    if (element.type === "checkbox" || element.type === "radio") {
+    if (element.type === "checkbox") {
+      // `click()` mantém o mesmo caminho usado no preenchimento e notifica
+      // frameworks controlados (React mapeia onChange de checkbox para click).
+      if (element.checked) element.click();
+      return true;
+    }
+    if (element.type === "radio") {
       element.checked = false;
+      element.dispatchEvent(new Event("input", { bubbles: true }));
       element.dispatchEvent(new Event("change", { bubbles: true }));
       return true;
     }
@@ -285,6 +299,8 @@
     }
     if (!["INPUT", "TEXTAREA"].includes(element.tagName) && isContentEditableElement(element)) {
       element.textContent = "";
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+      element.dispatchEvent(new Event("change", { bubbles: true }));
       return true;
     }
     setNativeValue(element, "");
@@ -520,7 +536,9 @@
       selectors.forEach((selector) => {
         try {
           clear(selector);
-          unmark(selector);
+          // Só desfaz marcações que a própria extensão criou: `unmark` em um
+          // seletor não marcado removeria outlines aplicados pela página.
+          if (markedFields.has(selector)) unmark(selector);
           cleared += 1;
         } catch (error) {
           failed.push({ selector, error: String(error && error.message || error) });

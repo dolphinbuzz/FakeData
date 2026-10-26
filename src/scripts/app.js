@@ -376,12 +376,19 @@ function clearAllPageFields() {
       return;
     }
     const failed = Array.isArray(response.failed) ? response.failed : [];
-    const failedSelectors = new Set(failed.map((item) => item && item.selector).filter(Boolean));
+    // Inclui seletor vazio: um campo sem seletor falhou e não deve ser zerado em memória.
+    const failedSelectors = new Set(
+      failed
+        .map((item) => (item && typeof item.selector === "string" ? item.selector : null))
+        .filter((selector) => selector !== null)
+    );
     pageFields.forEach((field) => {
       if (failedSelectors.has(field.selector)) return;
       field.value = "";
       field.fixedValue = "";
+      markedSelectors.delete(field.selector);
     });
+    updateMarkAllButton();
     renderPageFields();
     renderEmptyState();
     if (!pageFieldsStatus) return;
@@ -907,6 +914,7 @@ function commitPageFieldLabelEdition(editor) {
   const value = editor.value.trim();
   if (value) context.field.label = value;
   updatePageFieldRowLabel(context.row, context.field);
+  syncPageFieldControls();
 }
 
 function toggleFieldHighlight(field) {
@@ -988,7 +996,7 @@ function handlePageFieldInput(event) {
   if (!context) return;
   if (event.target.matches(".page-field-selector")) {
     context.field.selector = event.target.value;
-  } else if (event.target.matches(".page-field-fixed-value")) {
+  } else if (event.target.matches(".page-field-fixed-value") && context.field.fixed) {
     context.field.fixedValue = event.target.value;
   }
 }

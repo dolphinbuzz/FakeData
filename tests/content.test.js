@@ -483,6 +483,8 @@ describe("content script", () => {
     const changeEvents = vi.fn();
     const checkChange = vi.fn();
     const radioChange = vi.fn();
+    const bioInput = vi.fn();
+    document.querySelector("#bio").addEventListener("input", bioInput);
     email.addEventListener("input", inputEvents);
     email.addEventListener("change", changeEvents);
     document.querySelector("#check").addEventListener("change", checkChange);
@@ -503,6 +505,7 @@ describe("content script", () => {
     expect(checkChange).toHaveBeenCalledTimes(1);
     expect(radioChange).toHaveBeenCalledTimes(1);
     expect(document.querySelector("#bio").textContent).toBe("");
+    expect(bioInput).toHaveBeenCalledTimes(1);
     expect(document.querySelector("#bio-fallback").textContent).toBe("");
   });
 
@@ -510,12 +513,15 @@ describe("content script", () => {
     const uf = document.querySelector("#uf");
     uf.value = "CE";
     const changeEvents = vi.fn();
+    const inputEvents = vi.fn();
     uf.addEventListener("change", changeEvents);
+    uf.addEventListener("input", inputEvents);
 
     expect(await sendContentMessage({ action: ACTIONS.CLEAR_PAGE_FIELDS, selectors: ["#uf"] }))
       .toEqual({ cleared: 1, total: 1, failed: [] });
     expect(uf.value).toBe("");
     expect(changeEvents).toHaveBeenCalledTimes(1);
+    expect(inputEvents).toHaveBeenCalledTimes(1);
 
     uf.innerHTML = "<option value='CE'>Ceará</option><option value='SP'>São Paulo</option>";
     uf.value = "SP";
@@ -525,6 +531,7 @@ describe("content script", () => {
     expect(uf.selectedIndex).toBe(-1);
     expect(uf.value).toBe("");
     expect(changeEvents).toHaveBeenCalledTimes(2);
+    expect(inputEvents).toHaveBeenCalledTimes(2);
   });
 
   it("fecha o menu e limpa o texto exibido no select customizado", async () => {
@@ -540,13 +547,33 @@ describe("content script", () => {
     `);
     const trigger = document.querySelector("#custom input");
     const menu = document.querySelector("#custom > div");
+    const divTrigger = document.querySelector("#custom-div [role='combobox']");
+    const triggerInput = vi.fn();
+    const triggerChange = vi.fn();
+    const divInput = vi.fn();
+    trigger.addEventListener("input", triggerInput);
+    trigger.addEventListener("change", triggerChange);
+    divTrigger.addEventListener("input", divInput);
     menu.style.display = "block";
 
     expect(await sendContentMessage({ action: ACTIONS.CLEAR_PAGE_FIELDS, selectors: ["#custom", "#custom-div"] }))
       .toEqual({ cleared: 2, total: 2, failed: [] });
     expect(trigger.value).toBe("");
     expect(menu.style.display).toBe("none");
-    expect(document.querySelector("#custom-div [role='combobox']").textContent).toBe("");
+    expect(divTrigger.textContent).toBe("");
+    expect(triggerInput).toHaveBeenCalledTimes(1);
+    expect(triggerChange).toHaveBeenCalledTimes(1);
+    expect(divInput).toHaveBeenCalledTimes(1);
+  });
+
+  it("não remove outline aplicado pela página em campo não marcado pela extensão", async () => {
+    const email = document.querySelector("#email");
+    email.style.outline = "1px solid blue";
+
+    expect(await sendContentMessage({ action: ACTIONS.CLEAR_PAGE_FIELDS, selectors: ["#email"] }))
+      .toEqual({ cleared: 1, total: 1, failed: [] });
+
+    expect(email.style.outline).toBe("1px solid blue");
   });
 
   it("registra falhas de seletores inválidos ou inexistentes sem interromper o lote", async () => {

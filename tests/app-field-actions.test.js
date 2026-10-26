@@ -211,4 +211,55 @@ describe("popup app - ações da lista de campos", () => {
 
     expect(getPageFieldsStatus()).toBe("Nenhum preenchimento para limpar.");
   });
+
+  it("volta os botões de marcação ao estado desmarcado após limpar todos", async () => {
+    click("#mark-all-button");
+    await nextTick();
+    expect(document.querySelector("#mark-all-button").textContent).toBe("Desmarcar todos");
+    expect([...document.querySelectorAll(".page-field [data-action='highlight']")].map((button) => button.textContent))
+      .toEqual(["Desmarcar", "Desmarcar"]);
+
+    click("#clear-all-button");
+    await nextTick();
+
+    expect(document.querySelector("#mark-all-button").textContent).toBe("Marcar todos");
+    expect([...document.querySelectorAll(".page-field [data-action='highlight']")].map((button) => button.textContent))
+      .toEqual(["Marcar", "Marcar"]);
+  });
+
+  it("preserva campo sem seletor que o content script reportou como falha", async () => {
+    const rows = document.querySelectorAll(".page-field");
+    const selectorInput = rows[0].querySelector(".page-field-selector");
+    selectorInput.value = "";
+    selectorInput.dispatchEvent(new Event("input", { bubbles: true }));
+    const toggle = rows[0].querySelector(".page-field-fixed-toggle");
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+    const valueInput = rows[0].querySelector(".page-field-fixed-value");
+    valueInput.value = "a@b.com";
+    valueInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    chromeMock.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      if (message.action === ACTIONS.CLEAR_PAGE_FIELDS) {
+        callback({ cleared: 1, total: 2, failed: [{ selector: "", error: "Seletor inválido: valor vazio" }] });
+        return;
+      }
+      callback({});
+    });
+
+    click("#clear-all-button");
+    await nextTick();
+
+    expect(document.querySelector(".page-field[data-index='0'] .page-field-fixed-value").value).toBe("a@b.com");
+    expect(document.querySelector(".page-field[data-index='1'] .page-field-fixed-value").value).toBe("");
+  });
+
+  it("não reconstrói a linha ao alternar o valor fixo (A7)", () => {
+    const row = document.querySelector(".page-field");
+    const toggle = row.querySelector(".page-field-fixed-toggle");
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(document.querySelector(".page-field")).toBe(row);
+  });
 });

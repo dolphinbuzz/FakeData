@@ -305,7 +305,7 @@ export function createGeneratorData({
       fields: [
         ["Marca", (ctx) => ctx.marca],
         ["Modelo", (ctx) => ctx.modelo],
-        ["Placa", () => gerarPlaca()], ["Chassi", () => gerarChassi()], ["Ano", (ctx) => ctx.ano ?? gerarAno()],
+        ["Placa", () => gerarPlaca()], ["Chassi", () => gerarChassi()], ["Ano", (ctx) => ctx.ano ? `${ctx.ano}/${ctx.ano + 1}` : gerarAno()],
         ["Renavam", () => gerarRenavam(getRenavamFormatted())],
         ["Cor", () => pick(["Preto", "Branco", "Prata", "Azul", "Vermelho", "Cinza", "Verde"])],
         ["UF", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`]
@@ -345,7 +345,8 @@ export function generateMappedValue(type, context, inputType = "", options = {})
   const resolvedContext = context || data.person.context();
   const vehicle = options.vehicleContext ||
     pickVehicle(options.getVehicleCatalog ? options.getVehicleCatalog() : [], pick);
-  const year = vehicle.ano ?? pickModelYear(vehicle.marca, vehicle.modelo, pick) ?? gerarAno();
+  const ano = vehicle.ano ?? pickModelYear(vehicle.marca, vehicle.modelo, pick);
+  const year = ano === undefined ? gerarAno() : `${ano}/${ano + 1}`;
   const personValues = {
     name: `${resolvedContext.nome} ${resolvedContext.sobrenome}`,
     cpf: cpf(options.getCpfFormatted ? options.getCpfFormatted() : true),

@@ -162,4 +162,21 @@ describe("popup app - coerência de marca e modelo no preenchimento individual",
     expect(getMappedFields().map((field) => field.fixed)).toEqual([true, false]);
     expect(modelRow.querySelector(".page-field-fixed-value").value).toBe("Argo");
   });
+
+  it("não deixa o modelo preenchido anteriormente contaminar o lote", () => {
+    const [brandRow] = document.querySelectorAll(".page-field");
+
+    forceRandom(0.99);
+    click("#fill-all-button");
+    expect(getLastSentMessage(chromeMock, ACTIONS.FILL_ALL).fields)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ selector: "#model", value: "Corolla" })]));
+
+    fixValue(brandRow, "Fiat");
+    appUtils.clearSentMessages();
+    forceRandom(0.99);
+    click("#fill-all-button");
+
+    expect(getLastSentMessage(chromeMock, ACTIONS.FILL_ALL).fields)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ selector: "#model", value: "Argo" })]));
+  });
 });
