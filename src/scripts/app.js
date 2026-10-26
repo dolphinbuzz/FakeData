@@ -13,20 +13,7 @@ import { resolveVehicleContext } from "./domain/vehicle-context.js";
 import { sendMessageToTab, findActiveTab } from "./services/tabs-service.js";
 import { migrateLegacyProfiles, readProfiles, writeProfiles } from "./services/profiles-repository.js";
 
-let selectedType = "person";
-let currentResult = null;
-let activeTab = null;
-let activePageUrl = "";
-let activeBaseUrl = "";
-let selectedBaseUrl = "";
-let savedProfiles = [];
-let selectedProfileId = "";
-let mappingModalResolver = null;
-let mappingModalConfirmHandler = null;
-let pageFields = [];
-let markedSelectors = new Set();
-let vehicleCatalog = [];
-let floatingControlsVisible = true;
+import { state } from "./state/app-store.js";
 
 const resultSection = document.querySelector("#result-section");
 const resultFields = document.querySelector("#result-fields");
@@ -73,8 +60,6 @@ const automaticMappingTab = document.querySelector("#automatic-mapping-tab");
 const playgroundMappingTab = document.querySelector("#playground-mapping-tab");
 const automaticMappingPanel = document.querySelector("#automatic-mapping-panel");
 const playgroundMappingPanel = document.querySelector("#playground-mapping-panel");
-let selectorPlaygroundMarked = false;
-let selectorPlaygroundMarkedSelector = "";
 const mappingModal = document.querySelector("#mapping-modal");
 const mappingNameInput = document.querySelector("#mapping-name-input");
 const mappingModalError = document.querySelector("#mapping-modal-error");
@@ -126,7 +111,7 @@ const generatorConfig = {
   getCnpjFormatted: () => document.querySelector("#cnpj-formatted") ? document.querySelector("#cnpj-formatted").checked : true,
   getCnpjAlphanumeric: () => document.querySelector("#cnpj-alphanumeric") ? document.querySelector("#cnpj-alphanumeric").checked : false,
   getRenavamFormatted: () => document.querySelector("#renavam-formatted") ? document.querySelector("#renavam-formatted").checked : false,
-  getVehicleCatalog: () => vehicleCatalog
+  getVehicleCatalog: () => state.vehicleCatalog
 };
 const data = createGeneratorData(generatorConfig);
 
@@ -161,14 +146,14 @@ if (themeToggle) {
 
 document.querySelectorAll(".type-button").forEach((button) => {
   button.addEventListener("click", () => {
-    selectedType = button.dataset.type;
+    state.selectedType = button.dataset.type;
     document.querySelectorAll(".type-button").forEach((item) => item.classList.remove("active"));
     button.classList.add("active");
-    generateLabel.textContent = data[selectedType].label;
-    personOptions.classList.toggle("is-hidden", selectedType !== "person");
-    companyOptions.classList.toggle("is-hidden", selectedType !== "company");
-    vehicleOptions.classList.toggle("is-hidden", selectedType !== "vehicle");
-    if (openVehicleCatalogButton) openVehicleCatalogButton.hidden = selectedType !== "vehicle";
+    generateLabel.textContent = data[state.selectedType].label;
+    personOptions.classList.toggle("is-hidden", state.selectedType !== "person");
+    companyOptions.classList.toggle("is-hidden", state.selectedType !== "company");
+    vehicleOptions.classList.toggle("is-hidden", state.selectedType !== "vehicle");
+    if (openVehicleCatalogButton) openVehicleCatalogButton.hidden = state.selectedType !== "vehicle";
     generate();
   });
 });
@@ -178,7 +163,7 @@ ufSelect.addEventListener("change", () => {
   generate();
   localStorage.setItem("fakedata-uf", ufSelect.value);
 });
-copyJsonButton.addEventListener("click", () => copyText(JSON.stringify(currentResult, null, 2), copyJsonButton));
+copyJsonButton.addEventListener("click", () => copyText(JSON.stringify(state.currentResult, null, 2), copyJsonButton));
 openSidepanelButton.addEventListener("click", () => {
   chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT }).catch((error) => {
     console.error("Não foi possível abrir o painel lateral.", error);
@@ -219,7 +204,7 @@ function closeCurrentSidePanel() {
 }
 
 function saveVehicleCatalog() {
-  chrome.storage.local.set({ "fakedata-vehicle-catalog": vehicleCatalog }, () => {
+  chrome.storage.local.set({ "fakedata-vehicle-catalog": state.vehicleCatalog }, () => {
     if (chrome.runtime.lastError) {
       vehicleCatalogStatus.textContent = "Não foi possível salvar o catálogo.";
       return;
@@ -231,8 +216,8 @@ function saveVehicleCatalog() {
 
 function renderVehicleCatalog() {
   if (!vehicleCatalogList) return;
-  vehicleCatalogList.innerHTML = vehicleCatalog.length
-    ? vehicleCatalog.map((entry) => `<div class="vehicle-brand-row">
+  vehicleCatalogList.innerHTML = state.vehicleCatalog.length
+    ? state.vehicleCatalog.map((entry) => `<div class="vehicle-brand-row">
         <strong>${escapeHtml(entry.marca)}</strong>
         <button type="button" class="copy-all-button" data-edit-brand="${escapeHtml(entry.marca)}">Editar marca</button>
         <button type="button" class="copy-all-button danger-button" data-remove-brand="${escapeHtml(entry.marca)}">Excluir marca</button>
@@ -244,7 +229,7 @@ function renderVehicleCatalog() {
     : "<span class=\"muted\">Nenhum veículo personalizado cadastrado.</span>";
   vehicleCatalogList.querySelectorAll("[data-remove-brand]").forEach((button) => {
     button.addEventListener("click", () => {
-      vehicleCatalog = removeVehicleBrand(vehicleCatalog, button.dataset.removeBrand);
+      state.vehicleCatalog = removeVehicleBrand(state.vehicleCatalog, button.dataset.removeBrand);
       saveVehicleCatalog();
     });
   });
@@ -253,7 +238,7 @@ function renderVehicleCatalog() {
       const newName = await openRenameBrandModal(button.dataset.editBrand);
       if (!newName) return;
       try {
-        vehicleCatalog = renameVehicleBrand(vehicleCatalog, button.dataset.editBrand, newName);
+        state.vehicleCatalog = renameVehicleBrand(state.vehicleCatalog, button.dataset.editBrand, newName);
         saveVehicleCatalog();
       } catch (error) {
         vehicleCatalogStatus.textContent = error.message;
@@ -264,14 +249,14 @@ function renderVehicleCatalog() {
     button.addEventListener("click", () => {
       vehicleBrandInput.value = button.dataset.editModel;
       vehicleModelInput.value = button.dataset.model;
-      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.editModel, button.dataset.model);
+      state.vehicleCatalog = removeVehicleModel(state.vehicleCatalog, button.dataset.editModel, button.dataset.model);
       saveVehicleCatalog();
       vehicleModelInput.focus();
     });
   });
   vehicleCatalogList.querySelectorAll("[data-remove-model]").forEach((button) => {
     button.addEventListener("click", () => {
-      vehicleCatalog = removeVehicleModel(vehicleCatalog, button.dataset.removeModel, button.dataset.model);
+      state.vehicleCatalog = removeVehicleModel(state.vehicleCatalog, button.dataset.removeModel, button.dataset.model);
       saveVehicleCatalog();
     });
   });
@@ -279,7 +264,7 @@ function renderVehicleCatalog() {
 
 function addVehicle() {
   try {
-    vehicleCatalog = addVehicleModel(vehicleCatalog, vehicleBrandInput.value, vehicleModelInput.value);
+    state.vehicleCatalog = addVehicleModel(state.vehicleCatalog, vehicleBrandInput.value, vehicleModelInput.value);
     vehicleBrandInput.value = "";
     vehicleModelInput.value = "";
     vehicleCatalogStatus.textContent = "Veículo cadastrado.";
@@ -291,7 +276,7 @@ function addVehicle() {
 
 function loadVehicleCatalog() {
   chrome.storage.local.get({ "fakedata-vehicle-catalog": [] }, (result) => {
-    vehicleCatalog = normalizeVehicleCatalog(result["fakedata-vehicle-catalog"]);
+    state.vehicleCatalog = normalizeVehicleCatalog(result["fakedata-vehicle-catalog"]);
     renderVehicleCatalog();
     generate();
   });
@@ -319,7 +304,7 @@ document.addEventListener("keydown", (event) => {
 
 if (scanFieldsButton) scanFieldsButton.addEventListener("click", () => scanPageFields());
 if (baseUrlSelect) baseUrlSelect.addEventListener("change", () => {
-  selectedBaseUrl = baseUrlSelect.value;
+  state.selectedBaseUrl = baseUrlSelect.value;
   scanPageFields();
 });
 if (emptyStateScanButton) emptyStateScanButton.addEventListener("click", () => scanPageFields());
@@ -336,8 +321,8 @@ if (pageFieldsElement) {
   pageFieldsElement.addEventListener("blur", handlePageFieldBlur, true);
 }
 if (floatingControlsToggle) floatingControlsToggle.addEventListener("change", () => {
-  floatingControlsVisible = floatingControlsToggle.checked;
-  chrome.storage.local.set({ "fakedata-floating-controls": floatingControlsVisible });
+  state.floatingControlsVisible = floatingControlsToggle.checked;
+  chrome.storage.local.set({ "fakedata-floating-controls": state.floatingControlsVisible });
   syncPageFieldControls();
 });
 
@@ -349,8 +334,8 @@ function isEditableTarget(target) {
 function renderEmptyState() {
   if (!emptyStateElement || !emptyStateTitle || !emptyStateSubtitle || !pageFieldsStatus) return;
 
-  const hasFields = pageFields.length > 0;
-  const hasPageUrl = Boolean(activePageUrl);
+  const hasFields = state.pageFields.length > 0;
+  const hasPageUrl = Boolean(state.activePageUrl);
 
   emptyStateElement.hidden = hasFields || !hasPageUrl;
 
@@ -364,12 +349,12 @@ function renderEmptyState() {
 }
 
 function clearAllPageFields() {
-  if (!pageFields.length) {
+  if (!state.pageFields.length) {
     if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum preenchimento para limpar.";
     return;
   }
 
-  const selectors = pageFields.map((field) => field.selector);
+  const selectors = state.pageFields.map((field) => field.selector);
   sendToPage({ action: ACTIONS.CLEAR_PAGE_FIELDS, selectors }, (response, error) => {
     if (error || !response || response.error) {
       if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível limpar os campos desta página.";
@@ -382,17 +367,17 @@ function clearAllPageFields() {
         .map((item) => (item && typeof item.selector === "string" ? item.selector : null))
         .filter((selector) => selector !== null)
     );
-    pageFields.forEach((field) => {
+    state.pageFields.forEach((field) => {
       if (failedSelectors.has(field.selector)) return;
       field.value = "";
       field.fixedValue = "";
-      markedSelectors.delete(field.selector);
+      state.markedSelectors.delete(field.selector);
     });
     updateMarkAllButton();
     renderPageFields();
     renderEmptyState();
     if (!pageFieldsStatus) return;
-    const cleared = typeof response.cleared === "number" ? response.cleared : pageFields.length - failed.length;
+    const cleared = typeof response.cleared === "number" ? response.cleared : state.pageFields.length - failed.length;
     if (failed.length) {
       pageFieldsStatus.textContent = `${cleared} campo(s) limpado(s); ${failed.length} não foi(ram) limpo(s).`;
       return;
@@ -427,7 +412,7 @@ if (copyAuditButton) copyAuditButton.addEventListener("click", copyMappingAudit)
 if (automaticMappingTab) automaticMappingTab.addEventListener("click", () => activateMappingSubtab("automatic"));
 if (playgroundMappingTab) playgroundMappingTab.addEventListener("click", () => activateMappingSubtab("playground"));
 if (mappingModalConfirm) mappingModalConfirm.addEventListener("click", () => {
-  if (mappingModalConfirmHandler) mappingModalConfirmHandler();
+  if (state.mappingModalConfirmHandler) state.mappingModalConfirmHandler();
   else confirmMappingModal();
 });
 if (mappingModalCancel) mappingModalCancel.addEventListener("click", () => closeMappingModal(""));
@@ -439,8 +424,8 @@ if (mappingNameInput) mappingNameInput.addEventListener("keydown", (event) => {
 
 function loadFloatingControlsPreference(callback) {
   chrome.storage.local.get({ "fakedata-floating-controls": true }, (result) => {
-    floatingControlsVisible = result["fakedata-floating-controls"] !== false;
-    if (floatingControlsToggle) floatingControlsToggle.checked = floatingControlsVisible;
+    state.floatingControlsVisible = result["fakedata-floating-controls"] !== false;
+    if (floatingControlsToggle) floatingControlsToggle.checked = state.floatingControlsVisible;
     callback();
   });
 }
@@ -458,33 +443,33 @@ migrateLegacyProfiles(() => {
 });
 if (chrome.tabs && chrome.tabs.onActivated) {
   chrome.tabs.onActivated.addListener(() => {
-    activeTab = null;
-    activePageUrl = "";
-    activeBaseUrl = "";
+    state.activeTab = null;
+    state.activePageUrl = "";
+    state.activeBaseUrl = "";
     refreshBaseUrlOptions(() => scanPageFields());
   });
 }
 // A6: aceita apenas mensagens da aba ativa cuja origem bate com a base da página.
 // Sem `sender.tab` (ex.: mensagens internas) a mensagem é aceita, como antes.
 function shouldHandlePageContentChange(sender) {
-  if (!activeTab) return false;
+  if (!state.activeTab) return false;
   const senderTab = sender && sender.tab;
   if (!senderTab) return true;
-  if (senderTab.id !== activeTab.id) return false;
-  if (senderTab.url && getBaseUrl(senderTab.url) !== activeBaseUrl) return false;
+  if (senderTab.id !== state.activeTab.id) return false;
+  if (senderTab.url && getBaseUrl(senderTab.url) !== state.activeBaseUrl) return false;
   return true;
 }
 
 if (chrome.runtime && chrome.runtime.onMessage) {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message && message.action === ACTIONS.PAGE_FIELD_FILL_REQUEST) {
-      const field = pageFields.find((item) => item.key === message.key || item.selector === message.selector);
+      const field = state.pageFields.find((item) => item.key === message.key || item.selector === message.selector);
       if (!field || !sender.tab || !sender.tab.id) {
         sendResponse({ filled: false });
         return true;
       }
       const value = resolveFieldValue(field, (type, inputType) => {
-        const vehicleContext = resolveVehicleContext(vehicleCatalog, pageFields, pick, type);
+        const vehicleContext = resolveVehicleContext(state.vehicleCatalog, state.pageFields, pick, type);
         return generateMappedValuePure(type, data.person.context(), inputType, { ...generatorConfig, vehicleContext });
       });
       sendMessageToTab(sender.tab.id, {
@@ -504,7 +489,7 @@ if (chrome.runtime && chrome.runtime.onMessage) {
     }
     if (!message || message.action !== ACTIONS.PAGE_CONTENT_CHANGED) return;
     if (!shouldHandlePageContentChange(sender)) return;
-    const changedUrl = normalizePageUrl(message.url || "") !== activePageUrl;
+    const changedUrl = normalizePageUrl(message.url || "") !== state.activePageUrl;
     if (changedUrl || message.changeType === "route") {
       clearDisplayedPageFields("A página mudou. Atualizando os campos...");
       scanPageFields();
@@ -544,16 +529,16 @@ if (generatorTab) generatorTab.addEventListener("click", () => activateTab("gene
 if (mappingTab) mappingTab.addEventListener("click", () => activateTab("mapping"));
 
 function generate() {
-  const definition = data[selectedType];
+  const definition = data[state.selectedType];
   const context = definition.context ? definition.context() : {};
-  currentResult = Object.fromEntries(definition.fields.map(([label, create]) => [label, create(context)]));
+  state.currentResult = Object.fromEntries(definition.fields.map(([label, create]) => [label, create(context)]));
 
   resultTitle.textContent = definition.title;
   resultFields.innerHTML = definition.fields.map(([label]) => `
     <div class="result-field">
       <span class="field-label">${escapeHtml(label)}</span>
-      <span class="field-value" title="${escapeHtml(currentResult[label])}">${escapeHtml(currentResult[label])}</span>
-      <button class="copy-field-button" type="button" aria-label="Copiar ${escapeHtml(label)}" data-value="${escapeHtml(currentResult[label])}">⧉</button>
+      <span class="field-value" title="${escapeHtml(state.currentResult[label])}">${escapeHtml(state.currentResult[label])}</span>
+      <button class="copy-field-button" type="button" aria-label="Copiar ${escapeHtml(label)}" data-value="${escapeHtml(state.currentResult[label])}">⧉</button>
     </div>
   `).join("");
   resultFields.querySelectorAll(".copy-field-button").forEach((button) => {
@@ -563,10 +548,10 @@ function generate() {
 }
 
 function clearDisplayedPageFields(statusMessage) {
-  pageFields = [];
-  markedSelectors = new Set();
-  selectedProfileId = "";
-  savedProfiles = [];
+  state.pageFields = [];
+  state.markedSelectors = new Set();
+  state.selectedProfileId = "";
+  state.savedProfiles = [];
   if (savedMappingsSelect) {
     savedMappingsSelect.innerHTML = '<option value="">Nenhum mapeamento selecionado</option>';
     savedMappingsSelect.value = "";
@@ -575,14 +560,14 @@ function clearDisplayedPageFields(statusMessage) {
   renderPageFields();
   if (selectorPlaygroundInput) selectorPlaygroundInput.value = "";
   if (selectorPlaygroundCount) selectorPlaygroundCount.textContent = "—";
-  selectorPlaygroundMarked = false;
-  selectorPlaygroundMarkedSelector = "";
+  state.selectorPlaygroundMarked = false;
+  state.selectorPlaygroundMarkedSelector = "";
   updateSelectorMarkButton(0);
   if (pageFieldsStatus) pageFieldsStatus.textContent = statusMessage;
 }
 
 function getActiveTab(callback) {
-  findActiveTab(selectedBaseUrl, callback);
+  findActiveTab(state.selectedBaseUrl, callback);
 }
 
 function refreshBaseUrlOptions(callback = () => {}) {
@@ -594,15 +579,15 @@ function refreshBaseUrlOptions(callback = () => {}) {
     const bases = [...new Set((tabs || [])
       .map((tab) => tab && /^https?:/i.test(tab.url || "") ? getBaseUrl(tab.url) : "")
       .filter(Boolean))].sort();
-    if (selectedBaseUrl && !bases.includes(selectedBaseUrl)) selectedBaseUrl = "";
+    if (state.selectedBaseUrl && !bases.includes(state.selectedBaseUrl)) state.selectedBaseUrl = "";
     baseUrlSelect.innerHTML = bases.length
       ? bases.map((base) => `<option value="${escapeHtml(base)}">${escapeHtml(base)}</option>`).join("")
       : '<option value="">Nenhuma página HTTP(S) aberta</option>';
-    if (!selectedBaseUrl) {
+    if (!state.selectedBaseUrl) {
       const activeWebTab = (tabs || []).find((tab) => tab && tab.active && /^https?:/i.test(tab.url || ""));
-      selectedBaseUrl = activeWebTab ? getBaseUrl(activeWebTab.url) : bases[0] || "";
+      state.selectedBaseUrl = activeWebTab ? getBaseUrl(activeWebTab.url) : bases[0] || "";
     }
-    baseUrlSelect.value = selectedBaseUrl;
+    baseUrlSelect.value = state.selectedBaseUrl;
     callback();
   });
 }
@@ -613,25 +598,25 @@ function sendToPage(message, callback) {
     return;
   }
   getActiveTab((tab) => {
-    activeTab = tab;
-    if (!activeTab || !activeTab.id || !/^https?:/i.test(activeTab.url || "")) {
+    state.activeTab = tab;
+    if (!state.activeTab || !state.activeTab.id || !/^https?:/i.test(state.activeTab.url || "")) {
       callback(null, new Error("Nenhuma página ativa."));
       return;
     }
-    sendMessageToTab(activeTab.id, message, callback, true);
+    sendMessageToTab(state.activeTab.id, message, callback, true);
   });
 }
 
 function checkSelectorMatches() {
   const selector = selectorPlaygroundInput ? selectorPlaygroundInput.value.trim() : "";
-  if (selectorPlaygroundMarked && selector !== selectorPlaygroundMarkedSelector) {
-    sendToPage({ action: ACTIONS.UNMARK_SELECTOR_MATCHES, selector: selectorPlaygroundMarkedSelector }, () => {});
-    selectorPlaygroundMarked = false;
-    selectorPlaygroundMarkedSelector = "";
+  if (state.selectorPlaygroundMarked && selector !== state.selectorPlaygroundMarkedSelector) {
+    sendToPage({ action: ACTIONS.UNMARK_SELECTOR_MATCHES, selector: state.selectorPlaygroundMarkedSelector }, () => {});
+    state.selectorPlaygroundMarked = false;
+    state.selectorPlaygroundMarkedSelector = "";
   }
   if (!selector) {
     if (selectorPlaygroundCount) selectorPlaygroundCount.textContent = "—";
-    selectorPlaygroundMarked = false;
+    state.selectorPlaygroundMarked = false;
     updateSelectorMarkButton(0);
     return;
   }
@@ -641,7 +626,7 @@ function checkSelectorMatches() {
     selectorPlaygroundCount.textContent = !valid
       ? "Inválido"
       : `${response.count} encontrado(s)`;
-    if (!valid || response.count === 0) selectorPlaygroundMarked = false;
+    if (!valid || response.count === 0) state.selectorPlaygroundMarked = false;
     updateSelectorMarkButton(valid ? response.count : 0);
   });
 }
@@ -649,23 +634,23 @@ function checkSelectorMatches() {
 function updateSelectorMarkButton(count) {
   if (!selectorPlaygroundMark) return;
   selectorPlaygroundMark.disabled = count === 0;
-  selectorPlaygroundMark.textContent = selectorPlaygroundMarked ? "Desmarcar encontrados" : "Marcar encontrados";
+  selectorPlaygroundMark.textContent = state.selectorPlaygroundMarked ? "Desmarcar encontrados" : "Marcar encontrados";
 }
 
 function toggleSelectorMatches() {
   const selector = selectorPlaygroundInput ? selectorPlaygroundInput.value.trim() : "";
   if (!selector) return;
-  const action = selectorPlaygroundMarked ? ACTIONS.UNMARK_SELECTOR_MATCHES : ACTIONS.MARK_SELECTOR_MATCHES;
+  const action = state.selectorPlaygroundMarked ? ACTIONS.UNMARK_SELECTOR_MATCHES : ACTIONS.MARK_SELECTOR_MATCHES;
   sendToPage({ action, selector }, (response, error) => {
     if (error || !response) {
       if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível atualizar as marcações do seletor.";
       return;
     }
-    selectorPlaygroundMarked = !selectorPlaygroundMarked;
-    selectorPlaygroundMarkedSelector = selectorPlaygroundMarked ? selector : "";
+    state.selectorPlaygroundMarked = !state.selectorPlaygroundMarked;
+    state.selectorPlaygroundMarkedSelector = state.selectorPlaygroundMarked ? selector : "";
     updateSelectorMarkButton(response.count || 0);
     if (pageFieldsStatus) {
-      pageFieldsStatus.textContent = selectorPlaygroundMarked
+      pageFieldsStatus.textContent = state.selectorPlaygroundMarked
         ? `${response.count} elemento(s) encontrado(s) marcado(s).`
         : "Marcações do seletor removidas.";
     }
@@ -685,28 +670,28 @@ function capturePlaygroundSelector() {
 }
 
 function profileId() {
-  return `${activePageUrl}::${Date.now()}::${Math.random().toString(36).slice(2)}`;
+  return `${state.activePageUrl}::${Date.now()}::${Math.random().toString(36).slice(2)}`;
 }
 
 function updateSavedProfiles(profiles) {
-  savedProfiles = profiles.filter((profile) => normalizePageUrl(profile.pageUrl) === activePageUrl);
+  state.savedProfiles = profiles.filter((profile) => normalizePageUrl(profile.pageUrl) === state.activePageUrl);
   if (!savedMappingsSelect) return;
   savedMappingsSelect.innerHTML = '<option value="">Nenhum mapeamento selecionado</option>' +
-    savedProfiles.map((profile) => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name)} (${escapeHtml(profile.pageUrl)})</option>`).join("");
-  savedMappingsSelect.value = selectedProfileId;
+    state.savedProfiles.map((profile) => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name)} (${escapeHtml(profile.pageUrl)})</option>`).join("");
+  savedMappingsSelect.value = state.selectedProfileId;
 }
 
 function loadSavedProfile(id) {
-  const profile = savedProfiles.find((item) => item.id === id);
+  const profile = state.savedProfiles.find((item) => item.id === id);
   if (!profile) return;
-  selectedProfileId = id;
-  pageFields = profile.fields.map((field) => ({ ...field, fixed: Boolean(field.fixed), fixedValue: field.fixedValue || "" }));
+  state.selectedProfileId = id;
+  state.pageFields = profile.fields.map((field) => ({ ...field, fixed: Boolean(field.fixed), fixedValue: field.fixedValue || "" }));
   renderPageFields();
   if (pageFieldsStatus) pageFieldsStatus.textContent = `Mapeamento "${profile.name}" carregado.`;
 }
 
 function getCurrentProfile(profiles) {
-  return profiles.find((profile) => profile.id === selectedProfileId);
+  return profiles.find((profile) => profile.id === state.selectedProfileId);
 }
 
 function openMappingModal(initialName, title, confirmHandler = confirmMappingModal) {
@@ -717,18 +702,18 @@ function openMappingModal(initialName, title, confirmHandler = confirmMappingMod
   mappingModal.hidden = false;
   mappingNameInput.focus();
   mappingNameInput.select();
-  mappingModalConfirmHandler = confirmHandler;
+  state.mappingModalConfirmHandler = confirmHandler;
   return new Promise((resolve) => {
-    mappingModalResolver = resolve;
+    state.mappingModalResolver = resolve;
   });
 }
 
 function closeMappingModal(value) {
-  if (!mappingModal || !mappingModalResolver) return;
+  if (!mappingModal || !state.mappingModalResolver) return;
   mappingModal.hidden = true;
-  const resolve = mappingModalResolver;
-  mappingModalResolver = null;
-  mappingModalConfirmHandler = null;
+  const resolve = state.mappingModalResolver;
+  state.mappingModalResolver = null;
+  state.mappingModalConfirmHandler = null;
   resolve(value);
 }
 
@@ -747,7 +732,7 @@ function openRenameBrandModal(currentName) {
 }
 
 function remapAllFields() {
-  if (!pageFields.length) return;
+  if (!state.pageFields.length) return;
   scanPageFields(true);
 }
 
@@ -755,44 +740,44 @@ function scanPageFields(remapping = false, preserveCurrent = false) {
   if (!pageFieldsStatus) return;
   pageFieldsStatus.textContent = remapping ? "Remapeando campos automaticamente..." : "Lendo campos da página...";
   getActiveTab((tab) => {
-    activeTab = tab;
-    activePageUrl = normalizePageUrl(tab && tab.url ? tab.url : "");
-    activeBaseUrl = getBaseUrl(activePageUrl);
-    if (!activeTab || !activeTab.id || !/^https?:/i.test(activePageUrl)) {
-      pageFields = [];
+    state.activeTab = tab;
+    state.activePageUrl = normalizePageUrl(tab && tab.url ? tab.url : "");
+    state.activeBaseUrl = getBaseUrl(state.activePageUrl);
+    if (!state.activeTab || !state.activeTab.id || !/^https?:/i.test(state.activePageUrl)) {
+      state.pageFields = [];
       renderPageFields();
       pageFieldsStatus.textContent = "A página ativa não permite acesso a formulários.";
       return;
     }
     sendToPage({ action: ACTIONS.SCAN_FIELDS }, (response, error) => {
       if (error || !response || response.error) {
-        pageFields = [];
+        state.pageFields = [];
         renderPageFields();
         pageFieldsStatus.textContent = response && response.error
           ? response.error
           : "Não foi possível ler esta página. Recarregue-a e tente novamente.";
         return;
       }
-      readProfiles(activeBaseUrl, (profiles) => {
-        const matchingProfiles = profiles.filter((profile) => normalizePageUrl(profile.pageUrl) === activePageUrl);
-        if (!selectedProfileId || !matchingProfiles.some((profile) => profile.id === selectedProfileId)) {
-          selectedProfileId = matchingProfiles.length === 1 ? matchingProfiles[0].id : "";
+      readProfiles(state.activeBaseUrl, (profiles) => {
+        const matchingProfiles = profiles.filter((profile) => normalizePageUrl(profile.pageUrl) === state.activePageUrl);
+        if (!state.selectedProfileId || !matchingProfiles.some((profile) => profile.id === state.selectedProfileId)) {
+          state.selectedProfileId = matchingProfiles.length === 1 ? matchingProfiles[0].id : "";
         }
         updateSavedProfiles(profiles);
         const selected = getCurrentProfile(profiles);
         const saved = selected && selected.fields ? selected.fields : [];
-        pageFields = mergeScannedFields({
+        state.pageFields = mergeScannedFields({
           scanned: response.fields || [],
           saved,
-          previous: preserveCurrent ? pageFields : [],
+          previous: preserveCurrent ? state.pageFields : [],
           remapping,
           preserveCurrent
         });
-        markedSelectors = new Set();
+        state.markedSelectors = new Set();
         updateMarkAllButton();
         renderPageFields();
-        pageFieldsStatus.textContent = pageFields.length
-          ? `${pageFields.length} campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.`
+        pageFieldsStatus.textContent = state.pageFields.length
+          ? `${state.pageFields.length} campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.`
           : "Nenhum campo editável encontrado nesta página.";
       });
     });
@@ -801,7 +786,7 @@ function scanPageFields(remapping = false, preserveCurrent = false) {
 
 function renderPageFields() {
   if (!pageFieldsElement) return;
-  pageFieldsElement.innerHTML = pageFields.map((field, index) => {
+  pageFieldsElement.innerHTML = state.pageFields.map((field, index) => {
     const options = MAPPING_TYPES.map(([value, label]) =>
       `<option value="${escapeHtml(value)}" ${field.dataType === value ? "selected" : ""}>${escapeHtml(label)}</option>`
     ).join("");
@@ -819,7 +804,7 @@ function renderPageFields() {
         <label class="page-field-fixed"><input class="page-field-fixed-toggle" type="checkbox" ${field.fixed ? "checked" : ""}> Fixar valor</label>
         <input class="page-field-fixed-value" type="text" aria-label="Valor para ${escapeHtml(field.label)}" placeholder="Valor" value="${escapeHtml((field.fixed ? field.fixedValue : field.value) || "")}" ${field.fixed ? "" : "disabled"}>
         <div class="page-field-actions">
-          <button type="button" data-action="highlight">${markedSelectors.has(field.selector) ? "Desmarcar" : "Marcar"}</button>
+          <button type="button" data-action="highlight">${state.markedSelectors.has(field.selector) ? "Desmarcar" : "Marcar"}</button>
           <button type="button" data-action="locate" title="Localizar campo na página" aria-label="Localizar ${escapeHtml(field.label)}">⌖</button>
           <button type="button" data-action="target" title="Capturar o próximo clique na página" aria-label="Capturar seletor do próximo clique">🎯</button>
           <button type="button" data-action="fill" class="page-field-fill" title="Preencher campo com dado gerado ou valor fixado" aria-label="Preencher ${escapeHtml(field.label)}">
@@ -843,13 +828,13 @@ function getPageFieldContext(target) {
   if (!pageFieldsElement || !target || typeof target.closest !== "function") return null;
   const row = target.closest(".page-field");
   if (!row || !pageFieldsElement.contains(row)) return null;
-  const field = pageFields[Number(row.dataset.index)];
+  const field = state.pageFields[Number(row.dataset.index)];
   if (!field) return null;
   return { row, field };
 }
 
 function getPageFieldRow(field) {
-  const index = pageFields.indexOf(field);
+  const index = state.pageFields.indexOf(field);
   if (index < 0 || !pageFieldsElement) return null;
   return pageFieldsElement.querySelector(`.page-field[data-index="${index}"]`);
 }
@@ -889,10 +874,10 @@ function updatePageFieldRowLabel(row, field) {
 function refreshPageFieldHighlightButtons() {
   if (!pageFieldsElement) return;
   pageFieldsElement.querySelectorAll(".page-field").forEach((row) => {
-    const field = pageFields[Number(row.dataset.index)];
+    const field = state.pageFields[Number(row.dataset.index)];
     const button = row.querySelector('[data-action="highlight"]');
     if (!field || !button) return;
-    button.textContent = markedSelectors.has(field.selector) ? "Desmarcar" : "Marcar";
+    button.textContent = state.markedSelectors.has(field.selector) ? "Desmarcar" : "Marcar";
   });
 }
 
@@ -920,7 +905,7 @@ function commitPageFieldLabelEdition(editor) {
 function toggleFieldHighlight(field) {
   if (!field) return;
   const selector = field.selector;
-  const marked = markedSelectors.has(selector);
+  const marked = state.markedSelectors.has(selector);
   sendToPage({ action: marked ? ACTIONS.UNMARK_FIELD : ACTIONS.MARK_FIELD, selector }, (response, error) => {
     if (!pageFieldsStatus) return;
     if (error || !response) {
@@ -928,8 +913,8 @@ function toggleFieldHighlight(field) {
     } else if (!(marked ? response.unmarked : response.marked)) {
       pageFieldsStatus.textContent = "Seletor não encontrado na página. Ajuste o seletor e tente novamente.";
     } else {
-      if (marked) markedSelectors.delete(selector);
-      else markedSelectors.add(selector);
+      if (marked) state.markedSelectors.delete(selector);
+      else state.markedSelectors.add(selector);
       updateMarkAllButton();
       refreshPageFieldHighlightButtons();
       pageFieldsStatus.textContent = marked ? `${field.label} desmarcado.` : `${field.label} marcado.`;
@@ -965,7 +950,7 @@ function handlePageFieldClick(event) {
     locatePageField(context.field);
     return;
   }
-  const index = pageFields.indexOf(context.field);
+  const index = state.pageFields.indexOf(context.field);
   if (index < 0) return;
   if (action === "target") captureFieldSelector(index);
   else if (action === "fill") fillPageField(index);
@@ -1023,20 +1008,20 @@ function handlePageFieldBlur(event) {
 }
 
 function syncPageFieldControls() {
-  if (!activeTab) return;
+  if (!state.activeTab) return;
   sendToPage({
     action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS,
-    fields: pageFields.map((field) => ({
+    fields: state.pageFields.map((field) => ({
       key: field.key,
       selector: field.selector,
       label: field.label
     })),
-    visible: floatingControlsVisible
+    visible: state.floatingControlsVisible
   }, () => {});
 }
 
 function addNewSelector() {
-  if (!activePageUrl) {
+  if (!state.activePageUrl) {
     scanPageFields();
     return;
   }
@@ -1047,11 +1032,11 @@ function addNewSelector() {
       return;
     }
     const captured = response.field;
-    if (pageFields.some((field) => field.selector === captured.selector)) {
+    if (state.pageFields.some((field) => field.selector === captured.selector)) {
       if (pageFieldsStatus) pageFieldsStatus.textContent = "Esse seletor já está mapeado.";
       return;
     }
-    pageFields.push({
+    state.pageFields.push({
       ...captured,
       key: `${captured.selector}::manual-${Date.now()}`,
       label: captured.label || "Novo campo",
@@ -1066,33 +1051,33 @@ function addNewSelector() {
 }
 
 function copyMappingAudit() {
-  copyText(auditJson(pageFields), copyAuditButton);
+  copyText(auditJson(state.pageFields), copyAuditButton);
 }
 
 function updateMarkAllButton() {
   if (!markAllButton) return;
-  const allMarked = pageFields.length > 0 && pageFields.every((field) => markedSelectors.has(field.selector));
+  const allMarked = state.pageFields.length > 0 && state.pageFields.every((field) => state.markedSelectors.has(field.selector));
   markAllButton.textContent = allMarked ? "Desmarcar todos" : "Marcar todos";
 }
 
 function toggleMarkAllFields() {
-  if (!pageFields.length) {
+  if (!state.pageFields.length) {
     if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum campo encontrado para marcar.";
     return;
   }
-  const markableFields = pageFields.filter((field) => field.selector);
+  const markableFields = state.pageFields.filter((field) => field.selector);
   if (!markableFields.length) {
     if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum campo possui seletor utilizável para marcar.";
     return;
   }
-  const allMarked = markableFields.every((field) => markedSelectors.has(field.selector));
+  const allMarked = markableFields.every((field) => state.markedSelectors.has(field.selector));
   const action = allMarked ? ACTIONS.UNMARK_ALL_FIELDS : ACTIONS.MARK_ALL_FIELDS;
   sendToPage({ action, selectors: markableFields.map((field) => field.selector) }, (response, error) => {
     if (error || !response) {
       if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível atualizar as marcações.";
       return;
     }
-    markedSelectors = new Set(allMarked ? [] : (response.selectors || []));
+    state.markedSelectors = new Set(allMarked ? [] : (response.selectors || []));
     updateMarkAllButton();
     refreshPageFieldHighlightButtons();
     if (pageFieldsStatus) {
@@ -1114,12 +1099,12 @@ function captureFieldSelector(index) {
       if (pageFieldsStatus) pageFieldsStatus.textContent = "Não foi possível capturar um campo.";
       return;
     }
-    pageFields[index] = {
-      ...pageFields[index],
+    state.pageFields[index] = {
+      ...state.pageFields[index],
       selector: response.field.selector,
-      label: response.field.label || pageFields[index].label,
-      inferredType: response.field.inferredType || pageFields[index].inferredType,
-      dataType: pageFields[index].dataType === "text" ? response.field.inferredType : pageFields[index].dataType
+      label: response.field.label || state.pageFields[index].label,
+      inferredType: response.field.inferredType || state.pageFields[index].inferredType,
+      dataType: state.pageFields[index].dataType === "text" ? response.field.inferredType : state.pageFields[index].dataType
     };
     renderPageFields();
     if (pageFieldsStatus) pageFieldsStatus.textContent = "Seletor capturado. Salve o mapeamento para mantê-lo.";
@@ -1127,11 +1112,11 @@ function captureFieldSelector(index) {
 }
 
 function savePageMappings() {
-  if (!activePageUrl || !pageFields.length) {
+  if (!state.activePageUrl || !state.pageFields.length) {
     if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum mapeamento para salvar.";
     return;
   }
-  const selectedProfile = getCurrentProfile(savedProfiles);
+  const selectedProfile = getCurrentProfile(state.savedProfiles);
   if (selectedProfile) {
     persistPageMapping(selectedProfile.name, selectedProfile.id);
     return;
@@ -1142,7 +1127,7 @@ function savePageMappings() {
 }
 
 function persistPageMapping(name, existingId) {
-  const mappings = pageFields.map((field) => ({
+  const mappings = state.pageFields.map((field) => ({
     key: field.key,
     selector: field.selector,
     label: field.label,
@@ -1156,17 +1141,17 @@ function persistPageMapping(name, existingId) {
   }));
   chrome.storage.local.get({ "fakedata-field-mappings": {} }, (result) => {
     const stored = result["fakedata-field-mappings"] || {};
-    let application = stored[activeBaseUrl];
+    let application = stored[state.activeBaseUrl];
     if (Array.isArray(application)) application = { pages: [] };
     if (!application || !Array.isArray(application.pages)) application = { pages: [] };
     const existing = application.pages.find((profile) => profile.id === existingId);
-    const profile = { id: existing ? existing.id : profileId(), name: name.trim(), pageUrl: activePageUrl, fields: mappings, audit: getMappingAudit(pageFields) };
+    const profile = { id: existing ? existing.id : profileId(), name: name.trim(), pageUrl: state.activePageUrl, fields: mappings, audit: getMappingAudit(state.pageFields) };
     application.pages = existing
       ? application.pages.map((item) => item.id === profile.id ? profile : item)
       : application.pages.concat(profile);
-    stored[activeBaseUrl] = application;
+    stored[state.activeBaseUrl] = application;
     chrome.storage.local.set({ "fakedata-field-mappings": stored }, () => {
-      selectedProfileId = profile.id;
+      state.selectedProfileId = profile.id;
       updateSavedProfiles(application.pages);
       if (pageFieldsStatus) pageFieldsStatus.textContent = `Mapeamento "${profile.name}" salvo.`;
     });
@@ -1174,13 +1159,13 @@ function persistPageMapping(name, existingId) {
 }
 
 function renameSavedProfile() {
-  const profile = savedProfiles.find((item) => item.id === selectedProfileId);
+  const profile = state.savedProfiles.find((item) => item.id === state.selectedProfileId);
   if (!profile) return;
   openMappingModal(profile.name, "Renomear mapeamento").then((name) => {
     if (!name) return;
-    readProfiles(activeBaseUrl, (profiles) => {
+    readProfiles(state.activeBaseUrl, (profiles) => {
       const updated = profiles.map((item) => item.id === profile.id ? { ...item, name } : item);
-      writeProfiles(activeBaseUrl, updated, () => {
+      writeProfiles(state.activeBaseUrl, updated, () => {
         updateSavedProfiles(updated);
         if (pageFieldsStatus) pageFieldsStatus.textContent = "Nome atualizado.";
       });
@@ -1189,11 +1174,11 @@ function renameSavedProfile() {
 }
 
 function deleteSavedProfile() {
-  const profile = savedProfiles.find((item) => item.id === selectedProfileId);
+  const profile = state.savedProfiles.find((item) => item.id === state.selectedProfileId);
   if (!profile || !window.confirm(`Excluir "${profile.name}"?`)) return;
-  readProfiles(activeBaseUrl, (profiles) => {
-    writeProfiles(activeBaseUrl, profiles.filter((item) => item.id !== profile.id), () => {
-      selectedProfileId = "";
+  readProfiles(state.activeBaseUrl, (profiles) => {
+    writeProfiles(state.activeBaseUrl, profiles.filter((item) => item.id !== profile.id), () => {
+      state.selectedProfileId = "";
       updateSavedProfiles(profiles.filter((item) => item.id !== profile.id));
       if (pageFieldsStatus) pageFieldsStatus.textContent = "Mapeamento excluído.";
     });
@@ -1201,10 +1186,10 @@ function deleteSavedProfile() {
 }
 
 function fillPageField(index) {
-  const field = pageFields[index];
+  const field = state.pageFields[index];
   if (!field) return;
   const value = resolveFieldValue(field, (type, inputType) => {
-    const vehicleContext = resolveVehicleContext(vehicleCatalog, pageFields, pick, type);
+    const vehicleContext = resolveVehicleContext(state.vehicleCatalog, state.pageFields, pick, type);
     return generateMappedValuePure(type, data.person.context(), inputType, { ...generatorConfig, vehicleContext });
   });
   sendToPage({ action: ACTIONS.FILL_FIELD, selector: field.selector, value }, (response, error) => {
@@ -1222,23 +1207,23 @@ function fillPageField(index) {
 }
 
 function fillAllPageFields() {
-  if (!pageFields.length) {
+  if (!state.pageFields.length) {
     if (pageFieldsStatus) pageFieldsStatus.textContent = "Nenhum campo mapeado.";
     return;
   }
   const context = data.person.context();
   // P1: só campos fixados participam da escolha do veículo; os demais entram
   // com `value` vazio para não influenciar a coerência marca/modelo.
-  const pinnedFields = pageFields.map((field) => (field.fixed ? field : { ...field, value: "" }));
-  const vehicleContext = resolveVehicleContext(vehicleCatalog, pinnedFields, pick);
-  const fields = pageFields.map((field) => ({
+  const pinnedFields = state.pageFields.map((field) => (field.fixed ? field : { ...field, value: "" }));
+  const vehicleContext = resolveVehicleContext(state.vehicleCatalog, pinnedFields, pick);
+  const fields = state.pageFields.map((field) => ({
     selector: field.selector,
     value: resolveFieldValue(field, (type, inputType) =>
       generateMappedValuePure(type, context, inputType, { ...generatorConfig, vehicleContext }))
   }));
   sendToPage({ action: ACTIONS.FILL_ALL, fields }, (response, error) => {
     if (!error && response) {
-      pageFields.forEach((field, index) => {
+      state.pageFields.forEach((field, index) => {
         if (!fields[index]) return;
         field.value = String(fields[index].value);
         if (field.fixed) field.fixedValue = String(fields[index].value);
