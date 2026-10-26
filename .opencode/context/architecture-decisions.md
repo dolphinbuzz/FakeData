@@ -26,7 +26,7 @@
 **Status**: Accepted
 **Date**: 2026-01-15
 **Context**: Usuários testam múltiplas páginas da mesma aplicação (subdomínios, rotas).
-**Decision**: `fakedata-field-mappings` = `{ "https://base.com": { pages: [{ id, name, pageUrl, fields, audit }] } }`. `pageUrl` normalizada (sem query/hash). `baseUrl` via `getBaseUrl()` agrupa `app.exemplo.com.br` + `api.exemplo.com.br` → `https://exemplo.com.br`.
+**Decision**: `fakedata-field-mappings` = `{ "https://base.com": { pages: [{ id, name, pageUrl, fields, audit }] } }`. `pageUrl` normalizada (sem query/hash). `baseUrl` via `getBaseUrl()` agrupa `app.exemplo.com.br` + `api.exemplo.com.br` → `https://exemplo.com.br`; colapsa para 2 labels, preserva 3 em sufixos de 2 níveis conhecidos (`.com.br`, `.co.uk`, ...) e não colapsa IPs, `localhost` nem TLDs reservados.
 **Consequences**:
 - Organização lógica por aplicação
 - Migração legada necessária (formato v1: array por URL completa)

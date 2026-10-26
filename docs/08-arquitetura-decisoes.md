@@ -40,7 +40,7 @@ src/scripts/
   content.js          # Content script (IIFE, strict mode) - fila injeção, dispose, guarda vivacidade
   generators.js       # Pure data generation functions
   selector-engine.js  # Pure selector logic + DOM scanning + navigation observer (cleanup)
-  messages.js         # ACTIONS enum (Object.freeze, 16 actions)
+  messages.js         # ACTIONS enum (Object.freeze, 17 actions)
   privacy.js          # Privacy page logic
   data/
     estados.js        # Const: ESTADOS (27), DDDS

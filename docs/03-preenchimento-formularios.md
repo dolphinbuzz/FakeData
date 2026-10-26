@@ -9,12 +9,21 @@ Sistema de preenchimento automático de campos mapeados, suportando múltiplos t
 - Botão 📥 no painel do campo
 - Botão flutuante 📥 na página (se habilitado)
 - Usa valor fixo (se `fixed=true`) ou gera novo valor
+- Marca/modelo já presentes no formulário são reaproveitados para manter o veículo coerente (A2/P4)
 
 ### Preencher Todos
 - Sequencial (Promise chain) para evitar race conditions
 - Botão "Preencher todos" no painel
 - Atalho `Alt+Shift+P`
 - Feedback: `X de Y campo(s) preenchido(s)`
+- Resolve o veículo **uma vez por lote**, considerando apenas campos fixados; marca/modelo fixados não são sobrescritos (P1)
+- O ano gerado é coerente com o modelo escolhido quando o catálogo possui faixa conhecida (P2 parcial)
+
+### Limpar Todos
+- Botão "Limpar todos" no painel / atalho `Alt+Shift+C`
+- Envia `CLEAR_PAGE_FIELDS` ao content script e limpa de fato os campos da página
+- Inputs, textareas, selects, custom selects, checkbox/radio e `contenteditable` recebem os eventos nativos
+- Falhas por seletor são contabilizadas sem interromper os demais campos
 
 ### Botões Flutuantes
 - Posicionamento: `getBoundingClientRect()` + scroll offsets
@@ -76,5 +85,5 @@ Seletores: `multi-select`, `[role=combobox]`, `.ui-autocomplete-multiselect`
 ## Arquivos Relacionados
 - `src/scripts/content.js` - fill, fillSelect, fillCustomSelect, mark, highlight, floating controls, handleMessage, installationProbe, dispose
 - `src/scripts/generators.js` - generateMappedValue (valores por tipo)
-- `src/scripts/messages.js` - ACTIONS (FILL_FIELD, FILL_ALL, MARK_*, PAGE_FIELD_FILL_REQUEST, etc.)
+- `src/scripts/messages.js` - ACTIONS (FILL_FIELD, FILL_ALL, CLEAR_PAGE_FIELDS, MARK_*, PAGE_FIELD_FILL_REQUEST, etc.)
 - `src/scripts/selector-engine.js` - isCustomSelect, normalize, visible, SELECT2_OPTION_SELECTOR

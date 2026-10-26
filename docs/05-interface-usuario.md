@@ -56,10 +56,10 @@ chrome.windows.getCurrent((win) => {
 
 ### Automático
 - **URL Base**: Dropdown agrupado por domínio base (`getBaseUrl()`)
-- **Escanear**: `SCAN_FIELDS` → lista campos com tipo inferido
+- **Escanear**: `SCAN_FIELDS` → lista campos com tipo inferido, mesclando com o mapeamento salvo (não remapeia; o remapeamento tem botão próprio)
 - **Linha de campo**: Label (editável), Tipo (select 30 opções: 29 tipos + auto), Seletor (editável), Fixed checkbox + value, Ações
 - **Ações por linha**: Marcar/Desmarcar, Localizar (🔍), Capturar (🎯), Preencher (📥)
-- **Ações em lote**: Marcar todos, Preencher todos, Salvar seletores
+- **Ações em lote**: Marcar todos, Preencher todos, Salvar seletores, Limpar todos (limpa também os campos da página)
 - **Botões flutuantes**: Toggle persiste em `localStorage` + `chrome.storage`
 
 ### Playground

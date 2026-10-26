@@ -112,7 +112,9 @@ Ex: `https://exemplo.com/page::1700000000000::abc123`
 ### getBaseUrl(url)
 ```javascript
 // app.exemplo.com.br + api.exemplo.com.br → https://exemplo.com.br
-// Tratamento especial .com.br (3 níveis) e .com (2 níveis)
+// Colapsa para os 2 últimos labels; sufixos de 2 níveis conhecidos
+// (com.br, org.br, co.uk, com.au, co.jp, ...) preservam 3 labels
+// IPs, localhost e TLDs reservados (test, example, invalid) não são colapsados
 // Porta incluída se não padrão
 ```
 

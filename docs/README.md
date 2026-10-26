@@ -34,7 +34,7 @@ FakeData/
 │       ├── content.js          # Content script (IIFE, injetado) - fila injeção, dispose, guarda vivacidade
 │       ├── generators.js       # Geração de dados pura (funções exportadas)
 │       ├── selector-engine.js  # Scan, inferType, selectorFor, captureNextClick, observer nav
-│       ├── messages.js         # ACTIONS enum (Object.freeze, 16 actions)
+│       ├── messages.js         # ACTIONS enum (Object.freeze, 17 actions)
 │       ├── privacy.js          # Lógica página privacidade
 │       ├── data/
 │       │   ├── estados.js      # Const: ESTADOS (27), DDDS
@@ -50,11 +50,11 @@ FakeData/
 │       └── services/           # Serviços com dependência de chrome.*
 │           ├── tabs-service.js
 │           └── profiles-repository.js
-├── tests/                      # 310 testes (100% passing)
+├── tests/                      # 345 testes (100% passing)
 │   ├── setup.js               # Ambiente jsdom (sem mocks permissivos)
 │   ├── fixtures/              # chrome-mock.js, dom-factory.js
 │   ├── helpers/               # app-loader.js, interaction.js
-│   └── *.test.js              # 24 arquivos: app-*(12 por feature), content(33), selector-engine(74), generators(12), vehicle-catalog(12), messages(1), domain(6), services(2)
+│   └── *.test.js              # 24 arquivos: app-*(12 por feature), content(39), selector-engine(74), generators(17), vehicle-catalog(15), messages(1), domain(6), services(2)
 ├── .github/workflows/ci.yml    # Pipeline CI (5 jobs: test, mutation, lint, manifest-validation, version-consistency)
 ├── .opencode/                  # Config agente OpenCode V2
 │   ├── context/               # ADRs, API contracts, coding standards, testing strategy
@@ -111,8 +111,8 @@ Salva mapeamento → Nomeia → Aparece no dropdown → Seleciona → Edita/Reno
 
 ## Qualidade
 
-- **310 testes** passando (100%) em 24 arquivos
-- **Coverage real**: 97.42% statements, 86.22% branches, 98.13% functions, 99.87% lines
+- **345 testes** passando (100%) em 24 arquivos
+- **Coverage real**: 96.68% statements, 85.21% branches, 98.61% functions, 99.88% lines
 - **✅ Gate de coverage**: todos os thresholds atendidos (`selector-engine.js` 99.57% lines / 91.13% branches; `app.js` 100% lines)
 - **Thresholds**: 90% global (lines/functions/statements), 80% branches; mínimo 90% por arquivo (críticos 95-100%)
 - **Mutation testing**: Stryker nos módulos puros (`selector-engine.js`, `generators.js`, `vehicle-catalog.js`) com score mínimo de 60%

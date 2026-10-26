@@ -48,7 +48,7 @@ StoredField: {key, selector, label, dataType, fixed, fixedValue, selectorRule, s
 - Callbacks para chrome.storage (não Promises)
 - Sempre verificar chrome.runtime.lastError
 - Deep clone ao modificar: {...field, fixed: Boolean(field.fixed)}
-- Agrupamento por Base URL: getBaseUrl() trata .com.br, .com
+- Agrupamento por Base URL: getBaseUrl() colapsa subdomínios (2 labels; 3 em sufixos de 2 níveis conhecidos, como .com.br/.org.br/.co.uk) e preserva IPs, localhost e TLDs reservados
 
 ## Testes
 - Target: 90%+ coverage

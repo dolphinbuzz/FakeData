@@ -76,15 +76,15 @@ Consequências deliberadas:
 - Comportamentos reais do jsdom (ex.: `new Event`, `window.close`, `location`) são exercitados de verdade.
 - Mocks de Chrome APIs vivem em `tests/fixtures/chrome-mock.js` e são explícitos por teste.
 
-## Estrutura de Testes (310 testes, 24 arquivos)
+## Estrutura de Testes (345 testes, 24 arquivos)
 
 | Arquivo | Módulo alvo | Testes | Tipo |
 |---|---|---|---|
-| `generators.test.js` | `generators.js` | 12 | Funções puras |
+| `generators.test.js` | `generators.js` | 17 | Funções puras |
 | `selector-engine.test.js` | `selector-engine.js` | 74 | Funções puras + estado de módulo |
-| `vehicle-catalog.test.js` | `data/vehicle-catalog.js` | 12 | Funções puras |
-| `vehicle-context.test.js` | `domain/vehicle-context.js` | 18 | Funções puras |
-| `url-utils.test.js` | `domain/url-utils.js` | 11 | Funções puras |
+| `vehicle-catalog.test.js` | `data/vehicle-catalog.js` | 15 | Funções puras |
+| `vehicle-context.test.js` | `domain/vehicle-context.js` | 19 | Funções puras |
+| `url-utils.test.js` | `domain/url-utils.js` | 26 | Funções puras |
 | `html-utils.test.js` | `domain/html-utils.js` | 9 | Funções puras |
 | `field-merge.test.js` | `domain/field-merge.js` | 9 | Funções puras |
 | `field-value.test.js` | `domain/field-value.js` | 5 | Funções puras |
@@ -92,19 +92,19 @@ Consequências deliberadas:
 | `messages.test.js` | `messages.js` | 1 | Constantes |
 | `tabs-service.test.js` | `services/tabs-service.js` | 12 | Integração (mock de `chrome.tabs`/`scripting`) |
 | `profiles-repository.test.js` | `services/profiles-repository.js` | 13 | Integração (mock de `chrome.storage`) |
-| `content.test.js` | `content.js` | 33 | Integração (DOM real + mock de runtime) |
+| `content.test.js` | `content.js` | 39 | Integração (DOM real + mock de runtime) |
 | `app-mapping.test.js` | `app.js` (mapeamento) | 16 | Integração do popup |
-| `app-lifecycle.test.js` | `app.js` (ciclo de vida, fila, perfis) | 27 | Integração do popup |
+| `app-lifecycle.test.js` | `app.js` (ciclo de vida, fila, perfis) | 29 | Integração do popup |
 | `app-generator.test.js` | `app.js` (gerador) | 6 | Integração do popup |
 | `app-playground.test.js` | `app.js` (playground de seletores) | 7 | Integração do popup |
 | `app-theme-tabs.test.js` | `app.js` (tema, abas, modo popup/aba) | 8 | Integração do popup |
 | `app-vehicle-catalog.test.js` | `app.js` (catálogo de veículos) | 7 | Integração do popup |
-| `app-vehicle-context.test.js` | `app.js` (coerência marca/modelo) | 4 | Integração do popup |
+| `app-vehicle-context.test.js` | `app.js` (coerência marca/modelo) | 5 | Integração do popup |
 | `app-panel.test.js` | `app.js` (maximizar/fechar painel) | 5 | Integração do popup |
-| `app-field-actions.test.js` | `app.js` (ações da lista de campos) | 10 | Integração do popup |
+| `app-field-actions.test.js` | `app.js` (ações da lista de campos) | 12 | Integração do popup |
 | `app-floating-controls.test.js` | `app.js` (preenchimento sob demanda) | 2 | Integração do popup |
 | `app-escaping.test.js` | `app.js` (escape HTML do resultado) | 1 | Integração do popup |
-| **Total** | | **310** | |
+| **Total** | | **345** | |
 
 O antigo `app.test.js` (83 testes em um único arquivo) foi desmembrado por feature e removido. A cobertura de linhas de `app.js` é idêntica antes e depois da divisão; os únicos trechos que não eram cobertos (`setLoading` e `autovalidar`) foram removidos no refactor, e a cobertura de linhas de `app.js` chegou a 100%.
 
@@ -339,26 +339,23 @@ Relatório HTML em `reports/mutation/index.html` (ignorado pelo git).
 -------------------|---------|----------|---------|---------|-------------------
 File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
 -------------------|---------|----------|---------|---------|-------------------
-All files          |   97.42 |    86.22 |   98.13 |   99.87 |
- scripts           |   97.06 |    84.21 |   97.83 |   99.85 |
-  app.js           |   96.33 |    79.62 |   96.75 |     100 | ...1091-1097,1110
-  content.js       |   97.94 |    84.45 |   96.66 |   99.65 | 346
-  generators.js    |   99.51 |    93.75 |     100 |     100 | ...24,164-165,345
-  messages.js      |     100 |      100 |     100 |     100 |
+All files          |   96.68 |    85.21 |   98.61 |   99.88 |
+ scripts           |   96.27 |    83.36 |   98.37 |   99.86 |
+  app.js           |   94.74 |    78.10 |   97.42 |     100 | ...1234,1240,1253
+  content.js       |   98.21 |    86.81 |    98.50 |    99.70 | 405
+  generators.js    |   99.51 |    93.06 |     100 |     100 | ...64-165,199,345
   selector-engine.js|   96.36 |    91.13 |   98.64 |   99.57 | 196
- scripts/data      |     100 |      100 |     100 |     100 |
-  estados.js       |     100 |      100 |     100 |     100 |
-  mapping-types.js |     100 |      100 |     100 |     100 |
-  vehicle-catalog.js|    100 |      100 |     100 |     100 |
- scripts/domain    |     100 |    98.97 |     100 |     100 |
-  vehicle-context.js|    100 |    97.05 |     100 |     100 | 7
+ scripts/data      |   98.96 |    94.52 |     100 |     100 |
+  vehicle-catalog.js|   98.93 |    94.52 |     100 |     100 | 120,127-130
+ scripts/domain    |     100 |    99.04 |     100 |     100 |
+  vehicle-context.js|     100 |    97.50 |     100 |     100 | 7
  scripts/services  |     100 |    94.64 |     100 |     100 |
   profiles-repository.js| 100 |   96.15 |     100 |     100 | 15
   tabs-service.js  |     100 |    93.33 |     100 |     100 | 19,73
 -------------------|---------|----------|---------|---------|-------------------
 ```
 
-**Gate de coverage**: todos os thresholds atendidos. `app.js` ficou com 100% de lines após a remoção de `setLoading` e `autovalidar` (código morto) e a extração dos módulos de `domain/`/`services/`; `selector-engine.js` mantém lines 99.57% e branches 91.13% (≥90).
+**Gate de coverage**: todos os thresholds atendidos. `app.js` ficou com 100% de lines após a remoção de `setLoading` e `autovalidar` (código morto) e a extração dos módulos de `domain/`/`services/`; `selector-engine.js` mantém lines 99.57% e branches 91.13% (≥90). Como parte da suíte exercita geração aleatória (`pick`), branches/funcs podem variar décimos entre execuções.
 
 ## Debugging
 
