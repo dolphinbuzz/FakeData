@@ -465,6 +465,131 @@ describe("content script", () => {
     expect(document.querySelectorAll(".fakedata-page-fill")).toHaveLength(0);
   });
 
+  it("limpa input, textarea, checkbox, radio e contenteditable", async () => {
+    document.body.insertAdjacentHTML("beforeend", `
+      <textarea id="obs">Observação</textarea>
+      <input id="check" type="checkbox" checked>
+      <input id="radio" type="radio" checked>
+      <div id="bio" contenteditable="true">Olá</div>
+    `);
+    const fallbackEditable = document.createElement("div");
+    fallbackEditable.id = "bio-fallback";
+    fallbackEditable.textContent = "Texto";
+    Object.defineProperty(fallbackEditable, "isContentEditable", { value: true });
+    document.body.appendChild(fallbackEditable);
+    const email = document.querySelector("#email");
+    email.value = "qa@example.test";
+    const inputEvents = vi.fn();
+    const changeEvents = vi.fn();
+    const checkChange = vi.fn();
+    const radioChange = vi.fn();
+    email.addEventListener("input", inputEvents);
+    email.addEventListener("change", changeEvents);
+    document.querySelector("#check").addEventListener("change", checkChange);
+    document.querySelector("#radio").addEventListener("change", radioChange);
+
+    const response = await sendContentMessage({
+      action: ACTIONS.CLEAR_PAGE_FIELDS,
+      selectors: ["#email", "#obs", "#check", "#radio", "#bio", "#bio-fallback"]
+    });
+
+    expect(response).toEqual({ cleared: 6, total: 6, failed: [] });
+    expect(email.value).toBe("");
+    expect(inputEvents).toHaveBeenCalledTimes(1);
+    expect(changeEvents).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("#obs").value).toBe("");
+    expect(document.querySelector("#check").checked).toBe(false);
+    expect(document.querySelector("#radio").checked).toBe(false);
+    expect(checkChange).toHaveBeenCalledTimes(1);
+    expect(radioChange).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("#bio").textContent).toBe("");
+    expect(document.querySelector("#bio-fallback").textContent).toBe("");
+  });
+
+  it("limpa select voltando para a opção vazia ou desmarcando todas as opções", async () => {
+    const uf = document.querySelector("#uf");
+    uf.value = "CE";
+    const changeEvents = vi.fn();
+    uf.addEventListener("change", changeEvents);
+
+    expect(await sendContentMessage({ action: ACTIONS.CLEAR_PAGE_FIELDS, selectors: ["#uf"] }))
+      .toEqual({ cleared: 1, total: 1, failed: [] });
+    expect(uf.value).toBe("");
+    expect(changeEvents).toHaveBeenCalledTimes(1);
+
+    uf.innerHTML = "<option value='CE'>Ceará</option><option value='SP'>São Paulo</option>";
+    uf.value = "SP";
+
+    expect(await sendContentMessage({ action: ACTIONS.CLEAR_PAGE_FIELDS, selectors: ["#uf"] }))
+      .toEqual({ cleared: 1, total: 1, failed: [] });
+    expect(uf.selectedIndex).toBe(-1);
+    expect(uf.value).toBe("");
+    expect(changeEvents).toHaveBeenCalledTimes(2);
+  });
+
+  it("fecha o menu e limpa o texto exibido no select customizado", async () => {
+    document.body.insertAdjacentHTML("beforeend", `
+      <multi-select id="custom">
+        <input role="combobox" value="Brasil">
+        <div><ul class="ui-autocomplete"><li list-select>Brasil</li></ul></div>
+      </multi-select>
+      <multi-select id="custom-div">
+        <div role="combobox">Brasil</div>
+        <div><ul class="ui-autocomplete"></ul></div>
+      </multi-select>
+    `);
+    const trigger = document.querySelector("#custom input");
+    const menu = document.querySelector("#custom > div");
+    menu.style.display = "block";
+
+    expect(await sendContentMessage({ action: ACTIONS.CLEAR_PAGE_FIELDS, selectors: ["#custom", "#custom-div"] }))
+      .toEqual({ cleared: 2, total: 2, failed: [] });
+    expect(trigger.value).toBe("");
+    expect(menu.style.display).toBe("none");
+    expect(document.querySelector("#custom-div [role='combobox']").textContent).toBe("");
+  });
+
+  it("registra falhas de seletores inválidos ou inexistentes sem interromper o lote", async () => {
+    const email = document.querySelector("#email");
+    email.value = "qa@example.test";
+
+    const response = await sendContentMessage({
+      action: ACTIONS.CLEAR_PAGE_FIELDS,
+      selectors: ["#missing", "[", "", "#email"]
+    });
+
+    expect(response.cleared).toBe(1);
+    expect(response.total).toBe(4);
+    expect(response.failed).toHaveLength(3);
+    expect(response.failed[0]).toEqual({ selector: "#missing", error: "Elemento não encontrado: #missing" });
+    expect(response.failed[1].selector).toBe("[");
+    expect(response.failed[1].error).toContain("Seletor inválido");
+    expect(response.failed[2]).toEqual({ selector: "", error: "Seletor inválido: valor vazio" });
+    expect(email.value).toBe("");
+  });
+
+  it("retorna resultado vazio para lista de seletores vazia ou ausente", async () => {
+    expect(await sendContentMessage({ action: ACTIONS.CLEAR_PAGE_FIELDS, selectors: [] }))
+      .toEqual({ cleared: 0, total: 0, failed: [] });
+    expect(await sendContentMessage({ action: ACTIONS.CLEAR_PAGE_FIELDS }))
+      .toEqual({ cleared: 0, total: 0, failed: [] });
+  });
+
+  it("remove a marcação dos campos limpos e mantém os controles flutuantes", async () => {
+    await sendContentMessage({
+      action: ACTIONS.UPDATE_PAGE_FIELD_CONTROLS,
+      fields: [{ key: "email-field", selector: "#email", label: "E-mail" }]
+    });
+    expect((await sendContentMessage({ action: ACTIONS.MARK_FIELD, selector: "#email" })).marked).toBe(true);
+    expect(document.querySelector("#email").style.outline).toContain("#ef4444");
+
+    expect(await sendContentMessage({ action: ACTIONS.CLEAR_PAGE_FIELDS, selectors: ["#email"] }))
+      .toEqual({ cleared: 1, total: 1, failed: [] });
+
+    expect(document.querySelector("#email").style.outline).toBe("");
+    expect(document.querySelectorAll(".fakedata-page-fill")).toHaveLength(1);
+  });
+
   it("coleta falhas individuais no preenchimento em lote", async () => {
     const email = document.querySelector("#email");
     Object.defineProperty(email, "disabled", {
