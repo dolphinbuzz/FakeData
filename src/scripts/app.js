@@ -6,6 +6,7 @@ import { addVehicleModel, normalizeVehicleCatalog, pickVehicle, removeVehicleBra
 import { ACTIONS } from "./messages.js";
 import { normalizePageUrl, getBaseUrl } from "./domain/url-utils.js";
 import { escapeHtml } from "./domain/html-utils.js";
+import { getMappingAudit, auditJson } from "./domain/mapping-audit.js";
 
 let selectedType = "person";
 let currentResult = null;
@@ -1066,30 +1067,8 @@ function addNewSelector() {
   });
 }
 
-function getMappingAudit() {
-  const locators = new Set();
-  return pageFields.map((field) => {
-    const duplicateLocator = field.locatorName && locators.has(field.locatorName);
-    if (field.locatorName) locators.add(field.locatorName);
-    return {
-    elemento: field.label,
-    seletorGerado: field.selector,
-    locator: field.locatorName || "",
-    regraAplicada: field.selectorRule || "desconhecida",
-    status: field.selectorStatus === "stable" && !duplicateLocator ? "estável" : "frágil — requer atenção manual",
-    sugestao: duplicateLocator ? "Renomear o locator para eliminar a colisão." : (field.selectorSuggestion || "")
-    };
-  });
-}
-
-function auditJson() {
-  return JSON.stringify(Object.fromEntries(pageFields
-    .filter((field) => field.selector && field.locatorName)
-    .map((field) => [field.locatorName, field.selector])), null, 2);
-}
-
 function copyMappingAudit() {
-  copyText(auditJson(), copyAuditButton);
+  copyText(auditJson(pageFields), copyAuditButton);
 }
 
 function updateMarkAllButton() {
@@ -1183,7 +1162,7 @@ function persistPageMapping(name, existingId) {
     if (Array.isArray(application)) application = { pages: [] };
     if (!application || !Array.isArray(application.pages)) application = { pages: [] };
     const existing = application.pages.find((profile) => profile.id === existingId);
-    const profile = { id: existing ? existing.id : profileId(), name: name.trim(), pageUrl: activePageUrl, fields: mappings, audit: getMappingAudit() };
+    const profile = { id: existing ? existing.id : profileId(), name: name.trim(), pageUrl: activePageUrl, fields: mappings, audit: getMappingAudit(pageFields) };
     application.pages = existing
       ? application.pages.map((item) => item.id === profile.id ? profile : item)
       : application.pages.concat(profile);
