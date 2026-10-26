@@ -152,7 +152,8 @@ chrome.storage.local.set({ key: value }, () => { ... });
 - CSP: `script-src 'self'; object-src 'self'`
 
 ## Arquivos Relacionados
-- `src/scripts/app.js` - Toda lógica de storage/profile/migration
+- `src/scripts/app.js` - Orquestração do uso do storage (preferências, seleção de base)
+- `src/scripts/services/profiles-repository.js` - migrateLegacyProfiles, readProfiles, writeProfiles (chave `fakedata-field-mappings`)
 - `manifest.json` - Permissões storage
 - `src/scripts/content.js` - Floating controls sync
 - `src/scripts/data/vehicle-catalog.js` - normalizeVehicleCatalog, CRUD puro

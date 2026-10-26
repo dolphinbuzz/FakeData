@@ -108,5 +108,7 @@ chrome.windows.getCurrent((win) => {
 - `src/popup.html` - Estrutura completa
 - `src/styles/popup.css` - CSS custom properties, responsivo
 - `src/scripts/app.js` - Toda lógica de UI, modais, tabs, eventos, shortcuts
+- `src/scripts/domain/` - Helpers puros usados pela UI (url-utils, html-utils, field-merge, field-value, vehicle-context, mapping-audit)
+- `src/scripts/services/` - Serviços com dependência de `chrome.*` (tabs-service, profiles-repository)
 - `src/privacy.html` + `src/styles/privacy.css` - Página privacidade
 - `src/scripts/privacy.js` - Lógica página privacidade

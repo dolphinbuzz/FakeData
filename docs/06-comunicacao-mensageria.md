@@ -135,7 +135,7 @@ chrome.tabs.onActivated.addListener(() => {
 - Content script usa dynamic import: `Promise.all([import(...), import(...)])`
 - `modulesReady` Promise garante imports antes de handlers
 - Listener registrado imediatamente, handlers aguardam `modulesReady`
-- **Fila por aba**: `pendingInjections = new Map()` em `app.js`
+- **Fila por aba**: `pendingInjections = new Map()` em `src/scripts/services/tabs-service.js`
   - `injectContentScript(tabId, callback)` adiciona callback à fila da aba
   - Se já há injeção em andamento, callback entra na fila (coalescência)
   - `chrome.scripting.executeScript` chamado uma única vez
@@ -201,6 +201,7 @@ chrome.sidePanel.close({ windowId })
 
 ## Arquivos Relacionados
 - `src/scripts/messages.js` - ACTIONS enum (Object.freeze, 16 actions)
-- `src/scripts/app.js` - sendToPage, sendMessageToTab, injectContentScript, pendingInjections, getActiveTab, listeners
+- `src/scripts/app.js` - sendToPage, getActiveTab, listeners
+- `src/scripts/services/tabs-service.js` - sendMessageToTab, findActiveTab, injectContentScript, pendingInjections
 - `src/scripts/content.js` - handleMessage, chrome.runtime.onMessage, installationProbe, dispose, disposeNavigationObserver
 - `src/scripts/selector-engine.js` - installNavigationObserver (retorna cleanup function)

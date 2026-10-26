@@ -143,7 +143,7 @@ npm run test:coverage
 npm run test:mutation
 ```
 
-`npm test` executa a suíte Vitest (219 testes em 14 arquivos). `npm run test:coverage` gera os relatórios texto e HTML e exige pelo menos 90% de Lines globalmente e nos principais módulos de produção. `npm run test:mutation` executa o Stryker nos módulos puros (`selector-engine.js`, `generators.js` e `vehicle-catalog.js`) e falha se o mutation score ficar abaixo de 60%; o relatório HTML fica em `reports/mutation/`.
+`npm test` executa a suíte Vitest (310 testes em 24 arquivos). `npm run test:coverage` gera os relatórios texto e HTML e exige pelo menos 90% de Lines globalmente e nos principais módulos de produção. `npm run test:mutation` executa o Stryker nos módulos puros (`selector-engine.js`, `generators.js` e `vehicle-catalog.js`) e falha se o mutation score ficar abaixo de 60%; o relatório HTML fica em `reports/mutation/`.
 
 Os testes de interface usam o `src/popup.html` real e mocks explícitos das Chrome APIs em `tests/fixtures/`. O CI usa Node.js 22.x, executa `npm ci` e `npm run test:coverage` em cada push e pull request para `main`; em pushes para `main`, também executa o mutation testing. Os relatórios são publicados como artefatos do workflow.
 
@@ -186,10 +186,20 @@ FakeData/
 │   │   ├── generators.js
 │   │   ├── messages.js
 │   │   ├── selector-engine.js
-│   │   └── data/
-│   │       ├── estados.js
-│   │       ├── mapping-types.js
-│   │       └── vehicle-catalog.js
+│   │   ├── data/
+│   │   │   ├── estados.js
+│   │   │   ├── mapping-types.js
+│   │   │   └── vehicle-catalog.js
+│   │   ├── domain/
+│   │   │   ├── field-merge.js
+│   │   │   ├── field-value.js
+│   │   │   ├── html-utils.js
+│   │   │   ├── mapping-audit.js
+│   │   │   ├── url-utils.js
+│   │   │   └── vehicle-context.js
+│   │   └── services/
+│   │       ├── profiles-repository.js
+│   │       └── tabs-service.js
 │   └── styles/
 │       ├── popup.css
 │       └── privacy.css
@@ -201,6 +211,7 @@ FakeData/
     ├── helpers/
     │   ├── app-loader.js
     │   └── interaction.js
+    ├── app-escaping.test.js
     ├── app-field-actions.test.js
     ├── app-floating-controls.test.js
     ├── app-generator.test.js
@@ -210,9 +221,18 @@ FakeData/
     ├── app-playground.test.js
     ├── app-theme-tabs.test.js
     ├── app-vehicle-catalog.test.js
+    ├── app-vehicle-context.test.js
     ├── content.test.js
+    ├── field-merge.test.js
+    ├── field-value.test.js
     ├── generators.test.js
+    ├── html-utils.test.js
+    ├── mapping-audit.test.js
     ├── messages.test.js
+    ├── profiles-repository.test.js
     ├── selector-engine.test.js
-    └── vehicle-catalog.test.js
+    ├── tabs-service.test.js
+    ├── url-utils.test.js
+    ├── vehicle-catalog.test.js
+    └── vehicle-context.test.js
 ```

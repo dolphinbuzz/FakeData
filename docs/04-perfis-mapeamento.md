@@ -161,6 +161,7 @@ Ex: `https://exemplo.com/page::1700000000000::abc123`
 - **Excluir**: Confirmação → remove do array `pages`
 
 ## Arquivos Relacionados
-- `src/scripts/app.js` - Toda lógica de storage/profile/migration
+- `src/scripts/app.js` - Orquestração dos perfis (seleção, renomeação, exclusão)
+- `src/scripts/services/profiles-repository.js` - migrateLegacyProfiles, readProfiles, writeProfiles (storage)
 - `src/scripts/messages.js` - ACTIONS (PAGE_FIELD_FILL_REQUEST)
 - `src/scripts/content.js` - floating button click → PAGE_FIELD_FILL_REQUEST

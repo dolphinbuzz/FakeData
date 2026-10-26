@@ -36,7 +36,7 @@ Popup/Side Panel/Tab (extension pages) <---> Content Script (injetado)
 ## Módulos (ESM)
 
 src/scripts/
-  app.js              # Orquestração UI + Messaging + Storage
+  app.js              # Orquestração UI + estado + listeners
   content.js          # Content script (IIFE, strict mode) - fila injeção, dispose, guarda vivacidade
   generators.js       # Pure data generation functions
   selector-engine.js  # Pure selector logic + DOM scanning + navigation observer (cleanup)
@@ -46,6 +46,16 @@ src/scripts/
     estados.js        # Const: ESTADOS (27), DDDS
     mapping-types.js  # Const: MAPPING_TYPES (30 entradas: 29 tipos + auto)
     vehicle-catalog.js # Pure CRUD functions
+  domain/             # Helpers puros extraídos do app.js
+    url-utils.js      # normalizePageUrl, getBaseUrl
+    html-utils.js     # escapeHtml
+    mapping-audit.js  # getMappingAudit, auditJson
+    field-merge.js    # mergeScannedFields (mescla scan + perfil salvo)
+    field-value.js    # resolveFieldType, resolveFieldValue
+    vehicle-context.js # resolveVehicleContext (coerência marca/modelo)
+  services/           # Serviços com dependência de chrome.*
+    tabs-service.js   # pendingInjections, injectContentScript, sendMessageToTab, findActiveTab
+    profiles-repository.js # migrateLegacyProfiles, readProfiles, writeProfiles
 
 ### Padrões
 - Funções puras exportadas para testabilidade
@@ -106,7 +116,7 @@ Funções puras = alta cobertura (95%+). Integração = mocks complexos (90%+).
 **Date**: 2026-10-19
 **Context**: Race conditions em injeção concorrente (múltiplas abas/painéis), content script órfão após reload/extensão atualizada, navegação SPA sem cleanup de observers.
 **Decision**:
-- **Fila por aba** (`app.js`): `pendingInjections = Map<tabId, callback[]>`
+- **Fila por aba** (`services/tabs-service.js`): `pendingInjections = Map<tabId, callback[]>`
   - `injectContentScript(tabId, callback)` coalesce chamadas concorrentes na mesma aba
   - Uma única `executeScript` por aba; waiters notificados juntos
   - Entry removida **antes** de notificar (evita órfãos se waiter lançar)
