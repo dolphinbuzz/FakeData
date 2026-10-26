@@ -76,7 +76,7 @@ Consequências deliberadas:
 - Comportamentos reais do jsdom (ex.: `new Event`, `window.close`, `location`) são exercitados de verdade.
 - Mocks de Chrome APIs vivem em `tests/fixtures/chrome-mock.js` e são explícitos por teste.
 
-## Estrutura de Testes (345 testes, 24 arquivos)
+## Estrutura de Testes (350 testes, 24 arquivos)
 
 | Arquivo | Módulo alvo | Testes | Tipo |
 |---|---|---|---|
@@ -92,19 +92,19 @@ Consequências deliberadas:
 | `messages.test.js` | `messages.js` | 1 | Constantes |
 | `tabs-service.test.js` | `services/tabs-service.js` | 12 | Integração (mock de `chrome.tabs`/`scripting`) |
 | `profiles-repository.test.js` | `services/profiles-repository.js` | 13 | Integração (mock de `chrome.storage`) |
-| `content.test.js` | `content.js` | 39 | Integração (DOM real + mock de runtime) |
+| `content.test.js` | `content.js` | 40 | Integração (DOM real + mock de runtime) |
 | `app-mapping.test.js` | `app.js` (mapeamento) | 16 | Integração do popup |
 | `app-lifecycle.test.js` | `app.js` (ciclo de vida, fila, perfis) | 29 | Integração do popup |
 | `app-generator.test.js` | `app.js` (gerador) | 6 | Integração do popup |
 | `app-playground.test.js` | `app.js` (playground de seletores) | 7 | Integração do popup |
 | `app-theme-tabs.test.js` | `app.js` (tema, abas, modo popup/aba) | 8 | Integração do popup |
 | `app-vehicle-catalog.test.js` | `app.js` (catálogo de veículos) | 7 | Integração do popup |
-| `app-vehicle-context.test.js` | `app.js` (coerência marca/modelo) | 5 | Integração do popup |
+| `app-vehicle-context.test.js` | `app.js` (coerência marca/modelo) | 6 | Integração do popup |
 | `app-panel.test.js` | `app.js` (maximizar/fechar painel) | 5 | Integração do popup |
-| `app-field-actions.test.js` | `app.js` (ações da lista de campos) | 12 | Integração do popup |
+| `app-field-actions.test.js` | `app.js` (ações da lista de campos) | 15 | Integração do popup |
 | `app-floating-controls.test.js` | `app.js` (preenchimento sob demanda) | 2 | Integração do popup |
 | `app-escaping.test.js` | `app.js` (escape HTML do resultado) | 1 | Integração do popup |
-| **Total** | | **345** | |
+| **Total** | | **350** | |
 
 O antigo `app.test.js` (83 testes em um único arquivo) foi desmembrado por feature e removido. A cobertura de linhas de `app.js` é idêntica antes e depois da divisão; os únicos trechos que não eram cobertos (`setLoading` e `autovalidar`) foram removidos no refactor, e a cobertura de linhas de `app.js` chegou a 100%.
 
@@ -339,11 +339,11 @@ Relatório HTML em `reports/mutation/index.html` (ignorado pelo git).
 -------------------|---------|----------|---------|---------|-------------------
 File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
 -------------------|---------|----------|---------|---------|-------------------
-All files          |   96.68 |    85.21 |   98.61 |   99.88 |
- scripts           |   96.27 |    83.36 |   98.37 |   99.86 |
-  app.js           |   94.74 |    78.10 |   97.42 |     100 | ...1234,1240,1253
-  content.js       |   98.21 |    86.81 |    98.50 |    99.70 | 405
-  generators.js    |   99.51 |    93.06 |     100 |     100 | ...64-165,199,345
+All files          |   96.70 |    85.17 |   98.41 |   99.88 |
+ scripts           |   96.31 |    83.33 |   98.14 |   99.86 |
+  app.js           |   94.76 |    77.96 |   97.43 |     100 | ...1242,1248,1261
+  content.js       |   98.26 |    86.28 |   97.01 |    99.71 | 421
+  generators.js    |   99.51 |    95.09 |     100 |     100 | ...24,164-165,345
   selector-engine.js|   96.36 |    91.13 |   98.64 |   99.57 | 196
  scripts/data      |   98.96 |    94.52 |     100 |     100 |
   vehicle-catalog.js|   98.93 |    94.52 |     100 |     100 | 120,127-130

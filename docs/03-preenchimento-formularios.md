@@ -17,7 +17,7 @@ Sistema de preenchimento automático de campos mapeados, suportando múltiplos t
 - Atalho `Alt+Shift+P`
 - Feedback: `X de Y campo(s) preenchido(s)`
 - Resolve o veículo **uma vez por lote**, considerando apenas campos fixados; marca/modelo fixados não são sobrescritos (P1)
-- O ano gerado é coerente com o modelo escolhido quando o catálogo possui faixa conhecida (P2 parcial)
+- O ano gerado é coerente com o modelo escolhido quando o catálogo possui faixa conhecida, no formato `AAAA/AAAA` (P2 parcial)
 
 ### Limpar Todos
 - Botão "Limpar todos" no painel / atalho `Alt+Shift+C`

@@ -4,7 +4,7 @@ Documento vivo das decisões em aberto levantadas durante a execução de
 `plan/PLANO-REFATORACAO-APP-JS.md`.
 
 - **Branch:** `fix/pendencias-refatoracao`
-- **Último commit registrado neste documento:** `a07d19d fix(app): corrige A1 A4 A5 A6 A7 e P1`
+- **Último commit registrado neste documento:** `c365a94 fix: corrige achados da revisao em A4 A5 A7 e P2`
 - **Atualizado em:** 26/10/2026
 
 > Regra do plano: os achados abaixo foram **registrados** durante o refactor e **não devem ser
@@ -82,8 +82,9 @@ Documento vivo das decisões em aberto levantadas durante a execução de
   reportadas na barra de status e preservam o estado dos campos afetados.
 - **Contrato:** request `{ selectors: string[] }`; response
   `{ cleared, total, failed: [{ selector, error }] }`.
-- **Estado:** **resolvido** em `b205181` (content) e `a07d19d` (popup). Cobre input, textarea,
-  select nativo, custom select, checkbox/radio e `contenteditable`.
+- **Estado:** **resolvido** em `b205181` (content) e `a07d19d` (popup); ressincronização de
+  marcações, eventos para frameworks controlados e preservação de `outline` reforçadas em
+  `c365a94`.
 
 ## A5 — `field.fixedValue` era sobrescrito a cada preenchimento
 
@@ -133,10 +134,12 @@ Documento vivo das decisões em aberto levantadas durante a execução de
 - **Solução aplicada (ano):** `data/vehicle-catalog.js` passou a exportar `DEFAULT_MODEL_YEARS`
   (faixa por `"marca|modelo"` normalizado) e `pickModelYear`. `pickVehicle` inclui `ano` quando a
   faixa é conhecida. `createGeneratorData().vehicle.context()` expõe `ano`; `generateMappedValue`
-  usa `vehicle.ano` ou deriva via `pickModelYear`, caindo em `gerarAno()` para catálogos sem faixa.
+  usa `vehicle.ano` ou deriva via `pickModelYear`, formatando como `AAAA/AAAA` (ex.: `2024/2025`)
+  e caindo em `gerarAno()` para catálogos sem faixa.
   O contrato de `resolveVehicleContext` permanece `{ marca, modelo }`; a derivação do ano fica no
   gerador.
 - **Estado:** **parcialmente resolvido** em `33b0d1f` — o **ano** agora é coerente com o modelo.
+  O formato `AAAA/AAAA` e os testes de eventos foram ajustados em `c365a94`.
 - **Pendente:** **placa, chassi e renavam continuam aleatórios** porque o catálogo não carrega
   dados suficientes (série, planta, sequência). Resolver exige ampliar o modelo de dados do
   catálogo; não foi inventado vínculo.
@@ -178,7 +181,7 @@ Documento vivo das decisões em aberto levantadas durante a execução de
 
 - Smoke manual RT-01 a RT-10 (seção 5 do plano) não foi executado; o responsável autorizou seguir
   para o Passo 11 assumindo o risco.
-- Passos 0 a 11 do plano concluídos. Estado após a branch `fix/pendencias-refatoracao`: **345
-  testes em 24 arquivos**, cobertura global de 96,68% de statements, 85,21% de branches, 98,61% de
+- Passos 0 a 11 do plano concluídos. Estado após a branch `fix/pendencias-refatoracao`: **350
+  testes em 24 arquivos**, cobertura global de 96,70% de statements, 85,17% de branches, 98,41% de
   funções e 99,88% de linhas; `app.js` com 100% de linhas.
 - Plano B (seção 8) não iniciado, conforme instrução do plano.

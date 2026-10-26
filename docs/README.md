@@ -50,11 +50,11 @@ FakeData/
 │       └── services/           # Serviços com dependência de chrome.*
 │           ├── tabs-service.js
 │           └── profiles-repository.js
-├── tests/                      # 345 testes (100% passing)
+├── tests/                      # 350 testes (100% passing)
 │   ├── setup.js               # Ambiente jsdom (sem mocks permissivos)
 │   ├── fixtures/              # chrome-mock.js, dom-factory.js
 │   ├── helpers/               # app-loader.js, interaction.js
-│   └── *.test.js              # 24 arquivos: app-*(12 por feature), content(39), selector-engine(74), generators(17), vehicle-catalog(15), messages(1), domain(6), services(2)
+│   └── *.test.js              # 24 arquivos: app-*(por feature; 15 em field-actions, 29 em lifecycle), content(40), selector-engine(74), generators(17), vehicle-catalog(15), messages(1), domain(6), services(2)
 ├── .github/workflows/ci.yml    # Pipeline CI (5 jobs: test, mutation, lint, manifest-validation, version-consistency)
 ├── .opencode/                  # Config agente OpenCode V2
 │   ├── context/               # ADRs, API contracts, coding standards, testing strategy
@@ -111,8 +111,8 @@ Salva mapeamento → Nomeia → Aparece no dropdown → Seleciona → Edita/Reno
 
 ## Qualidade
 
-- **345 testes** passando (100%) em 24 arquivos
-- **Coverage real**: 96.68% statements, 85.21% branches, 98.61% functions, 99.88% lines
+- **350 testes** passando (100%) em 24 arquivos
+- **Coverage real**: 96.70% statements, 85.17% branches, 98.41% functions, 99.88% lines
 - **✅ Gate de coverage**: todos os thresholds atendidos (`selector-engine.js` 99.57% lines / 91.13% branches; `app.js` 100% lines)
 - **Thresholds**: 90% global (lines/functions/statements), 80% branches; mínimo 90% por arquivo (críticos 95-100%)
 - **Mutation testing**: Stryker nos módulos puros (`selector-engine.js`, `generators.js`, `vehicle-catalog.js`) com score mínimo de 60%

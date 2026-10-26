@@ -231,7 +231,8 @@ function removeVehicleModel(catalog: VehicleCatalogEntry[], marca: string, model
 function removeVehicleBrand(catalog: VehicleCatalogEntry[], marca: string): VehicleCatalogEntry[];
 function renameVehicleBrand(catalog: VehicleCatalogEntry[], marca: string, novoNome: string): VehicleCatalogEntry[];
 function renameVehicleModel(catalog: VehicleCatalogEntry[], marca: string, modelo: string, novoModelo: string): VehicleCatalogEntry[];
-function pickVehicle(catalog: VehicleCatalogEntry[], pick: (arr) => any): { marca: string, modelo: string };
+function pickVehicle(catalog: VehicleCatalogEntry[], pick: (arr) => any): { marca: string, modelo: string, ano?: number };
+function pickModelYear(marca: string, modelo: string, pick: (arr) => any): number | undefined;
 ```
 
 ## Validation Functions (generators.js)
