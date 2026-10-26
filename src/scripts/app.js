@@ -4,6 +4,7 @@ import { DDDS, ESTADOS } from "./data/estados.js";
 import { MAPPING_TYPES } from "./data/mapping-types.js";
 import { addVehicleModel, normalizeVehicleCatalog, pickVehicle, removeVehicleBrand, removeVehicleModel, renameVehicleBrand, renameVehicleModel } from "./data/vehicle-catalog.js";
 import { ACTIONS } from "./messages.js";
+import { normalizePageUrl, getBaseUrl } from "./domain/url-utils.js";
 
 let selectedType = "person";
 let currentResult = null;
@@ -732,35 +733,6 @@ function capturePlaygroundSelector() {
     if (selectorPlaygroundInput) selectorPlaygroundInput.value = response.field.selector;
     checkSelectorMatches();
   });
-}
-
-function normalizePageUrl(url) {
-  try {
-    const parsed = new URL(url);
-    parsed.hash = "";
-    parsed.search = "";
-    return parsed.toString();
-  } catch (error) {
-    return url;
-  }
-}
-
-function getBaseUrl(url) {
-  try {
-    const parsed = new URL(url);
-    const hostname = parsed.hostname.toLowerCase();
-    const labels = hostname.split(".").filter(Boolean);
-    let domain = hostname;
-    if (labels.length >= 3 && labels.slice(-2).join(".") === "com.br") {
-      domain = labels.slice(-3).join(".");
-    } else if (labels.length >= 2 && labels[labels.length - 1] === "com") {
-      domain = labels.slice(-2).join(".");
-    }
-    const port = parsed.port ? `:${parsed.port}` : "";
-    return `${parsed.protocol}//${domain}${port}`;
-  } catch (error) {
-    return "";
-  }
 }
 
 function profileId() {
