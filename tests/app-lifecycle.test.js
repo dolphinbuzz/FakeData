@@ -61,6 +61,16 @@ describe("popup app - ciclo de vida e injeção", () => {
     expect(getPageFieldsStatus()).toContain("Não foi possível ler esta página");
   });
 
+  // Caracterização do achado A1 / cenário RT-10: o clique passa o MouseEvent como
+  // `remapping`, então o status inicial é o de remapeamento. O refactor não deve mudar isso.
+  it("registra o status de remapeamento ao clicar em Escanear campos (achado A1)", () => {
+    chromeMock.tabs.sendMessage.mockImplementation(() => {});
+
+    click("#scan-fields-button");
+
+    expect(getPageFieldsStatus()).toBe("Remapeando campos automaticamente...");
+  });
+
   it("serializa a injeção por aba e atende chamadas concorrentes com um único executeScript", async () => {
     chromeMock.tabs.sendMessage.mockClear();
     chromeMock.scripting.executeScript.mockClear();

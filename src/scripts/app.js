@@ -7,6 +7,7 @@ import { ACTIONS } from "./messages.js";
 import { normalizePageUrl, getBaseUrl } from "./domain/url-utils.js";
 import { escapeHtml } from "./domain/html-utils.js";
 import { getMappingAudit, auditJson } from "./domain/mapping-audit.js";
+import { mergeScannedFields } from "./domain/field-merge.js";
 
 let selectedType = "person";
 let currentResult = null;
@@ -883,23 +884,13 @@ function scanPageFields(remapping = false, preserveCurrent = false) {
         updateSavedProfiles(profiles);
         const selected = getCurrentProfile(profiles);
         const saved = selected && selected.fields ? selected.fields : [];
-        const previousFields = preserveCurrent ? pageFields : [];
-        pageFields = (response.fields || []).map((field) => {
-          const mapping = previousFields.find((item) => item.key === field.key || item.selector === field.selector) ||
-            saved.find((item) => item.key === field.key || item.selector === field.selector);
-          return {
-            ...field,
-            dataType: mapping && mapping.dataType ? mapping.dataType : field.inferredType || "text",
-            selector: remapping ? field.selector : (mapping && mapping.selector ? mapping.selector : field.selector),
-            label: mapping && mapping.label ? mapping.label : field.label,
-            fixed: Boolean(mapping && mapping.fixed),
-            fixedValue: mapping && mapping.fixedValue != null ? mapping.fixedValue : ""
-          };
+        pageFields = mergeScannedFields({
+          scanned: response.fields || [],
+          saved,
+          previous: preserveCurrent ? pageFields : [],
+          remapping,
+          preserveCurrent
         });
-        if (preserveCurrent) {
-          const scannedKeys = new Set(pageFields.map((field) => field.key));
-          pageFields = pageFields.concat(previousFields.filter((field) => !scannedKeys.has(field.key)));
-        }
         markedSelectors = new Set();
         updateMarkAllButton();
         renderPageFields();
