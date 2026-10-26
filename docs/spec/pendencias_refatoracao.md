@@ -177,6 +177,24 @@ Documento vivo das decisões em aberto levantadas durante a execução de
 
 ---
 
+## Fase 2 — store de estado e painel de campos
+
+- **Store:** `src/scripts/state/app-store.js` centraliza o estado mutável do popup
+  (`state` + `resetState()`), commit `a223568`.
+- **Painel de campos:** `src/scripts/ui/page-fields-panel.js` recebeu scan, renderização,
+  delegação A7, ações por campo, fill/clear/mark, captura, auditoria e sincronização dos
+  controles flutuantes. O `app.js` manteve bootstrap, perfis/mapeamentos, catálogo, gerador,
+  playground e atalhos.
+- **Tamanho:** `app.js` caiu de 1265 para 782 linhas; o novo módulo tem 579 linhas.
+- **Validação:** **350 testes em 24 arquivos**; cobertura global de 96,64% de statements,
+  85,22% de branches, 98,23% de funções e 99,76% de linhas; `app.js` e
+  `page-fields-panel.js` com 100% de linhas.
+- **Revisão independente:** aprovada com ressalvas não bloqueantes — o painel ainda orquestra
+  perfis/armazenamento, não há teste unitário isolado do módulo e a sincronização
+  `UPDATE_PAGE_FIELD_CONTROLS` após render não tem teste dedicado. Fica para a fase seguinte.
+
+---
+
 ## Itens de acompanhamento sem ação definida
 
 - Smoke manual RT-01 a RT-10 (seção 5 do plano) não foi executado; o responsável autorizou seguir
