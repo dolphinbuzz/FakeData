@@ -4,7 +4,7 @@ Documento vivo das decisões em aberto levantadas durante a execução de
 `plan/PLANO-REFATORACAO-APP-JS.md`.
 
 - **Branch:** `refactor/app-js-modularizacao`
-- **Último commit registrado neste documento:** `fix(app): mantém marca e modelo coerentes no preenchimento individual`
+- **Último commit registrado neste documento:** `refactor(app): extrai profiles-repository`
 - **Atualizado em:** 26/10/2026
 
 > Regra do plano: os achados abaixo foram **registrados** durante o refactor e **não devem ser
@@ -141,4 +141,4 @@ Documento vivo das decisões em aberto levantadas durante a execução de
 ## Itens de acompanhamento sem ação definida
 
 - Smoke manual RT-01 a RT-10 (seção 5 do plano) segue pendente de execução humana.
-- Passos 7 a 11 do plano ainda não executados no momento desta atualização.
+- Passos 9 a 11 do plano ainda não executados (passos 7 e 8 concluídos).
