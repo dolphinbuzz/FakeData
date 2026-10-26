@@ -3,7 +3,7 @@ import { ACTIONS } from "../src/scripts/messages.js";
 import { createChromeMock } from "./fixtures/chrome-mock.js";
 import { createPopupDOM } from "./fixtures/dom-factory.js";
 import { loadApp } from "./helpers/app-loader.js";
-import { getLastSentMessage, getMappedFields } from "./helpers/interaction.js";
+import { click, getLastSentMessage, getMappedFields } from "./helpers/interaction.js";
 
 const vehicleFields = [
   {
@@ -142,5 +142,24 @@ describe("popup app - coerência de marca e modelo no preenchimento individual",
 
     expect(getLastSentMessage(chromeMock, ACTIONS.FILL_FIELD))
       .toMatchObject({ selector: "#model", value: "Argo" });
+  });
+
+  it("resolve o veículo do lote apenas com os campos fixados", () => {
+    const [brandRow, modelRow] = document.querySelectorAll(".page-field");
+
+    fixValue(brandRow, "Fiat");
+    appUtils.clearSentMessages();
+    // 0,99 faria o sorteio cair em Toyota/Corolla.
+    forceRandom(0.99);
+
+    click("#fill-all-button");
+
+    const message = getLastSentMessage(chromeMock, ACTIONS.FILL_ALL);
+    expect(message.fields).toEqual([
+      expect.objectContaining({ selector: "#brand", value: "Fiat" }),
+      expect.objectContaining({ selector: "#model", value: "Argo" }),
+    ]);
+    expect(getMappedFields().map((field) => field.fixed)).toEqual([true, false]);
+    expect(modelRow.querySelector(".page-field-fixed-value").value).toBe("Argo");
   });
 });

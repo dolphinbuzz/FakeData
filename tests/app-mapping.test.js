@@ -216,7 +216,7 @@ describe("popup app - salvamento de mapeamentos", () => {
     });
   });
 
-  it("exibe e salva os valores do preenchimento em lote", async () => {
+  it("exibe e salva os valores do preenchimento em lote sem marcá-los como fixos", async () => {
     appUtils.clearSentMessages();
     click("#fill-all-button");
 
@@ -232,7 +232,7 @@ describe("popup app - salvamento de mapeamentos", () => {
     const savedFields = appUtils.getStorageData()["fakedata-field-mappings"]["https://sistema.example.test"].pages[0].fields;
     fillAllMessage.fields.forEach((sentField) => {
       expect(savedFields).toEqual(expect.arrayContaining([
-        expect.objectContaining({ selector: sentField.selector, fixedValue: sentField.value, fixed: false }),
+        expect.objectContaining({ selector: sentField.selector, fixedValue: "", fixed: false }),
       ]));
     });
   });

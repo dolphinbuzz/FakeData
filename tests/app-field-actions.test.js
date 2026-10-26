@@ -3,7 +3,7 @@ import { ACTIONS } from "../src/scripts/messages.js";
 import { createChromeMock } from "./fixtures/chrome-mock.js";
 import { createPopupDOM, scannedFields } from "./fixtures/dom-factory.js";
 import { loadApp, nextTick } from "./helpers/app-loader.js";
-import { click, expectSentAction, getPageFieldsStatus } from "./helpers/interaction.js";
+import { click, expectSentAction, getLastSentMessage, getPageFieldsStatus } from "./helpers/interaction.js";
 
 let dom;
 let chromeMock;
@@ -138,15 +138,67 @@ describe("popup app - ações da lista de campos", () => {
     expect(getPageFieldsStatus()).toBe("Não foi possível atualizar as marcações.");
   });
 
-  it("limpa os valores preenchidos de todos os campos", () => {
+  it("limpa os valores preenchidos de todos os campos na página", async () => {
     click("#fill-all-button");
     const filledValues = [...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value);
     expect(filledValues.every((value) => value.length > 0)).toBe(true);
 
+    appUtils.clearSentMessages();
     click("#clear-all-button");
+    await nextTick();
 
+    expect(getLastSentMessage(chromeMock, ACTIONS.CLEAR_PAGE_FIELDS)).toMatchObject({ selectors: ["#email", "#cpf"] });
     expect(getPageFieldsStatus()).toBe("2 campo(s) limpado(s).");
     expect([...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value)).toEqual(["", ""]);
+  });
+
+  it("preserva os valores quando a limpeza na página falha", async () => {
+    click("#fill-all-button");
+    const filledValues = [...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value);
+
+    chromeMock.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      if (message.action === ACTIONS.CLEAR_PAGE_FIELDS) {
+        chromeMock.runtime.lastError = { message: "Receiver unavailable" };
+        callback();
+        chromeMock.runtime.lastError = null;
+        return;
+      }
+      callback({});
+    });
+
+    click("#clear-all-button");
+    await nextTick();
+
+    expect(getPageFieldsStatus()).toBe("Não foi possível limpar os campos desta página.");
+    expect([...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value)).toEqual(filledValues);
+  });
+
+  it("limpa apenas os campos que o content script confirmou", async () => {
+    const rows = document.querySelectorAll(".page-field");
+    [["a@b.com"], ["123"]].forEach(([value], index) => {
+      const row = rows[index];
+      const toggle = row.querySelector(".page-field-fixed-toggle");
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event("change", { bubbles: true }));
+      const input = row.querySelector(".page-field-fixed-value");
+      input.value = value;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    chromeMock.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      if (message.action === ACTIONS.CLEAR_PAGE_FIELDS) {
+        callback({ cleared: 1, total: 2, failed: [{ selector: "#cpf", error: "Elemento não encontrado" }] });
+        return;
+      }
+      callback({});
+    });
+
+    click("#clear-all-button");
+    await nextTick();
+
+    expect(getPageFieldsStatus()).toBe("1 campo(s) limpado(s); 1 não foi(ram) limpo(s).");
+    expect(document.querySelector(".page-field[data-index='0'] .page-field-fixed-value").value).toBe("");
+    expect(document.querySelector(".page-field[data-index='1'] .page-field-fixed-value").value).toBe("123");
   });
 
   it("informa quando não há preenchimentos para limpar", async () => {
