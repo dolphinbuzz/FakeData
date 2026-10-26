@@ -4,7 +4,7 @@ Documento vivo das decisões em aberto levantadas durante a execução de
 `plan/PLANO-REFATORACAO-APP-JS.md`.
 
 - **Branch:** `refactor/app-js-modularizacao`
-- **Último commit registrado neste documento:** `refactor(app): extrai profiles-repository`
+- **Último commit registrado neste documento:** `docs: atualiza estrutura do app.js`
 - **Atualizado em:** 26/10/2026
 
 > Regra do plano: os achados abaixo foram **registrados** durante o refactor e **não devem ser
@@ -140,5 +140,8 @@ Documento vivo das decisões em aberto levantadas durante a execução de
 
 ## Itens de acompanhamento sem ação definida
 
-- Smoke manual RT-01 a RT-10 (seção 5 do plano) segue pendente de execução humana.
-- Passos 9 a 11 do plano ainda não executados (passos 7 e 8 concluídos).
+- Smoke manual RT-01 a RT-10 (seção 5 do plano) não foi executado; o responsável autorizou seguir
+  para o Passo 11 assumindo o risco.
+- Passos 0 a 11 do plano concluídos. Estado final: `app.js` com 1129 linhas, 24 arquivos e 310
+  testes, cobertura de linhas de `app.js` em 100%.
+- Plano B (seção 8) não iniciado, conforme instrução do plano.
