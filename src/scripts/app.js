@@ -8,6 +8,7 @@ import { normalizePageUrl, getBaseUrl } from "./domain/url-utils.js";
 import { escapeHtml } from "./domain/html-utils.js";
 import { getMappingAudit, auditJson } from "./domain/mapping-audit.js";
 import { mergeScannedFields } from "./domain/field-merge.js";
+import { resolveFieldValue } from "./domain/field-value.js";
 
 let selectedType = "person";
 let currentResult = null;
@@ -458,10 +459,8 @@ if (chrome.runtime && chrome.runtime.onMessage) {
         sendResponse({ filled: false });
         return true;
       }
-      const type = field.dataType === "auto" ? field.inferredType : field.dataType;
-      const value = field.fixed
-        ? field.fixedValue
-        : generateMappedValuePure(type, data.person.context(), field.inputType, generatorOptions);
+      const value = resolveFieldValue(field, (type, inputType) =>
+        generateMappedValuePure(type, data.person.context(), inputType, generatorOptions));
       sendMessageToTab(sender.tab.id, {
         action: ACTIONS.FILL_FIELD,
         selector: field.selector,
@@ -1196,8 +1195,8 @@ function deleteSavedProfile() {
 function fillPageField(index) {
   const field = pageFields[index];
   if (!field) return;
-  const type = field.dataType === "auto" ? field.inferredType : field.dataType;
-  const value = field.fixed ? field.fixedValue : generateMappedValuePure(type, data.person.context(), field.inputType, generatorOptions);
+  const value = resolveFieldValue(field, (type, inputType) =>
+    generateMappedValuePure(type, data.person.context(), inputType, generatorOptions));
   sendToPage({ action: ACTIONS.FILL_FIELD, selector: field.selector, value }, (response, error) => {
     if (!error && response && response.filled) {
       field.value = String(value);
@@ -1221,10 +1220,8 @@ function fillAllPageFields() {
   const vehicleContext = pickVehicle(vehicleCatalog, pick);
   const fields = pageFields.map((field) => ({
     selector: field.selector,
-    value: field.fixed ? field.fixedValue : generateMappedValuePure(field.dataType === "auto" ? field.inferredType : field.dataType, context, field.inputType, {
-      ...generatorOptions,
-      vehicleContext
-    })
+    value: resolveFieldValue(field, (type, inputType) =>
+      generateMappedValuePure(type, context, inputType, { ...generatorOptions, vehicleContext }))
   }));
   sendToPage({ action: ACTIONS.FILL_ALL, fields }, (response, error) => {
     if (!error && response) {
