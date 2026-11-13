@@ -85,6 +85,37 @@ describe("popup app - modo popup vs aba dedicada", () => {
     expect(document.querySelector("#generator-tab").hidden).toBe(false);
     expect(document.querySelector("#playground-mapping-tab").hidden).toBe(false);
   });
+
+  it("ignora atalhos sem Alt+Shift ou com Ctrl/Meta", () => {
+    appUtils.clearSentMessages();
+    const dispatchShortcut = (modifiers) => document.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "s",
+      bubbles: true,
+      cancelable: true,
+      ...modifiers
+    }));
+
+    dispatchShortcut({ shiftKey: true });
+    dispatchShortcut({ altKey: true });
+    dispatchShortcut({ altKey: true, shiftKey: true, ctrlKey: true });
+    dispatchShortcut({ altKey: true, shiftKey: true, metaKey: true });
+
+    expect(expectSentAction(chromeMock, ACTIONS.SCAN_FIELDS)).toBe(false);
+  });
+
+  it("não executa atalho de salvar quando o controle está oculto no popup", async () => {
+    appUtils.cleanup();
+    chromeMock = createChromeMock({ scanFields: scannedFields, windowType: "popup" });
+    dom = createPopupDOM();
+    appUtils = await loadApp(chromeMock);
+    appUtils.clearSentMessages();
+
+    pressShortcut("l");
+
+    expect(document.querySelector("#mapping-modal").hidden).toBe(true);
+    expect(appUtils.getStorageData()["fakedata-field-mappings"]).toEqual({});
+    expect(appUtils.getSentMessages()).toHaveLength(0);
+  });
 });
 
 describe("popup app - mudança de base URL e abas", () => {

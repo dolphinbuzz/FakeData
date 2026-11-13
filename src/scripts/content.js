@@ -232,6 +232,81 @@
     return true;
   }
 
+  function clearTarget(selector) {
+    if (typeof selector !== "string" || !selector.trim()) {
+      throw new Error("Seletor inválido: valor vazio");
+    }
+    let element;
+    try {
+      element = document.querySelector(selector);
+    } catch (error) {
+      throw new Error(`Seletor inválido: ${selector}`);
+    }
+    if (!element) throw new Error(`Elemento não encontrado: ${selector}`);
+    return element;
+  }
+
+  function isContentEditableElement(element) {
+    const editable = element.getAttribute("contenteditable");
+    if (editable !== null) return editable.toLowerCase() !== "false";
+    return element.isContentEditable === true;
+  }
+
+  function clearSelect(element) {
+    const hasEmptyOption = Array.from(element.options).some((option) => option.value === "");
+    if (hasEmptyOption) element.value = "";
+    else element.selectedIndex = -1;
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function clearCustomSelect(element) {
+    closeCustomMenus();
+    const trigger = element.querySelector("input, [role='combobox'], .ui-autocomplete-multiselect") || element;
+    if (trigger.matches("input, textarea")) {
+      // setNativeValue já dispara input + change.
+      setNativeValue(trigger, "");
+    } else {
+      trigger.textContent = "";
+      trigger.dispatchEvent(new Event("input", { bubbles: true }));
+      trigger.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    closeCustomMenus();
+  }
+
+  function clear(selector) {
+    const mappedElement = clearTarget(selector);
+    const element = select2NativeField(mappedElement) || mappedElement;
+    if (element.type === "checkbox") {
+      // `click()` mantém o mesmo caminho usado no preenchimento e notifica
+      // frameworks controlados (React mapeia onChange de checkbox para click).
+      if (element.checked) element.click();
+      return true;
+    }
+    if (element.type === "radio") {
+      element.checked = false;
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    }
+    if (selectorEngine.isCustomSelect(element)) {
+      clearCustomSelect(element);
+      return true;
+    }
+    if (element.tagName === "SELECT") {
+      clearSelect(element);
+      return true;
+    }
+    if (!["INPUT", "TEXTAREA"].includes(element.tagName) && isContentEditableElement(element)) {
+      element.textContent = "";
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    }
+    setNativeValue(element, "");
+    return true;
+  }
+
   function highlight(selector) {
     const element = find(selector);
     if (!element) return false;
@@ -453,6 +528,23 @@
         closeCustomMenus();
         sendResponse({ filled: results.filter(Boolean).length, total: results.length, failed });
       });
+    }
+    if (message.action === actions.CLEAR_PAGE_FIELDS) {
+      const selectors = Array.isArray(message.selectors) ? message.selectors : [];
+      const failed = [];
+      let cleared = 0;
+      selectors.forEach((selector) => {
+        try {
+          clear(selector);
+          // Só desfaz marcações que a própria extensão criou: `unmark` em um
+          // seletor não marcado removeria outlines aplicados pela página.
+          if (markedFields.has(selector)) unmark(selector);
+          cleared += 1;
+        } catch (error) {
+          failed.push({ selector, error: String(error && error.message || error) });
+        }
+      });
+      sendResponse({ cleared, total: selectors.length, failed });
     }
     if (message.action === actions.HIGHLIGHT_FIELD) sendResponse({ highlighted: highlight(message.selector) });
     if (message.action === actions.MARK_FIELD) sendResponse({ marked: mark(message.selector) });

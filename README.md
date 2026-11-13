@@ -30,8 +30,10 @@ A extensão solicita `activeTab`, `scripting`, `storage` e `sidePanel`. Essas pe
 1. Abra a aba **Gerar dados** (não necessário no popup compacto).
 2. Escolha **Pessoa**, **Veículo** ou **Empresa**.
 3. Opcionalmente selecione a UF. A preferência fica salva localmente.
-4. Clique em **Gerar Pessoa**, **Gerar Veículo** ou **Gerar Empresa**.
-5. Copie um campo individualmente ou use **Copiar JSON**.
+4. Informe a **Quantidade de registros** (de 1 a 100; o padrão é 1) e clique em **Gerar Pessoa**, **Gerar Veículo** ou **Gerar Empresa**.
+5. Copie um campo individualmente. Para lotes, **Copiar JSON** copia todos os registros; **Baixar JSON** ou **Baixar CSV** exporta o lote completo.
+
+O painel mostra os campos do primeiro registro como amostra. Os arquivos CSV usam UTF-8, cabeçalho e proteção contra fórmulas de planilha.
 
 ### Pessoa
 
@@ -143,7 +145,7 @@ npm run test:coverage
 npm run test:mutation
 ```
 
-`npm test` executa a suíte Vitest (219 testes em 14 arquivos). `npm run test:coverage` gera os relatórios texto e HTML e exige pelo menos 90% de Lines globalmente e nos principais módulos de produção. `npm run test:mutation` executa o Stryker nos módulos puros (`selector-engine.js`, `generators.js` e `vehicle-catalog.js`) e falha se o mutation score ficar abaixo de 60%; o relatório HTML fica em `reports/mutation/`.
+`npm test` executa a suíte Vitest (372 testes em 27 arquivos). `npm run test:coverage` gera os relatórios texto e HTML e exige pelo menos 90% de Lines globalmente e nos principais módulos de produção. `npm run test:mutation` executa o Stryker nos módulos puros (`selector-engine.js`, `generators.js` e `vehicle-catalog.js`) e falha se o mutation score ficar abaixo de 60%; o relatório HTML fica em `reports/mutation/`.
 
 Os testes de interface usam o `src/popup.html` real e mocks explícitos das Chrome APIs em `tests/fixtures/`. O CI usa Node.js 22.x, executa `npm ci` e `npm run test:coverage` em cada push e pull request para `main`; em pushes para `main`, também executa o mutation testing. Os relatórios são publicados como artefatos do workflow.
 
@@ -185,11 +187,32 @@ FakeData/
 │   │   ├── content.js
 │   │   ├── generators.js
 │   │   ├── messages.js
+│   │   ├── privacy.js
 │   │   ├── selector-engine.js
-│   │   └── data/
-│   │       ├── estados.js
-│   │       ├── mapping-types.js
-│   │       └── vehicle-catalog.js
+│   │   ├── data/
+│   │   │   ├── estados.js
+│   │   │   ├── mapping-types.js
+│   │   │   └── vehicle-catalog.js
+│   │   ├── domain/
+│   │   │   ├── field-merge.js
+│   │   │   ├── field-value.js
+│   │   │   ├── html-utils.js
+│   │   │   ├── mapping-audit.js
+│   │   │   ├── url-utils.js
+│   │   │   ├── vehicle-context.js
+│   │   │   └── batch-export.js
+│   │   ├── services/
+│   │   │   ├── profiles-repository.js
+│   │   │   └── tabs-service.js
+│   │   ├── state/
+│   │   │   └── app-store.js
+│   │   └── ui/
+│   │       ├── generator-panel.js
+│   │       ├── navigation-controls.js
+│   │       ├── page-fields-panel.js
+│   │       ├── profile-controls.js
+│   │       ├── selector-playground.js
+│   │       └── vehicle-catalog-panel.js
 │   └── styles/
 │       ├── popup.css
 │       └── privacy.css
@@ -201,18 +224,31 @@ FakeData/
     ├── helpers/
     │   ├── app-loader.js
     │   └── interaction.js
+    ├── app-escaping.test.js
     ├── app-field-actions.test.js
     ├── app-floating-controls.test.js
     ├── app-generator.test.js
+    ├── app-store.test.js
+    ├── app-empty-state.test.js
     ├── app-lifecycle.test.js
     ├── app-mapping.test.js
     ├── app-panel.test.js
     ├── app-playground.test.js
     ├── app-theme-tabs.test.js
     ├── app-vehicle-catalog.test.js
+    ├── app-vehicle-context.test.js
     ├── content.test.js
+    ├── field-merge.test.js
+    ├── field-value.test.js
     ├── generators.test.js
+    ├── html-utils.test.js
+    ├── mapping-audit.test.js
     ├── messages.test.js
+    ├── profiles-repository.test.js
     ├── selector-engine.test.js
-    └── vehicle-catalog.test.js
+    ├── tabs-service.test.js
+    ├── url-utils.test.js
+    ├── vehicle-catalog.test.js
+    ├── batch-export.test.js
+    └── vehicle-context.test.js
 ```

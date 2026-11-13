@@ -76,27 +76,37 @@ Consequências deliberadas:
 - Comportamentos reais do jsdom (ex.: `new Event`, `window.close`, `location`) são exercitados de verdade.
 - Mocks de Chrome APIs vivem em `tests/fixtures/chrome-mock.js` e são explícitos por teste.
 
-## Estrutura de Testes (219 testes, 14 arquivos)
+## Estrutura de Testes (350 testes, 24 arquivos)
 
 | Arquivo | Módulo alvo | Testes | Tipo |
 |---|---|---|---|
-| `generators.test.js` | `generators.js` | 12 | Funções puras |
+| `generators.test.js` | `generators.js` | 17 | Funções puras |
 | `selector-engine.test.js` | `selector-engine.js` | 74 | Funções puras + estado de módulo |
-| `vehicle-catalog.test.js` | `data/vehicle-catalog.js` | 12 | Funções puras |
+| `vehicle-catalog.test.js` | `data/vehicle-catalog.js` | 15 | Funções puras |
+| `vehicle-context.test.js` | `domain/vehicle-context.js` | 19 | Funções puras |
+| `url-utils.test.js` | `domain/url-utils.js` | 26 | Funções puras |
+| `html-utils.test.js` | `domain/html-utils.js` | 9 | Funções puras |
+| `field-merge.test.js` | `domain/field-merge.js` | 9 | Funções puras |
+| `field-value.test.js` | `domain/field-value.js` | 5 | Funções puras |
+| `mapping-audit.test.js` | `domain/mapping-audit.js` | 8 | Funções puras |
 | `messages.test.js` | `messages.js` | 1 | Constantes |
-| `content.test.js` | `content.js` | 33 | Integração (DOM real + mock de runtime) |
+| `tabs-service.test.js` | `services/tabs-service.js` | 12 | Integração (mock de `chrome.tabs`/`scripting`) |
+| `profiles-repository.test.js` | `services/profiles-repository.js` | 13 | Integração (mock de `chrome.storage`) |
+| `content.test.js` | `content.js` | 40 | Integração (DOM real + mock de runtime) |
 | `app-mapping.test.js` | `app.js` (mapeamento) | 16 | Integração do popup |
-| `app-lifecycle.test.js` | `app.js` (ciclo de vida, fila, perfis) | 26 | Integração do popup |
+| `app-lifecycle.test.js` | `app.js` (ciclo de vida, fila, perfis) | 29 | Integração do popup |
 | `app-generator.test.js` | `app.js` (gerador) | 6 | Integração do popup |
 | `app-playground.test.js` | `app.js` (playground de seletores) | 7 | Integração do popup |
 | `app-theme-tabs.test.js` | `app.js` (tema, abas, modo popup/aba) | 8 | Integração do popup |
 | `app-vehicle-catalog.test.js` | `app.js` (catálogo de veículos) | 7 | Integração do popup |
+| `app-vehicle-context.test.js` | `app.js` (coerência marca/modelo) | 6 | Integração do popup |
 | `app-panel.test.js` | `app.js` (maximizar/fechar painel) | 5 | Integração do popup |
-| `app-field-actions.test.js` | `app.js` (ações da lista de campos) | 10 | Integração do popup |
+| `app-field-actions.test.js` | `app.js` (ações da lista de campos) | 15 | Integração do popup |
 | `app-floating-controls.test.js` | `app.js` (preenchimento sob demanda) | 2 | Integração do popup |
-| **Total** | | **219** | |
+| `app-escaping.test.js` | `app.js` (escape HTML do resultado) | 1 | Integração do popup |
+| **Total** | | **350** | |
 
-O antigo `app.test.js` (83 testes em um único arquivo) foi desmembrado por feature e removido. A cobertura de linhas de `app.js` é idêntica antes e depois da divisão; os únicos trechos não cobertos (`setLoading` e `autovalidar`) já não eram cobertos pelo arquivo antigo.
+O antigo `app.test.js` (83 testes em um único arquivo) foi desmembrado por feature e removido. A cobertura de linhas de `app.js` é idêntica antes e depois da divisão; os únicos trechos que não eram cobertos (`setLoading` e `autovalidar`) foram removidos no refactor, e a cobertura de linhas de `app.js` chegou a 100%.
 
 ### Suporte compartilhado
 
@@ -325,25 +335,17 @@ Relatório HTML em `reports/mutation/index.html` (ignorado pelo git).
 
 ## Coverage Real (`npm run test:coverage`)
 
-```
--------------------|---------|----------|---------|---------|-------------------
-File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
--------------------|---------|----------|---------|---------|-------------------
-All files          |   96.38 |    83.83 |   97.44 |   98.84 |
- scripts           |   96.21 |    83.16 |   97.31 |   98.79 |
-  app.js           |   94.83 |    78.62 |   95.85 |   97.99 | 340-348,1323-1333
-  content.js       |   97.94 |    84.45 |   96.66 |   99.65 | 346
-  generators.js    |   99.51 |    93.75 |     100 |     100 | ...64-165,199,345
-  messages.js      |     100 |      100 |     100 |     100 |
-  selector-engine.js|   96.36 |    91.13 |   98.64 |   99.57 | 196
- scripts/data      |     100 |      100 |     100 |     100 |
-  estados.js       |     100 |      100 |     100 |     100 |
-  mapping-types.js |     100 |      100 |     100 |     100 |
-  vehicle-catalog.js|    100 |      100 |     100 |     100 |
--------------------|---------|----------|---------|---------|-------------------
-```
+Última execução registrada: **372 testes em 27 arquivos**, todos aprovados.
 
-**Gate de coverage**: todos os thresholds atendidos. `app.js` (340-348: `setLoading`; 1323-1333: `autovalidar`) não é coberto nem pelos testes antigos; `selector-engine.js` mantém lines 99.57% e branches 91.13% (≥90).
+| Escopo | Statements | Branches | Functions | Lines |
+|---|---:|---:|---:|---:|
+| Global | 96,76% | 84,87% | 98,87% | 99,77% |
+| `app.js` | 97,67% | 83,00% | 96,15% | 100% |
+| `state/app-store.js` | — | — | — | 100% |
+| Controladores `ui/` | 94,36% | 76,58% | 98,40% | 99,69% |
+| `selector-engine.js` | 96,36% | 91,13% | 98,64% | 99,57% |
+
+**Leitura dos resultados**: a cobertura global de linhas não caiu significativamente — a execução anterior registrou 99,54% e esta chegou a 99,77%. A queda mais visível era localizada: o novo `state/app-store.js` estava em 50% de Lines e alguns controladores tinham caminhos de erro/atalhos sem asserções específicas. O teste de reset do estado cobre agora todos os seus caminhos; novos testes verificam erro de exportação, falha de clipboard e rejeição de atalhos inválidos/ocultos. A cobertura de branches dos controladores continua abaixo da de Lines porque há guards para referências opcionais e configurações que não existem no DOM de produção; não se deve adicionar testes de baixo valor só para percorrer essas combinações.
 
 ## Debugging
 

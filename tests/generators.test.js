@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_MODEL_YEARS } from "../src/scripts/data/vehicle-catalog.js";
 import {
   cnpj,
   cpf,
@@ -61,6 +62,56 @@ describe("geradores", () => {
       const generatedContext = definition.context();
       definition.fields.forEach(([, create]) => expect(create(generatedContext)).toBeTruthy());
     }
+  });
+
+  it("gera ano coerente com o modelo default do veículo", () => {
+    const data = createGeneratorData();
+    const context = data.vehicle.context();
+    const [primeiroAno, ultimoAno] =
+      DEFAULT_MODEL_YEARS[`${context.marca}|${context.modelo}`.toLocaleLowerCase()];
+    const anoField = data.vehicle.fields.find(([label]) => label === "Ano");
+
+    expect(context.ano).toBeGreaterThanOrEqual(primeiroAno);
+    expect(context.ano).toBeLessThanOrEqual(ultimoAno);
+    expect(anoField[1](context)).toBe(`${context.ano}/${context.ano + 1}`);
+  });
+
+  it("usa gerarAno quando o catálogo do gerador não tem faixa de ano", () => {
+    const data = createGeneratorData({
+      getVehicleCatalog: () => [{ marca: "Marca X", modelos: ["Modelo Y"] }],
+    });
+    const context = data.vehicle.context();
+    const anoField = data.vehicle.fields.find(([label]) => label === "Ano");
+
+    expect(context.ano).toBeUndefined();
+    expect(anoField[1](context)).toMatch(/^20\d{2}\/20\d{2}$/);
+  });
+
+  it("reaproveita o ano do veículo em generateMappedValue", () => {
+    const context = createGeneratorData().person.context();
+    const vehicleContext = { marca: "Toyota", modelo: "Corolla", ano: 2024 };
+
+    expect(generateMappedValue("year", context, "", { vehicleContext })).toBe("2024/2025");
+  });
+
+  it("deriva o ano do modelo quando o vehicleContext não traz ano", () => {
+    const context = createGeneratorData().person.context();
+    const value = generateMappedValue("year", context, "", {
+      vehicleContext: { marca: "Toyota", modelo: "Corolla" },
+    });
+
+    const [ano] = value.split("/");
+    expect(Number(ano)).toBeGreaterThanOrEqual(2020);
+    expect(Number(ano)).toBeLessThanOrEqual(2026);
+  });
+
+  it("usa gerarAno em generateMappedValue quando o catálogo não tem ano", () => {
+    const context = createGeneratorData().person.context();
+    const value = generateMappedValue("year", context, "", {
+      getVehicleCatalog: () => [{ marca: "Marca X", modelos: ["Modelo Y"] }],
+    });
+
+    expect(value).toMatch(/^20\d{2}\/20\d{2}$/);
   });
 
   it("expõe títulos, rótulos e campos estáveis para os três geradores", () => {

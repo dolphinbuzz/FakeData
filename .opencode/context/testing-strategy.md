@@ -138,7 +138,7 @@ Split by feature:
 | `app-theme-tabs.test.js` | Theme persistence, tabs/subtabs, popup vs dedicated tab mode |
 | `app-vehicle-catalog.test.js` | Catalog CRUD, validation and error paths |
 | `app-panel.test.js` | Maximize/close side panel, missing APIs, window fallbacks |
-| `app-field-actions.test.js` | Remap, label edit (Enter), highlight toggle, add selector, mark-all, clear values |
+| `app-field-actions.test.js` | Remap, label edit (Enter), highlight toggle, add selector, mark-all, clear values, clear page |
 | `app-floating-controls.test.js` | PAGE_FIELD_FILL_REQUEST (found/absent/no tab/error), fixed value |
 
 ### messages.test.js (Target: 100%)

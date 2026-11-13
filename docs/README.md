@@ -30,21 +30,31 @@ FakeData/
 │   │   ├── popup.css           # CSS custom properties (temas light/dark)
 │   │   └── privacy.css
 │   └── scripts/
-│       ├── app.js              # Orquestração UI + Messaging + Storage
+│       ├── app.js              # Orquestração UI + estado + listeners
 │       ├── content.js          # Content script (IIFE, injetado) - fila injeção, dispose, guarda vivacidade
 │       ├── generators.js       # Geração de dados pura (funções exportadas)
 │       ├── selector-engine.js  # Scan, inferType, selectorFor, captureNextClick, observer nav
-│       ├── messages.js         # ACTIONS enum (Object.freeze, 16 actions)
+│       ├── messages.js         # ACTIONS enum (Object.freeze, 17 actions)
 │       ├── privacy.js          # Lógica página privacidade
-│       └── data/
-│           ├── estados.js      # Const: ESTADOS (27), DDDS
-│           ├── mapping-types.js # Const: MAPPING_TYPES (30 entradas: 29 tipos + auto)
-│           └── vehicle-catalog.js # CRUD catálogo veículos (puro)
-├── tests/                      # 219 testes (100% passing)
+│       ├── data/
+│       │   ├── estados.js      # Const: ESTADOS (27), DDDS
+│       │   ├── mapping-types.js # Const: MAPPING_TYPES (30 entradas: 29 tipos + auto)
+│       │   └── vehicle-catalog.js # CRUD catálogo veículos (puro)
+│       ├── domain/             # Helpers puros extraídos do app.js
+│       │   ├── url-utils.js
+│       │   ├── html-utils.js
+│       │   ├── mapping-audit.js
+│       │   ├── field-merge.js
+│       │   ├── field-value.js
+│       │   └── vehicle-context.js
+│       └── services/           # Serviços com dependência de chrome.*
+│           ├── tabs-service.js
+│           └── profiles-repository.js
+├── tests/                      # 350 testes (100% passing)
 │   ├── setup.js               # Ambiente jsdom (sem mocks permissivos)
 │   ├── fixtures/              # chrome-mock.js, dom-factory.js
 │   ├── helpers/               # app-loader.js, interaction.js
-│   └── *.test.js              # 14 arquivos: app-*(9 por feature), content(33), selector-engine(74), generators(11), vehicle-catalog(12), messages(1)
+│   └── *.test.js              # 24 arquivos: app-*(por feature; 15 em field-actions, 29 em lifecycle), content(40), selector-engine(74), generators(17), vehicle-catalog(15), messages(1), domain(6), services(2)
 ├── .github/workflows/ci.yml    # Pipeline CI (5 jobs: test, mutation, lint, manifest-validation, version-consistency)
 ├── .opencode/                  # Config agente OpenCode V2
 │   ├── context/               # ADRs, API contracts, coding standards, testing strategy
@@ -101,9 +111,9 @@ Salva mapeamento → Nomeia → Aparece no dropdown → Seleciona → Edita/Reno
 
 ## Qualidade
 
-- **219 testes** passando (100%) em 14 arquivos
-- **Coverage real**: 96.38% statements, 83.83% branches, 97.44% functions, 98.84% lines
-- **✅ Gate de coverage**: todos os thresholds atendidos (`selector-engine.js` 99.57% lines / 91.13% branches; `app.js` 97.99% lines)
+- **350 testes** passando (100%) em 24 arquivos
+- **Coverage real**: 96.70% statements, 85.17% branches, 98.41% functions, 99.88% lines
+- **✅ Gate de coverage**: todos os thresholds atendidos (`selector-engine.js` 99.57% lines / 91.13% branches; `app.js` 100% lines)
 - **Thresholds**: 90% global (lines/functions/statements), 80% branches; mínimo 90% por arquivo (críticos 95-100%)
 - **Mutation testing**: Stryker nos módulos puros (`selector-engine.js`, `generators.js`, `vehicle-catalog.js`) com score mínimo de 60%
 - **CI**: GitHub Actions (Node 22, npm ci, test:coverage, mutation em pushes para main, manifest-validation, version-consistency; job de lint é no-op, pois não há script lint)
@@ -150,7 +160,7 @@ npm run validate-manifest  # script Node + ajv 8 + schema Chrome Manifest V3
 - `.gitattributes`: LF forçado em `.opencode/hooks/**/*.sh`
 
 ### A2 - Fila de Injeção + Guarda de Vivacidade + Dispose
-- `app.js`: `pendingInjections` (Map\<tabId, callback[]\>) + `injectContentScript()` serializa injeção por aba; waiters notificados juntos
+- `src/scripts/services/tabs-service.js`: `pendingInjections` (Map\<tabId, callback[]\>) + `injectContentScript()` serializa injeção por aba; waiters notificados juntos
 - `content.js`: instalação autoritativa — `previousInstall.dispose?.()` remove listener, marcações, controles, estilo e observer; `installationProbe` retorna `!disposed && Boolean(chrome.runtime?.id)` e expõe `dispose()`
 - `selector-engine.js`: `installNavigationObserver()` retorna função cleanup (disconnect MutationObserver, remove popstate/hashchange, restaura pushState/replaceState, limpa timer)
 

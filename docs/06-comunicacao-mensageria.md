@@ -3,7 +3,7 @@
 ## Visão Geral
 Protocolo de mensagens entre Popup/Side Panel (extension pages) e Content Scripts (páginas web). Baseado em `chrome.runtime.sendMessage` + `chrome.tabs.sendMessage` com fila de injeção, retry e guarda de re-injeção/dispose (A2).
 
-## ACTIONS (Contrato Imutável — 16 actions)
+## ACTIONS (Contrato Imutável — 17 actions)
 
 ```javascript
 const ACTIONS = Object.freeze({
@@ -25,6 +25,7 @@ const ACTIONS = Object.freeze({
   CAPTURE_NEXT_CLICK: "CAPTURE_NEXT_CLICK",          // {} → { captured, field? }
   UPDATE_PAGE_FIELD_CONTROLS: "UPDATE_PAGE_FIELD_CONTROLS",  // { fields[], visible } → { updated, count }
   SET_PAGE_FIELD_CONTROLS_VISIBILITY: "SET_PAGE_FIELD_CONTROLS_VISIBILITY", // { visible } → { updated, count }
+  CLEAR_PAGE_FIELDS: "CLEAR_PAGE_FIELDS",            // { selectors[] } → { cleared, total, failed[] }
 
   // Content → Popup (Request async from floating button)
   PAGE_FIELD_FILL_REQUEST: "PAGE_FIELD_FILL_REQUEST" // { key, selector } → { filled }
@@ -101,6 +102,16 @@ interface Field {
 // Popup responde: { filled: boolean }
 ```
 
+### CLEAR_PAGE_FIELDS
+```typescript
+// Popup → Content
+{ selectors: string[] }
+// Content responde:
+{ cleared: number, total: number, failed: Array<{ selector: string, error: string }> }
+// Limpa input/textarea/select/custom select/checkbox/radio/contenteditable
+// e dispara os eventos nativos correspondentes. Falhas são isoladas por seletor.
+```
+
 ### PAGE_CONTENT_CHANGED
 ```typescript
 { url: string, changeType: "route" | "dom" }
@@ -135,7 +146,7 @@ chrome.tabs.onActivated.addListener(() => {
 - Content script usa dynamic import: `Promise.all([import(...), import(...)])`
 - `modulesReady` Promise garante imports antes de handlers
 - Listener registrado imediatamente, handlers aguardam `modulesReady`
-- **Fila por aba**: `pendingInjections = new Map()` em `app.js`
+- **Fila por aba**: `pendingInjections = new Map()` em `src/scripts/services/tabs-service.js`
   - `injectContentScript(tabId, callback)` adiciona callback à fila da aba
   - Se já há injeção em andamento, callback entra na fila (coalescência)
   - `chrome.scripting.executeScript` chamado uma única vez
@@ -200,7 +211,8 @@ chrome.sidePanel.close({ windowId })
 - Timeouts: captureNextClick 30s, page change debounce 250ms
 
 ## Arquivos Relacionados
-- `src/scripts/messages.js` - ACTIONS enum (Object.freeze, 16 actions)
-- `src/scripts/app.js` - sendToPage, sendMessageToTab, injectContentScript, pendingInjections, getActiveTab, listeners
+- `src/scripts/messages.js` - ACTIONS enum (Object.freeze, 17 actions)
+- `src/scripts/app.js` - sendToPage, getActiveTab, listeners
+- `src/scripts/services/tabs-service.js` - sendMessageToTab, findActiveTab, injectContentScript, pendingInjections
 - `src/scripts/content.js` - handleMessage, chrome.runtime.onMessage, installationProbe, dispose, disposeNavigationObserver
 - `src/scripts/selector-engine.js` - installNavigationObserver (retorna cleanup function)

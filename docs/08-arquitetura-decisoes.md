@@ -36,16 +36,36 @@ Popup/Side Panel/Tab (extension pages) <---> Content Script (injetado)
 ## Módulos (ESM)
 
 src/scripts/
-  app.js              # Orquestração UI + Messaging + Storage
+  app.js              # Composição/bootstrap + ciclo de vida e coordenação global
   content.js          # Content script (IIFE, strict mode) - fila injeção, dispose, guarda vivacidade
   generators.js       # Pure data generation functions
   selector-engine.js  # Pure selector logic + DOM scanning + navigation observer (cleanup)
-  messages.js         # ACTIONS enum (Object.freeze, 16 actions)
+  messages.js         # ACTIONS enum (Object.freeze, 17 actions)
   privacy.js          # Privacy page logic
   data/
     estados.js        # Const: ESTADOS (27), DDDS
     mapping-types.js  # Const: MAPPING_TYPES (30 entradas: 29 tipos + auto)
     vehicle-catalog.js # Pure CRUD functions
+  domain/             # Helpers puros extraídos do app.js
+    url-utils.js      # normalizePageUrl, getBaseUrl
+    html-utils.js     # escapeHtml
+    mapping-audit.js  # getMappingAudit, auditJson
+    field-merge.js    # mergeScannedFields (mescla scan + perfil salvo)
+    field-value.js    # resolveFieldType, resolveFieldValue
+    vehicle-context.js # resolveVehicleContext (coerência marca/modelo)
+    batch-export.js   # Validação do tamanho do lote e serialização JSON/CSV
+  services/           # Serviços com dependência de chrome.*
+    tabs-service.js   # pendingInjections, injectContentScript, sendMessageToTab, findActiveTab
+    profiles-repository.js # migrateLegacyProfiles, readProfiles, writeProfiles
+  state/
+    app-store.js      # Estado mutável compartilhado pelos controladores
+  ui/
+    page-fields-panel.js # Scan, lista de campos e preenchimento
+    generator-panel.js # Geração, resultado e exportação
+    vehicle-catalog-panel.js # CRUD e modal do catálogo
+    selector-playground.js # Contagem, captura e marcação de seletores
+    profile-controls.js # Perfis e modal de mapeamento
+    navigation-controls.js # Tema, abas, atalhos e modos de abertura
 
 ### Padrões
 - Funções puras exportadas para testabilidade
@@ -106,7 +126,7 @@ Funções puras = alta cobertura (95%+). Integração = mocks complexos (90%+).
 **Date**: 2026-10-19
 **Context**: Race conditions em injeção concorrente (múltiplas abas/painéis), content script órfão após reload/extensão atualizada, navegação SPA sem cleanup de observers.
 **Decision**:
-- **Fila por aba** (`app.js`): `pendingInjections = Map<tabId, callback[]>`
+- **Fila por aba** (`services/tabs-service.js`): `pendingInjections = Map<tabId, callback[]>`
   - `injectContentScript(tabId, callback)` coalesce chamadas concorrentes na mesma aba
   - Uma única `executeScript` por aba; waiters notificados juntos
   - Entry removida **antes** de notificar (evita órfãos se waiter lançar)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addVehicleModel,
+  DEFAULT_MODEL_YEARS,
   DEFAULT_VEHICLE_CATALOG,
   normalizeVehicleCatalog,
   pickVehicle,
@@ -27,11 +28,41 @@ describe("catálogo de veículos", () => {
 
   it("seleciona um modelo somente da marca selecionada", () => {
     const result = pickVehicle([{ marca: "Ford", modelos: ["Ranger", "Ka"] }], (items) => items[0]);
-    expect(result).toEqual({ marca: "Ford", modelo: "Ranger" });
-    expect(pickVehicle([], (items) => items[0])).toEqual({
+    expect(result).toMatchObject({ marca: "Ford", modelo: "Ranger" });
+    expect(pickVehicle([], (items) => items[0])).toMatchObject({
       marca: DEFAULT_VEHICLE_CATALOG[0].marca,
       modelo: DEFAULT_VEHICLE_CATALOG[0].modelos[0]
     });
+  });
+
+  it("inclui o ano dentro da faixa do modelo default", () => {
+    const result = pickVehicle([], (items) => items[0]);
+    const [primeiroAno, ultimoAno] = DEFAULT_MODEL_YEARS["toyota|corolla"];
+
+    expect(Number.isInteger(result.ano)).toBe(true);
+    expect(result.ano).toBeGreaterThanOrEqual(primeiroAno);
+    expect(result.ano).toBeLessThanOrEqual(ultimoAno);
+  });
+
+  it("mantém ano indefinido para catálogo customizado sem faixa conhecida", () => {
+    const result = pickVehicle([{ marca: "Marca X", modelos: ["Modelo Y"] }], (items) => items[0]);
+
+    expect(result).toMatchObject({ marca: "Marca X", modelo: "Modelo Y" });
+    expect(result.ano).toBeUndefined();
+  });
+
+  it("mapeia faixas de anos para todos os modelos default com chave normalizada", () => {
+    const defaultModels = DEFAULT_VEHICLE_CATALOG.flatMap(({ marca, modelos }) =>
+      modelos.map((modelo) => ({ marca, modelo })));
+
+    expect(Object.keys(DEFAULT_MODEL_YEARS)).toHaveLength(defaultModels.length);
+    for (const { marca, modelo } of defaultModels) {
+      const key = `${marca}|${modelo}`.toLocaleLowerCase();
+      const [primeiroAno, ultimoAno] = DEFAULT_MODEL_YEARS[key];
+      expect(Number.isInteger(primeiroAno)).toBe(true);
+      expect(Number.isInteger(ultimoAno)).toBe(true);
+      expect(ultimoAno).toBeGreaterThanOrEqual(primeiroAno);
+    }
   });
 
   it("permite editar e excluir marcas e modelos", () => {

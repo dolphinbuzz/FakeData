@@ -29,7 +29,7 @@ Módulo responsável pela geração de dados fictícios realistas para testes de
 | Modelo | Vinculado à marca | Seleção aleatória por marca |
 | Placa | Mercosul (60%) ou antiga (40%) | `ABC1D23` ou `ABC-1234` |
 | Chassi/VIN | 17 chars ISO 3779 | Check digit posição 9 válido |
-| Ano | Fabricação 2015-2026 | `AAAA/AAAA` |
+| Ano | Faixa do modelo no catálogo (`DEFAULT_MODEL_YEARS`, 2017-2026) | `AAAA/AAAA` (ex.: `2024/2025`) |
 | Cor | Lista pré-definida | 7 opções |
 | UF | Estado | 27 UFs |
 

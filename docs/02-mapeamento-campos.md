@@ -6,10 +6,10 @@ Sistema de descoberta, inferência e mapeamento de campos de formulário em pág
 ## Sub-abas
 
 ### Automático
-- **Escanear campos**: Descobre inputs, selects, textareas, custom selects
+- **Escanear campos**: Descobre inputs, selects, textareas, custom selects, mesclando com o mapeamento salvo (sem remapear)
 - **Revisar campos**: Tipo inferido, seletor CSS, label, status
 - **Ações por campo**: Marcar, Localizar, Capturar (🎯), Preencher
-- **Ações em lote**: Marcar todos, Preencher todos, Salvar seletores
+- **Ações em lote**: Marcar todos, Preencher todos, Salvar seletores, Limpar todos (limpa também a página)
 
 ### Playground
 - **Verificar seletor CSS**: Conta matches em tempo real

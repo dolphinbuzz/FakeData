@@ -1,5 +1,5 @@
 import { DDDS, ESTADOS } from "./data/estados.js";
-import { pickVehicle } from "./data/vehicle-catalog.js";
+import { pickModelYear, pickVehicle } from "./data/vehicle-catalog.js";
 
 const DEFAULT_PROVIDERS = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"];
 const VIN_ALPHABET = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789";
@@ -305,7 +305,7 @@ export function createGeneratorData({
       fields: [
         ["Marca", (ctx) => ctx.marca],
         ["Modelo", (ctx) => ctx.modelo],
-        ["Placa", () => gerarPlaca()], ["Chassi", () => gerarChassi()], ["Ano", () => gerarAno()],
+        ["Placa", () => gerarPlaca()], ["Chassi", () => gerarChassi()], ["Ano", (ctx) => ctx.ano ? `${ctx.ano}/${ctx.ano + 1}` : gerarAno()],
         ["Renavam", () => gerarRenavam(getRenavamFormatted())],
         ["Cor", () => pick(["Preto", "Branco", "Prata", "Azul", "Vermelho", "Cinza", "Verde"])],
         ["UF", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`]
@@ -345,6 +345,8 @@ export function generateMappedValue(type, context, inputType = "", options = {})
   const resolvedContext = context || data.person.context();
   const vehicle = options.vehicleContext ||
     pickVehicle(options.getVehicleCatalog ? options.getVehicleCatalog() : [], pick);
+  const ano = vehicle.ano ?? pickModelYear(vehicle.marca, vehicle.modelo, pick);
+  const year = ano === undefined ? gerarAno() : `${ano}/${ano + 1}`;
   const personValues = {
     name: `${resolvedContext.nome} ${resolvedContext.sobrenome}`,
     cpf: cpf(options.getCpfFormatted ? options.getCpfFormatted() : true),
@@ -360,7 +362,7 @@ export function generateMappedValue(type, context, inputType = "", options = {})
     income: `R$ ${randomInt(1800, 18000).toLocaleString("pt-BR")},00`,
     company: `${pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma", "Conecta", "Aliança", "Pleno", "Vértice"])} Tecnologia Ltda.`,
     cnpj: cnpj(options.getCnpjFormatted ? options.getCnpjFormatted() : true, options.getCnpjAlphanumeric ? options.getCnpjAlphanumeric() : false),
-    brand: vehicle.marca, model: vehicle.modelo, year: gerarAno(),
+    brand: vehicle.marca, model: vehicle.modelo, year,
     plate: gerarPlaca(), chassi: gerarChassi(), renavam: gerarRenavam(options.getRenavamFormatted ? options.getRenavamFormatted() : false),
     website: gerarSite(pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma"])), text: randomWord()
   };

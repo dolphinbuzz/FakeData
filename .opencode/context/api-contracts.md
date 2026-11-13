@@ -23,6 +23,7 @@ const ACTIONS = {
   CAPTURE_NEXT_CLICK: "CAPTURE_NEXT_CLICK",          // {} -> { captured: boolean, field?: Field }
   UPDATE_PAGE_FIELD_CONTROLS: "UPDATE_PAGE_FIELD_CONTROLS",  // { fields: [{key,selector,label}], visible: boolean } -> { updated: boolean, count: number }
   SET_PAGE_FIELD_CONTROLS_VISIBILITY: "SET_PAGE_FIELD_CONTROLS_VISIBILITY", // { visible: boolean } -> { updated: boolean, count: number }
+  CLEAR_PAGE_FIELDS: "CLEAR_PAGE_FIELDS",            // { selectors: string[] } -> { cleared: number, total: number, failed: Array<{selector, error}> }
   
   // Content -> Popup (Async Request from Floating Button)
   PAGE_FIELD_FILL_REQUEST: "PAGE_FIELD_FILL_REQUEST" // { key, selector } -> { filled: boolean }
@@ -88,7 +89,7 @@ interface StoredField {
   label: string;
   dataType: MappingType;          // User-selected (may differ from inferredType)
   fixed: boolean;                 // Checkbox "Fixar valor"
-  fixedValue: string;             // Value if fixed, else last used
+  fixedValue: string;             // Value if fixed=true; "" for non-fixed fields (A5)
   selectorRule: string;
   selectorStatus: "stable" | "fragile";
   selectorSuggestion: string;
@@ -230,7 +231,8 @@ function removeVehicleModel(catalog: VehicleCatalogEntry[], marca: string, model
 function removeVehicleBrand(catalog: VehicleCatalogEntry[], marca: string): VehicleCatalogEntry[];
 function renameVehicleBrand(catalog: VehicleCatalogEntry[], marca: string, novoNome: string): VehicleCatalogEntry[];
 function renameVehicleModel(catalog: VehicleCatalogEntry[], marca: string, modelo: string, novoModelo: string): VehicleCatalogEntry[];
-function pickVehicle(catalog: VehicleCatalogEntry[], pick: (arr) => any): { marca: string, modelo: string };
+function pickVehicle(catalog: VehicleCatalogEntry[], pick: (arr) => any): { marca: string, modelo: string, ano?: number };
+function pickModelYear(marca: string, modelo: string, pick: (arr) => any): number | undefined;
 ```
 
 ## Validation Functions (generators.js)
@@ -248,7 +250,7 @@ function gerarAno(): string;  // "2024/2025"
 ## URL Utilities (app.js)
 ```typescript
 function normalizePageUrl(url: string): string;  // Remove query + hash
-function getBaseUrl(url: string): string;        // "https://dominio.com.br" (handles .com.br)
+function getBaseUrl(url: string): string;        // "https://dominio.com.br" (colapsa subdomínios; trata sufixos de 2 níveis, IPs, localhost e TLDs reservados)
 function profileId(): string;                    // "${pageUrl}::${Date.now()}::${random}"
 ```
 

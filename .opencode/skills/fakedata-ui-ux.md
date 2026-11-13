@@ -18,14 +18,15 @@ opencode/nemotron-3-ultra-free
 ## Arquivos Principais
 - src/popup.html - Estrutura principal
 - src/styles/popup.css - Estilos (CSS custom properties para theming)
-- src/scripts/app.js - Lógica UI (renderPageFields, modais, tabs, eventos)
+- src/scripts/app.js - Lógica UI (renderPageFields, delegação de eventos, modais, tabs)
 - src/privacy.html + src/styles/privacy.css
 
 ## Fluxos UI Principais
 - detectPopupMode() -> applyPopupMode() - Popup vs Side Panel vs Tab
 - activateTab("generator"|"mapping") - Abas principais
 - activateMappingSubtab("automatic"|"playground") - Sub-abas de mapeamento
-- renderPageFields() - Linhas de campo dinâmicas com editores
+- renderPageFields() - Reconstrói a lista de campos (scan, carregar perfil, limpar)
+- Delegação de eventos em #page-fields (click/change/input/keydown/focusout) com atualização pontual do DOM (A7)
 - Modais: nome do mapeamento, catálogo de veículos, confirmações
 
 ## Theming

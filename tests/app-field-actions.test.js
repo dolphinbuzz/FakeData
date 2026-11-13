@@ -3,7 +3,7 @@ import { ACTIONS } from "../src/scripts/messages.js";
 import { createChromeMock } from "./fixtures/chrome-mock.js";
 import { createPopupDOM, scannedFields } from "./fixtures/dom-factory.js";
 import { loadApp, nextTick } from "./helpers/app-loader.js";
-import { click, expectSentAction, getPageFieldsStatus } from "./helpers/interaction.js";
+import { click, expectSentAction, getLastSentMessage, getPageFieldsStatus } from "./helpers/interaction.js";
 
 let dom;
 let chromeMock;
@@ -138,15 +138,67 @@ describe("popup app - ações da lista de campos", () => {
     expect(getPageFieldsStatus()).toBe("Não foi possível atualizar as marcações.");
   });
 
-  it("limpa os valores preenchidos de todos os campos", () => {
+  it("limpa os valores preenchidos de todos os campos na página", async () => {
     click("#fill-all-button");
     const filledValues = [...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value);
     expect(filledValues.every((value) => value.length > 0)).toBe(true);
 
+    appUtils.clearSentMessages();
     click("#clear-all-button");
+    await nextTick();
 
+    expect(getLastSentMessage(chromeMock, ACTIONS.CLEAR_PAGE_FIELDS)).toMatchObject({ selectors: ["#email", "#cpf"] });
     expect(getPageFieldsStatus()).toBe("2 campo(s) limpado(s).");
     expect([...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value)).toEqual(["", ""]);
+  });
+
+  it("preserva os valores quando a limpeza na página falha", async () => {
+    click("#fill-all-button");
+    const filledValues = [...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value);
+
+    chromeMock.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      if (message.action === ACTIONS.CLEAR_PAGE_FIELDS) {
+        chromeMock.runtime.lastError = { message: "Receiver unavailable" };
+        callback();
+        chromeMock.runtime.lastError = null;
+        return;
+      }
+      callback({});
+    });
+
+    click("#clear-all-button");
+    await nextTick();
+
+    expect(getPageFieldsStatus()).toBe("Não foi possível limpar os campos desta página.");
+    expect([...document.querySelectorAll(".page-field-fixed-value")].map((input) => input.value)).toEqual(filledValues);
+  });
+
+  it("limpa apenas os campos que o content script confirmou", async () => {
+    const rows = document.querySelectorAll(".page-field");
+    [["a@b.com"], ["123"]].forEach(([value], index) => {
+      const row = rows[index];
+      const toggle = row.querySelector(".page-field-fixed-toggle");
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event("change", { bubbles: true }));
+      const input = row.querySelector(".page-field-fixed-value");
+      input.value = value;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    chromeMock.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      if (message.action === ACTIONS.CLEAR_PAGE_FIELDS) {
+        callback({ cleared: 1, total: 2, failed: [{ selector: "#cpf", error: "Elemento não encontrado" }] });
+        return;
+      }
+      callback({});
+    });
+
+    click("#clear-all-button");
+    await nextTick();
+
+    expect(getPageFieldsStatus()).toBe("1 campo(s) limpado(s); 1 não foi(ram) limpo(s).");
+    expect(document.querySelector(".page-field[data-index='0'] .page-field-fixed-value").value).toBe("");
+    expect(document.querySelector(".page-field[data-index='1'] .page-field-fixed-value").value).toBe("123");
   });
 
   it("informa quando não há preenchimentos para limpar", async () => {
@@ -158,5 +210,56 @@ describe("popup app - ações da lista de campos", () => {
     click("#clear-all-button");
 
     expect(getPageFieldsStatus()).toBe("Nenhum preenchimento para limpar.");
+  });
+
+  it("volta os botões de marcação ao estado desmarcado após limpar todos", async () => {
+    click("#mark-all-button");
+    await nextTick();
+    expect(document.querySelector("#mark-all-button").textContent).toBe("Desmarcar todos");
+    expect([...document.querySelectorAll(".page-field [data-action='highlight']")].map((button) => button.textContent))
+      .toEqual(["Desmarcar", "Desmarcar"]);
+
+    click("#clear-all-button");
+    await nextTick();
+
+    expect(document.querySelector("#mark-all-button").textContent).toBe("Marcar todos");
+    expect([...document.querySelectorAll(".page-field [data-action='highlight']")].map((button) => button.textContent))
+      .toEqual(["Marcar", "Marcar"]);
+  });
+
+  it("preserva campo sem seletor que o content script reportou como falha", async () => {
+    const rows = document.querySelectorAll(".page-field");
+    const selectorInput = rows[0].querySelector(".page-field-selector");
+    selectorInput.value = "";
+    selectorInput.dispatchEvent(new Event("input", { bubbles: true }));
+    const toggle = rows[0].querySelector(".page-field-fixed-toggle");
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+    const valueInput = rows[0].querySelector(".page-field-fixed-value");
+    valueInput.value = "a@b.com";
+    valueInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    chromeMock.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      if (message.action === ACTIONS.CLEAR_PAGE_FIELDS) {
+        callback({ cleared: 1, total: 2, failed: [{ selector: "", error: "Seletor inválido: valor vazio" }] });
+        return;
+      }
+      callback({});
+    });
+
+    click("#clear-all-button");
+    await nextTick();
+
+    expect(document.querySelector(".page-field[data-index='0'] .page-field-fixed-value").value).toBe("a@b.com");
+    expect(document.querySelector(".page-field[data-index='1'] .page-field-fixed-value").value).toBe("");
+  });
+
+  it("não reconstrói a linha ao alternar o valor fixo (A7)", () => {
+    const row = document.querySelector(".page-field");
+    const toggle = row.querySelector(".page-field-fixed-toggle");
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(document.querySelector(".page-field")).toBe(row);
   });
 });

@@ -112,7 +112,9 @@ Ex: `https://exemplo.com/page::1700000000000::abc123`
 ### getBaseUrl(url)
 ```javascript
 // app.exemplo.com.br + api.exemplo.com.br → https://exemplo.com.br
-// Tratamento especial .com.br (3 níveis) e .com (2 níveis)
+// Colapsa para os 2 últimos labels; sufixos de 2 níveis conhecidos
+// (com.br, org.br, co.uk, com.au, co.jp, ...) preservam 3 labels
+// IPs, localhost e TLDs reservados (test, example, invalid) não são colapsados
 // Porta incluída se não padrão
 ```
 
@@ -140,7 +142,7 @@ Ex: `https://exemplo.com/page::1700000000000::abc123`
 |-------------|---------------|
 | `fixed=false` | Gera novo valor a cada preenchimento |
 | `fixed=true` | Usa `fixedValue` (persistido) |
-| Após preenchimento | `value` e `fixedValue` atualizados (mesmo se não fixo) |
+| Após preenchimento | `value` é sempre atualizado; `fixedValue` só é gravado se `fixed=true` |
 
 ## Fluxos Principais
 
@@ -161,6 +163,7 @@ Ex: `https://exemplo.com/page::1700000000000::abc123`
 - **Excluir**: Confirmação → remove do array `pages`
 
 ## Arquivos Relacionados
-- `src/scripts/app.js` - Toda lógica de storage/profile/migration
+- `src/scripts/app.js` - Orquestração dos perfis (seleção, renomeação, exclusão)
+- `src/scripts/services/profiles-repository.js` - migrateLegacyProfiles, readProfiles, writeProfiles (storage)
 - `src/scripts/messages.js` - ACTIONS (PAGE_FIELD_FILL_REQUEST)
 - `src/scripts/content.js` - floating button click → PAGE_FIELD_FILL_REQUEST

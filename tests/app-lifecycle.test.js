@@ -34,6 +34,27 @@ describe("popup app - ciclo de vida e injeção", () => {
     expect(scans.length).toBeGreaterThanOrEqual(3);
   });
 
+  it("ignora mudanças de conteúdo de outra aba ou de outra origem (achado A6)", async () => {
+    const listener = appUtils.getAppMessageListener();
+    appUtils.clearSentMessages();
+
+    listener({ action: ACTIONS.PAGE_CONTENT_CHANGED, changeType: "dom", url: "https://sistema.example.test/cadastro" }, { tab: { id: 99, url: "https://sistema.example.test/cadastro" } });
+    listener({ action: ACTIONS.PAGE_CONTENT_CHANGED, changeType: "dom", url: "https://sistema.example.test/cadastro" }, { tab: { id: 10, url: "https://outro.test/cadastro" } });
+    await nextTick();
+
+    expect(appUtils.getSentMessages().filter((item) => item.message.action === ACTIONS.SCAN_FIELDS)).toHaveLength(0);
+  });
+
+  it("aceita mudança de conteúdo sem sender.tab (achado A6)", async () => {
+    const listener = appUtils.getAppMessageListener();
+    appUtils.clearSentMessages();
+
+    listener({ action: ACTIONS.PAGE_CONTENT_CHANGED, changeType: "dom", url: "https://sistema.example.test/cadastro" }, {});
+    await nextTick();
+
+    expect(appUtils.getSentMessages().filter((item) => item.message.action === ACTIONS.SCAN_FIELDS)).toHaveLength(1);
+  });
+
   it("informa quando não há uma página web acessível", async () => {
     appUtils.cleanup();
     chromeMock = createChromeMock({ scanFields: scannedFields, openTabs: [{ id: 1, url: "chrome://settings/", active: true }] });
@@ -59,6 +80,38 @@ describe("popup app - ciclo de vida e injeção", () => {
     await nextTick();
 
     expect(getPageFieldsStatus()).toContain("Não foi possível ler esta página");
+  });
+
+  // A1 / cenário RT-10: o clique manual em "Escanear campos" apenas relê a página,
+  // sem remapear e sem descartar o seletor salvo.
+  it("apenas escaneia ao clicar em Escanear campos, preservando o seletor salvo (achado A1)", async () => {
+    appUtils.cleanup();
+    chromeMock = createChromeMock({
+      scanFields: scannedFields,
+      profiles: [{
+        id: "profile-1",
+        name: "Perfil com seletor ajustado",
+        pageUrl: "https://sistema.example.test/cadastro",
+        fields: [{ ...scannedFields[0], selector: "#email-atualizado" }],
+      }],
+    });
+    dom = createPopupDOM();
+    appUtils = await loadApp(chromeMock);
+
+    chromeMock.tabs.sendMessage.mockImplementation(() => {});
+    click("#scan-fields-button");
+
+    expect(getPageFieldsStatus()).toBe("Lendo campos da página...");
+
+    chromeMock.tabs.sendMessage.mockImplementation((tabId, message, callback) => {
+      if (message && message.action === ACTIONS.SCAN_FIELDS) callback({ fields: scannedFields });
+      else callback({});
+    });
+    click("#scan-fields-button");
+    await nextTick();
+
+    expect([...document.querySelectorAll(".page-field-selector")].map((input) => input.value))
+      .toEqual(["#email-atualizado", "#cpf"]);
   });
 
   it("serializa a injeção por aba e atende chamadas concorrentes com um único executeScript", async () => {
