@@ -20,6 +20,110 @@ afterEach(() => {
 });
 
 describe("popup app - mapeamento de campos", () => {
+  it("ordena os tipos e filtra cada seletor sem alterar o valor atual", () => {
+    const rows = document.querySelectorAll(".page-field");
+    const firstSearch = rows[0].querySelector(".page-field-type-search");
+    const firstType = rows[0].querySelector(".page-field-type");
+    const originalType = firstType.value;
+    const firstMenu = firstType.parentElement.querySelector(".page-field-type-menu");
+    const secondOptions = rows[1].querySelectorAll(".page-field-type-option");
+    const labels = [...rows[0].querySelectorAll(".page-field-type-option")].map((option) => option.textContent);
+
+    expect(labels).toEqual([...labels].sort((first, second) =>
+      first.localeCompare(second, "pt-BR", { sensitivity: "base" })
+    ));
+    expect(firstMenu.hidden).toBe(true);
+
+    firstType.click();
+    expect(firstMenu.hidden).toBe(false);
+    expect(firstMenu.contains(firstSearch)).toBe(true);
+
+    firstSearch.value = "sem-correspondencia";
+    firstSearch.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(rows[0].querySelectorAll(".page-field-type-option")).toHaveLength(0);
+    expect(rows[0].querySelector(".page-field-type-no-results").hidden).toBe(false);
+    expect(firstType.value).toBe(originalType);
+
+    firstSearch.value = "ENDERECO";
+    firstSearch.dispatchEvent(new Event("input", { bubbles: true }));
+
+    expect([...rows[0].querySelectorAll(".page-field-type-option")].map((option) => option.value))
+      .toEqual(["address"]);
+    expect(firstType.value).toBe(originalType);
+    expect(rows[1].querySelectorAll(".page-field-type-option")).toHaveLength(secondOptions.length);
+
+    rows[0].querySelector('.page-field-type-option[value="address"]').click();
+    expect(getMappedFields()[0].type).toBe("address");
+    expect(firstType.querySelector(".page-field-type-value").textContent).toBe("Endereço");
+    expect(firstMenu.hidden).toBe(true);
+
+    firstType.focus();
+    firstType.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      cancelable: true,
+    }));
+    expect(firstMenu.hidden).toBe(false);
+    expect(document.activeElement).toBe(firstSearch);
+
+    firstSearch.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    }));
+    expect(firstMenu.hidden).toBe(true);
+    expect(document.activeElement).toBe(firstType);
+  });
+
+  it("navega pelo menu pesquisável com teclado e fecha ao sair do controle", () => {
+    const row = document.querySelector(".page-field");
+    const trigger = row.querySelector(".page-field-type");
+    const control = row.querySelector(".page-field-type-control");
+    const menu = row.querySelector(".page-field-type-menu");
+    const search = row.querySelector(".page-field-type-search");
+
+    trigger.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      cancelable: true,
+    }));
+    expect(menu.hidden).toBe(false);
+    expect(document.activeElement).toBe(search);
+
+    search.value = "a";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    const options = () => [...control.querySelectorAll(".page-field-type-option")];
+    expect(options().length).toBeGreaterThan(1);
+
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(options()[0]);
+    options()[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(options()[1]);
+    options()[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(options()[0]);
+    options()[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(options().at(-1));
+    options().at(-1).dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(options()[0]);
+    options()[0].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(options().at(-1));
+    options().at(-1).dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(menu.hidden).toBe(true);
+    expect(document.activeElement).toBe(trigger);
+
+    trigger.click();
+    search.value = "phone";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(trigger.value).toBe("phone");
+    expect(menu.hidden).toBe(true);
+
+    trigger.click();
+    expect(menu.hidden).toBe(false);
+    row.querySelector(".page-field-selector").click();
+    expect(menu.hidden).toBe(true);
+  });
+
   it("escaneia campos da aba ativa e renderiza os mapeamentos encontrados", async () => {
     expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(
       10, // tabId da aba ativa

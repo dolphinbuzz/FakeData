@@ -448,8 +448,8 @@ describe("popup app - persistência e atualização de perfil", () => {
 
   it("persiste alterações de tipo e valor fixo do campo", async () => {
     const type = document.querySelector(".page-field-type");
-    type.value = "phone";
-    type.dispatchEvent(new Event("change", { bubbles: true }));
+    type.click();
+    document.querySelector('.page-field-type-option[value="phone"]').click();
     const fixed = document.querySelector(".page-field-fixed-toggle");
     fixed.click();
     const value = document.querySelector(".page-field-fixed-value");
