@@ -49,20 +49,22 @@ export function initPageFieldsPanel({
   } = refs;
 
   function renderEmptyState() {
-    if (!emptyStateElement || !emptyStateTitle || !emptyStateSubtitle || !pageFieldsStatus) return;
+    if (!emptyStateElement || !emptyStateTitle || !emptyStateSubtitle) return;
 
     const hasFields = state.pageFields.length > 0;
     const hasPageUrl = Boolean(state.activePageUrl);
 
-    emptyStateElement.hidden = hasFields || !hasPageUrl;
+    // O bloco só existe para orientar quando não há campos mapeados.
+    emptyStateElement.hidden = hasFields;
 
-    if (!hasFields && hasPageUrl) {
+    if (hasPageUrl) {
       emptyStateTitle.textContent = "Nenhum campo encontrado nesta página";
       emptyStateSubtitle.textContent = "A página carregada não possui inputs, selects ou textareas detectáveis. Tente recarregar a página ou verificar se o formulário está visível.";
-    } else if (!hasPageUrl) {
-      emptyStateTitle.textContent = "Nenhuma página acessível";
-      emptyStateSubtitle.textContent = "Abra uma página HTTP(S) com um formulário para começar. Páginas internas do navegador (chrome://, edge://) não são suportadas.";
+      return;
     }
+
+    emptyStateTitle.textContent = "Nenhuma página acessível";
+    emptyStateSubtitle.textContent = "Abra uma página HTTP(S) com um formulário para começar. Páginas internas do navegador (chrome://, edge://) não são suportadas.";
   }
 
   function clearAllPageFields() {
@@ -92,7 +94,6 @@ export function initPageFieldsPanel({
       });
       updateMarkAllButton();
       renderPageFields();
-      renderEmptyState();
       if (!pageFieldsStatus) return;
       const cleared = typeof response.cleared === "number" ? response.cleared : state.pageFields.length - failed.length;
       if (failed.length) {

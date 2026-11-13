@@ -36,7 +36,7 @@ Popup/Side Panel/Tab (extension pages) <---> Content Script (injetado)
 ## Módulos (ESM)
 
 src/scripts/
-  app.js              # Orquestração UI + estado + listeners
+  app.js              # Composição/bootstrap + ciclo de vida e coordenação global
   content.js          # Content script (IIFE, strict mode) - fila injeção, dispose, guarda vivacidade
   generators.js       # Pure data generation functions
   selector-engine.js  # Pure selector logic + DOM scanning + navigation observer (cleanup)
@@ -53,9 +53,19 @@ src/scripts/
     field-merge.js    # mergeScannedFields (mescla scan + perfil salvo)
     field-value.js    # resolveFieldType, resolveFieldValue
     vehicle-context.js # resolveVehicleContext (coerência marca/modelo)
+    batch-export.js   # Validação do tamanho do lote e serialização JSON/CSV
   services/           # Serviços com dependência de chrome.*
     tabs-service.js   # pendingInjections, injectContentScript, sendMessageToTab, findActiveTab
     profiles-repository.js # migrateLegacyProfiles, readProfiles, writeProfiles
+  state/
+    app-store.js      # Estado mutável compartilhado pelos controladores
+  ui/
+    page-fields-panel.js # Scan, lista de campos e preenchimento
+    generator-panel.js # Geração, resultado e exportação
+    vehicle-catalog-panel.js # CRUD e modal do catálogo
+    selector-playground.js # Contagem, captura e marcação de seletores
+    profile-controls.js # Perfis e modal de mapeamento
+    navigation-controls.js # Tema, abas, atalhos e modos de abertura
 
 ### Padrões
 - Funções puras exportadas para testabilidade

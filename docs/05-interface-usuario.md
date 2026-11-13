@@ -100,14 +100,21 @@ chrome.windows.getCurrent((win) => {
 
 ## Estados de UI
 - `hidden` attribute (não `display:none`)
+- Componentes com `display` de autor (ex.: `.empty-state`, `.mapping-modal`) reafirmam a regra do user-agent com `.classe[hidden] { display: none }`
 - Loading: botão disabled + texto "Carregando..."
 - Status messages: `#page-fields-status`, `#vehicle-catalog-status`
-- Empty states: "Nenhum campo encontrado", "Nenhum veículo cadastrado"
+- Empty states: `#empty-state` fica visível sempre que não houver campos mapeados — "Nenhum campo encontrado nesta página" (página HTTP(S)) ou "Nenhuma página acessível" (aba interna) — e é ocultado quando há campos; "Nenhum veículo cadastrado"
 
 ## Arquivos Relacionados
 - `src/popup.html` - Estrutura completa
 - `src/styles/popup.css` - CSS custom properties, responsivo
-- `src/scripts/app.js` - Toda lógica de UI, modais, tabs, eventos, shortcuts
+- `src/scripts/app.js` - Composição dos controladores, bootstrap e coordenação de abas/mensagens
+- `src/scripts/ui/generator-panel.js` - Gerador, resultado e exportação JSON/CSV
+- `src/scripts/ui/vehicle-catalog-panel.js` - CRUD e modal do catálogo de veículos
+- `src/scripts/ui/selector-playground.js` - Playground de seletores
+- `src/scripts/ui/profile-controls.js` - Perfis e modal de mapeamento
+- `src/scripts/ui/navigation-controls.js` - Tema, navegação, atalhos e modos popup/aba/painel
+- `src/scripts/ui/page-fields-panel.js` - Lista, scan, preenchimento e ações dos campos
 - `src/scripts/domain/` - Helpers puros usados pela UI (url-utils, html-utils, field-merge, field-value, vehicle-context, mapping-audit)
 - `src/scripts/services/` - Serviços com dependência de `chrome.*` (tabs-service, profiles-repository)
 - `src/privacy.html` + `src/styles/privacy.css` - Página privacidade

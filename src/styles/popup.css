@@ -442,6 +442,39 @@ h2 {
   margin-right: 5px;
 }
 
+.batch-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.batch-controls input {
+  width: 82px;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.batch-export-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.batch-status {
+  min-height: 16px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .result-section {
   margin-top: 28px;
 }
@@ -911,6 +944,11 @@ footer a:hover {
   border-color: #586579;
 }
 
+.copy-all-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
 .result-fields {
   display: grid;
   gap: 8px;
@@ -1009,6 +1047,12 @@ footer {
   border: 1px dashed var(--border);
   border-radius: 10px;
   margin: 24px 0;
+}
+
+/* `display: flex` acima vence a regra do user-agent `[hidden] { display: none }`,
+   então o atributo `hidden` precisa ser reafirmado como estilo de autor. */
+.empty-state[hidden] {
+  display: none;
 }
 
 .empty-state__icon {

@@ -335,27 +335,17 @@ Relatório HTML em `reports/mutation/index.html` (ignorado pelo git).
 
 ## Coverage Real (`npm run test:coverage`)
 
-```
--------------------|---------|----------|---------|---------|-------------------
-File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
--------------------|---------|----------|---------|---------|-------------------
-All files          |   96.70 |    85.17 |   98.41 |   99.88 |
- scripts           |   96.31 |    83.33 |   98.14 |   99.86 |
-  app.js           |   94.76 |    77.96 |   97.43 |     100 | ...1242,1248,1261
-  content.js       |   98.26 |    86.28 |   97.01 |    99.71 | 421
-  generators.js    |   99.51 |    95.09 |     100 |     100 | ...24,164-165,345
-  selector-engine.js|   96.36 |    91.13 |   98.64 |   99.57 | 196
- scripts/data      |   98.96 |    94.52 |     100 |     100 |
-  vehicle-catalog.js|   98.93 |    94.52 |     100 |     100 | 120,127-130
- scripts/domain    |     100 |    99.04 |     100 |     100 |
-  vehicle-context.js|     100 |    97.50 |     100 |     100 | 7
- scripts/services  |     100 |    94.64 |     100 |     100 |
-  profiles-repository.js| 100 |   96.15 |     100 |     100 | 15
-  tabs-service.js  |     100 |    93.33 |     100 |     100 | 19,73
--------------------|---------|----------|---------|---------|-------------------
-```
+Última execução registrada: **372 testes em 27 arquivos**, todos aprovados.
 
-**Gate de coverage**: todos os thresholds atendidos. `app.js` ficou com 100% de lines após a remoção de `setLoading` e `autovalidar` (código morto) e a extração dos módulos de `domain/`/`services/`; `selector-engine.js` mantém lines 99.57% e branches 91.13% (≥90). Como parte da suíte exercita geração aleatória (`pick`), branches/funcs podem variar décimos entre execuções.
+| Escopo | Statements | Branches | Functions | Lines |
+|---|---:|---:|---:|---:|
+| Global | 96,76% | 84,87% | 98,87% | 99,77% |
+| `app.js` | 97,67% | 83,00% | 96,15% | 100% |
+| `state/app-store.js` | — | — | — | 100% |
+| Controladores `ui/` | 94,36% | 76,58% | 98,40% | 99,69% |
+| `selector-engine.js` | 96,36% | 91,13% | 98,64% | 99,57% |
+
+**Leitura dos resultados**: a cobertura global de linhas não caiu significativamente — a execução anterior registrou 99,54% e esta chegou a 99,77%. A queda mais visível era localizada: o novo `state/app-store.js` estava em 50% de Lines e alguns controladores tinham caminhos de erro/atalhos sem asserções específicas. O teste de reset do estado cobre agora todos os seus caminhos; novos testes verificam erro de exportação, falha de clipboard e rejeição de atalhos inválidos/ocultos. A cobertura de branches dos controladores continua abaixo da de Lines porque há guards para referências opcionais e configurações que não existem no DOM de produção; não se deve adicionar testes de baixo valor só para percorrer essas combinações.
 
 ## Debugging
 

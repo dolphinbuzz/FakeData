@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Geração de lotes de até 100 registros para Pessoa, Veículo e Empresa, com exportação em JSON e CSV
 - Agentic development team structure with specialized agents
 - OpenCode configuration with hooks, skills, workflows
 - Shared context files (architecture decisions, API contracts, coding standards, testing strategy)
@@ -28,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Falsos positivos causados por mocks globais permissivos e por estado de módulo vazando entre testes (ex.: `runtimeContextInvalidated` no `selector-engine`)
+- Painel de campos: o bloco de empty state (`#empty-state`) permanecia visível após o escaneamento detectar campos, pois `display: flex` vencia o atributo `hidden`; a regra `.empty-state[hidden]` restaura o comportamento e o bloco agora só aparece quando não há campos mapeados
 
 ## [1.0.1] - 2026-01-15
 

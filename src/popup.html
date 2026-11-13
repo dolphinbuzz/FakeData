@@ -175,6 +175,10 @@
           <span aria-hidden="true">✦</span>
           Gerar <span id="generate-label">Pessoa</span>
         </button>
+        <div class="batch-controls">
+          <label for="batch-size">Quantidade de registros (1–100)</label>
+          <input id="batch-size" type="number" min="1" max="100" step="1" value="1" inputmode="numeric">
+        </div>
       </section>
 
       <section id="result-section" class="result-section is-hidden" aria-live="polite">
@@ -185,6 +189,11 @@
           </div>
           <button id="copy-json-button" class="copy-all-button" type="button">Copiar JSON</button>
         </div>
+        <div class="batch-export-actions">
+          <button id="export-json-button" class="copy-all-button" type="button">Baixar JSON</button>
+          <button id="export-csv-button" class="copy-all-button" type="button">Baixar CSV</button>
+        </div>
+        <p id="batch-status" class="batch-status" role="status" aria-live="polite"></p>
         <div id="result-fields" class="result-fields"></div>
       </section>
       </div>
