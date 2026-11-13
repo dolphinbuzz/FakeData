@@ -1,3 +1,5 @@
+const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
+
 export const MAPPING_TYPES = [
   ["auto", "Inferir automaticamente"],
   ["name", "Nome"],
@@ -29,4 +31,20 @@ export const MAPPING_TYPES = [
   ["checkbox", "Checkbox"],
   ["radio", "Radio"],
   ["text", "Texto"]
-];
+].sort(([, firstLabel], [, secondLabel]) => collator.compare(firstLabel, secondLabel));
+
+function normalizeSearchTerm(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR");
+}
+
+export function filterMappingTypes(query) {
+  const searchTerm = normalizeSearchTerm(query).trim();
+  if (!searchTerm) return MAPPING_TYPES;
+
+  return MAPPING_TYPES.filter(([value, label]) =>
+    normalizeSearchTerm(`${label} ${value}`).includes(searchTerm)
+  );
+}

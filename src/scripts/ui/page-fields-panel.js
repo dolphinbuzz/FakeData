@@ -1,6 +1,6 @@
 // Painel de campos da página: escaneamento, renderização, ações por campo,
 // marcação, preenchimento e limpeza. Extraído do `app.js` na Fase 2.
-import { MAPPING_TYPES } from "../data/mapping-types.js";
+import { filterMappingTypes, MAPPING_TYPES } from "../data/mapping-types.js";
 import { ACTIONS } from "../messages.js";
 import { escapeHtml } from "../domain/html-utils.js";
 import { mergeScannedFields } from "../domain/field-merge.js";
@@ -47,6 +47,71 @@ export function initPageFieldsPanel({
     baseUrlSelect,
     copyAuditButton
   } = refs;
+
+  function getTypeOptionsMarkup(field, query = "") {
+    return filterMappingTypes(query).map(([value, label]) =>
+      `<button type="button" class="page-field-type-option" role="option" aria-selected="${field.dataType === value}" value="${escapeHtml(value)}">${escapeHtml(label)}</button>`
+    ).join("");
+  }
+
+  function renderTypeOptions(control, field, query = "") {
+    const options = control.querySelector(".page-field-type-options");
+    const noResults = control.querySelector(".page-field-type-no-results");
+    const matches = filterMappingTypes(query);
+    if (options) options.innerHTML = getTypeOptionsMarkup(field, query);
+    if (noResults) noResults.hidden = matches.length > 0;
+  }
+
+  function closeTypeMenu(control, returnFocus = false) {
+    const trigger = control && control.querySelector(".page-field-type");
+    const menu = control && control.querySelector(".page-field-type-menu");
+    if (!trigger || !menu) return;
+    menu.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+    if (returnFocus) trigger.focus();
+  }
+
+  function closeOtherTypeMenus(exceptControl = null) {
+    if (!pageFieldsElement) return;
+    pageFieldsElement.querySelectorAll(".page-field-type-control").forEach((control) => {
+      if (control !== exceptControl) closeTypeMenu(control);
+    });
+  }
+
+  function toggleTypeMenu(control, field) {
+    const trigger = control.querySelector(".page-field-type");
+    const menu = control.querySelector(".page-field-type-menu");
+    const search = control.querySelector(".page-field-type-search");
+    if (!trigger || !menu || !search) return;
+    if (!menu.hidden) {
+      closeTypeMenu(control, true);
+      return;
+    }
+
+    closeOtherTypeMenus(control);
+    search.value = "";
+    renderTypeOptions(control, field);
+    menu.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    search.focus();
+  }
+
+  function selectTypeOption(option, field) {
+    const control = option.closest(".page-field-type-control");
+    const trigger = control && control.querySelector(".page-field-type");
+    const value = option.value;
+    const selectedType = MAPPING_TYPES.find(([type]) => type === value);
+    if (!trigger || !selectedType) return;
+
+    field.dataType = value;
+    trigger.value = value;
+    trigger.querySelector(".page-field-type-value").textContent = selectedType[1];
+    closeTypeMenu(control, true);
+  }
+
+  function handleTypeMenuOutsideClick(event) {
+    if (!event.target.closest(".page-field-type-control")) closeOtherTypeMenus();
+  }
 
   function renderEmptyState() {
     if (!emptyStateElement || !emptyStateTitle || !emptyStateSubtitle) return;
@@ -160,9 +225,9 @@ export function initPageFieldsPanel({
   function renderPageFields() {
     if (!pageFieldsElement) return;
     pageFieldsElement.innerHTML = state.pageFields.map((field, index) => {
-      const options = MAPPING_TYPES.map(([value, label]) =>
-        `<option value="${escapeHtml(value)}" ${field.dataType === value ? "selected" : ""}>${escapeHtml(label)}</option>`
-      ).join("");
+      const options = getTypeOptionsMarkup(field);
+      const selectedType = MAPPING_TYPES.find(([value]) => value === field.dataType);
+      const typeLabel = selectedType ? selectedType[1] : field.dataType;
       return `
         <div class="page-field" data-index="${index}">
           <div class="page-field-heading">
@@ -172,7 +237,17 @@ export function initPageFieldsPanel({
             ${field.selectorStatus !== "stable" || field.selectorSuggestion ? `<span class="field-warning" title="${escapeHtml(field.selectorSuggestion || "Este campo possui um problema no mapeamento.")}" aria-label="${escapeHtml(field.selectorSuggestion || "Este campo possui um problema no mapeamento.")}">!</span>` : ""}
             <span class="muted">${escapeHtml(field.inputType || field.tagName)}</span>
           </div>
-          <select class="page-field-type" aria-label="Tipo para ${escapeHtml(field.label)}">${options}</select>
+          <div class="page-field-type-control">
+            <button type="button" class="page-field-type" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="page-field-type-options-${index}" aria-label="Tipo para ${escapeHtml(field.label)}" value="${escapeHtml(field.dataType)}">
+              <span class="page-field-type-value">${escapeHtml(typeLabel)}</span>
+              <span class="page-field-type-arrow" aria-hidden="true">▾</span>
+            </button>
+            <div class="page-field-type-menu" hidden>
+              <input class="page-field-type-search" type="search" aria-label="Buscar tipo para ${escapeHtml(field.label)}" placeholder="Buscar tipo..." autocomplete="off">
+              <div id="page-field-type-options-${index}" class="page-field-type-options" role="listbox" aria-label="Tipos para ${escapeHtml(field.label)}">${options}</div>
+              <p class="page-field-type-no-results" role="status" hidden>Nenhum tipo corresponde à busca</p>
+            </div>
+          </div>
           <input class="page-field-selector" type="text" aria-label="Seletor para ${escapeHtml(field.label)}" value="${escapeHtml(field.selector)}">
           <label class="page-field-fixed"><input class="page-field-fixed-toggle" type="checkbox" ${field.fixed ? "checked" : ""}> Fixar valor</label>
           <input class="page-field-fixed-value" type="text" aria-label="Valor para ${escapeHtml(field.label)}" placeholder="Valor" value="${escapeHtml((field.fixed ? field.fixedValue : field.value) || "")}" ${field.fixed ? "" : "disabled"}>
@@ -238,6 +313,8 @@ export function initPageFieldsPanel({
     if (selectorInput) selectorInput.setAttribute("aria-label", `Seletor para ${field.label}`);
     const valueInput = row.querySelector(".page-field-fixed-value");
     if (valueInput) valueInput.setAttribute("aria-label", `Valor para ${field.label}`);
+    const typeSearchInput = row.querySelector(".page-field-type-search");
+    if (typeSearchInput) typeSearchInput.setAttribute("aria-label", `Buscar tipo para ${field.label}`);
     const locateButton = row.querySelector('[data-action="locate"]');
     if (locateButton) locateButton.setAttribute("aria-label", `Localizar ${field.label}`);
     const fillButton = row.querySelector('[data-action="fill"]');
@@ -308,6 +385,15 @@ export function initPageFieldsPanel({
   function handlePageFieldClick(event) {
     const context = getPageFieldContext(event.target);
     if (!context) return;
+    const typeOption = event.target.closest(".page-field-type-option");
+    if (typeOption) {
+      selectTypeOption(typeOption, context.field);
+      return;
+    }
+    if (event.target.closest(".page-field-type")) {
+      toggleTypeMenu(context.row.querySelector(".page-field-type-control"), context.field);
+      return;
+    }
     if (event.target.closest(".page-field-edit-label")) {
       startPageFieldLabelEdition(context.row);
       return;
@@ -332,10 +418,6 @@ export function initPageFieldsPanel({
   function handlePageFieldChange(event) {
     const context = getPageFieldContext(event.target);
     if (!context) return;
-    if (event.target.matches(".page-field-type")) {
-      context.field.dataType = event.target.value;
-      return;
-    }
     if (event.target.matches(".page-field-fixed-toggle")) {
       context.field.fixed = event.target.checked;
       if (event.target.checked && !context.field.fixedValue) {
@@ -352,17 +434,76 @@ export function initPageFieldsPanel({
   function handlePageFieldInput(event) {
     const context = getPageFieldContext(event.target);
     if (!context) return;
-    if (event.target.matches(".page-field-selector")) {
+    if (event.target.matches(".page-field-type-search")) {
+      renderTypeOptions(
+        context.row.querySelector(".page-field-type-control"),
+        context.field,
+        event.target.value
+      );
+    } else if (event.target.matches(".page-field-selector")) {
       context.field.selector = event.target.value;
     } else if (event.target.matches(".page-field-fixed-value") && context.field.fixed) {
       context.field.fixedValue = event.target.value;
     }
   }
 
+  function moveTypeOptionFocus(control, currentOption, direction) {
+    const options = [...control.querySelectorAll(".page-field-type-option")];
+    if (!options.length) return;
+    const currentIndex = options.indexOf(currentOption);
+    const nextIndex = currentIndex < 0
+      ? direction > 0 ? 0 : options.length - 1
+      : (currentIndex + direction + options.length) % options.length;
+    options[nextIndex].focus();
+  }
+
   function handlePageFieldKeydown(event) {
-    if (!event.target || !event.target.matches || !event.target.matches(".page-field-label-editor")) return;
+    if (!event.target || !event.target.matches) return;
     const context = getPageFieldContext(event.target);
     if (!context) return;
+    if (event.target.matches(".page-field-type")) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        toggleTypeMenu(context.row.querySelector(".page-field-type-control"), context.field);
+      }
+      return;
+    }
+    if (event.target.matches(".page-field-type-search")) {
+      const control = context.row.querySelector(".page-field-type-control");
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeTypeMenu(control, true);
+      } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        moveTypeOptionFocus(control, null, event.key === "ArrowDown" ? 1 : -1);
+      } else if (event.key === "Enter") {
+        const options = control.querySelectorAll(".page-field-type-option");
+        if (options.length === 1) {
+          event.preventDefault();
+          selectTypeOption(options[0], context.field);
+        } else if (options.length > 1) {
+          event.preventDefault();
+          options[0].focus();
+        }
+      }
+      return;
+    }
+    if (event.target.matches(".page-field-type-option")) {
+      const control = context.row.querySelector(".page-field-type-control");
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeTypeMenu(control, true);
+      } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        moveTypeOptionFocus(control, event.target, event.key === "ArrowDown" ? 1 : -1);
+      } else if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        const options = control.querySelectorAll(".page-field-type-option");
+        options[event.key === "Home" ? 0 : options.length - 1]?.focus();
+      }
+      return;
+    }
+    if (!event.target.matches(".page-field-label-editor")) return;
     if (event.key === "Enter") {
       event.preventDefault();
       event.target.blur();
@@ -378,6 +519,11 @@ export function initPageFieldsPanel({
   function handlePageFieldBlur(event) {
     if (!event.target || !event.target.matches || !event.target.matches(".page-field-label-editor")) return;
     commitPageFieldLabelEdition(event.target);
+  }
+
+  function handlePageFieldTypeFocusOut(event) {
+    const control = event.target.closest(".page-field-type-control");
+    if (control && !control.contains(event.relatedTarget)) closeTypeMenu(control);
   }
 
   function syncPageFieldControls() {
@@ -561,8 +707,10 @@ export function initPageFieldsPanel({
     pageFieldsElement.addEventListener("change", handlePageFieldChange);
     pageFieldsElement.addEventListener("input", handlePageFieldInput);
     pageFieldsElement.addEventListener("keydown", handlePageFieldKeydown);
+    pageFieldsElement.addEventListener("focusout", handlePageFieldTypeFocusOut);
     pageFieldsElement.addEventListener("blur", handlePageFieldBlur, true);
   }
+  document.addEventListener("click", handleTypeMenuOutsideClick);
   if (floatingControlsToggle) floatingControlsToggle.addEventListener("change", () => {
     state.floatingControlsVisible = floatingControlsToggle.checked;
     persistFloatingControls(state.floatingControlsVisible);
