@@ -223,9 +223,9 @@ describe("popup app - ciclo de vida e injeção", () => {
     });
 
     click("#scan-fields-button");
-    const baseUrlSelect = document.querySelector("#base-url-select");
-    baseUrlSelect.value = "https://outro.example.test";
-    baseUrlSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    const monitoredTabSelect = document.querySelector("#monitored-tab-select");
+    monitoredTabSelect.value = "11";
+    monitoredTabSelect.dispatchEvent(new Event("change", { bubbles: true }));
 
     expect(Array.from(injectionCallbacks.keys())).toEqual([10, 11]);
     expect(chromeMock.scripting.executeScript).toHaveBeenCalledTimes(2);
@@ -608,5 +608,61 @@ describe("popup app - tolerância a APIs ausentes", () => {
 
     expect(document.querySelectorAll(".page-field")).toHaveLength(2);
     expect(getPageFieldsStatus()).toBe("2 campo(s) encontrado(s). Selecione o tipo e ajuste o seletor se necessário.");
+  });
+});
+
+describe("popup app - ciclo de vida da guia monitorada", () => {
+  it("atualiza a URL exibida e reescaneia a guia selecionada ao terminar navegação", async () => {
+    appUtils.cleanup();
+    const tabs = [
+      { id: 10, url: "https://sistema.example.test/cadastro", active: true },
+      { id: 11, url: "https://sistema.example.test/login" },
+    ];
+    chromeMock = createChromeMock({ scanFields: scannedFields, openTabs: tabs });
+    dom = createPopupDOM();
+    appUtils = await loadApp(chromeMock);
+
+    const listener = chromeMock.tabs.onUpdated.addListener.mock.calls[0][0];
+    tabs[0].url = "https://sistema.example.test/cadastro?etapa=2#dados";
+    listener(10, { url: tabs[0].url }, tabs[0]);
+
+    const select = document.querySelector("#monitored-tab-select");
+    expect(select.options[0].textContent).toBe(tabs[0].url);
+
+    chromeMock.tabs.sendMessage.mockClear();
+    listener(10, { status: "complete" }, tabs[0]);
+
+    expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(
+      10,
+      { action: ACTIONS.SCAN_FIELDS },
+      expect.any(Function)
+    );
+  });
+
+  it("seleciona outra guia e reescaneia quando a guia selecionada é fechada", async () => {
+    appUtils.cleanup();
+    const tabs = [
+      { id: 10, url: "https://sistema.example.test/cadastro", active: true },
+      { id: 11, url: "https://sistema.example.test/login" },
+    ];
+    chromeMock = createChromeMock({ scanFields: scannedFields, openTabs: tabs });
+    dom = createPopupDOM();
+    appUtils = await loadApp(chromeMock);
+
+    const select = document.querySelector("#monitored-tab-select");
+    select.value = "11";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    chromeMock.tabs.sendMessage.mockClear();
+
+    tabs.splice(1, 1);
+    const listener = chromeMock.tabs.onRemoved.addListener.mock.calls[0][0];
+    listener(11, { windowId: 1 });
+
+    expect(select.value).toBe("10");
+    expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(
+      10,
+      { action: ACTIONS.SCAN_FIELDS },
+      expect.any(Function)
+    );
   });
 });

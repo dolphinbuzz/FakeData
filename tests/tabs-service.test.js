@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  findActiveTab,
+  findSelectedTab,
   injectContentScript,
   sendMessageToTab,
 } from "../src/scripts/services/tabs-service.js";
@@ -132,19 +132,31 @@ describe("tabs-service", () => {
     });
   });
 
-  describe("findActiveTab", () => {
-    it("prioriza a aba ativa dentro da base selecionada", () => {
+  describe("findSelectedTab", () => {
+    it("prioriza a guia selecionada mesmo quando outra guia está ativa", () => {
       chrome.tabs.query.mockImplementation((queryInfo, callback) => callback([
         { id: 1, url: "https://outro.test/x", active: true },
         { id: 2, url: "https://app.test/a" },
-        { id: 3, url: "https://app.test/b", active: true },
+        { id: 3, url: "https://app.test/b" },
         { id: 4, url: "chrome://extensions" },
       ]));
       const callback = vi.fn();
 
-      findActiveTab("https://app.test", callback);
+      findSelectedTab(3, callback);
 
-      expect(callback).toHaveBeenCalledWith({ id: 3, url: "https://app.test/b", active: true });
+      expect(callback).toHaveBeenCalledWith({ id: 3, url: "https://app.test/b" });
+    });
+
+    it("usa a guia ativa quando a guia selecionada não está mais disponível", () => {
+      chrome.tabs.query.mockImplementation((queryInfo, callback) => callback([
+        { id: 1, url: "https://primeira.test/x" },
+        { id: 2, url: "https://ativa.test/a", active: true },
+      ]));
+      const callback = vi.fn();
+
+      findSelectedTab(3, callback);
+
+      expect(callback).toHaveBeenCalledWith({ id: 2, url: "https://ativa.test/a", active: true });
     });
 
     it("usa a primeira aba web quando nenhuma está ativa", () => {
@@ -154,7 +166,7 @@ describe("tabs-service", () => {
       ]));
       const callback = vi.fn();
 
-      findActiveTab("", callback);
+      findSelectedTab(null, callback);
 
       expect(callback).toHaveBeenCalledWith({ id: 1, url: "https://primeira.test/a" });
     });
@@ -167,7 +179,7 @@ describe("tabs-service", () => {
       ]));
       const callback = vi.fn();
 
-      findActiveTab("", callback);
+      findSelectedTab(null, callback);
 
       expect(callback).toHaveBeenCalledWith(null);
     });
@@ -176,7 +188,7 @@ describe("tabs-service", () => {
       chrome.tabs.query.mockImplementation((queryInfo, callback) => callback(null));
       const callback = vi.fn();
 
-      findActiveTab("https://app.test", callback);
+      findSelectedTab(3, callback);
 
       expect(callback).toHaveBeenCalledWith(null);
     });
@@ -187,7 +199,7 @@ describe("tabs-service", () => {
       const callback = vi.fn();
 
       try {
-        findActiveTab("https://app.test", callback);
+        findSelectedTab(3, callback);
       } finally {
         chrome.tabs = tabs;
       }

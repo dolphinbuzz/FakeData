@@ -2,7 +2,7 @@
 import { ACTIONS } from "./messages.js";
 import { normalizePageUrl, getBaseUrl } from "./domain/url-utils.js";
 import { escapeHtml } from "./domain/html-utils.js";
-import { sendMessageToTab, findActiveTab } from "./services/tabs-service.js";
+import { sendMessageToTab, findSelectedTab } from "./services/tabs-service.js";
 import { migrateLegacyProfiles } from "./services/profiles-repository.js";
 import { initPageFieldsPanel } from "./ui/page-fields-panel.js";
 import { initGeneratorPanel } from "./ui/generator-panel.js";
@@ -29,7 +29,7 @@ const remapAllButton = document.querySelector("#remap-all-button");
 const copyAuditButton = document.querySelector("#copy-audit-button");
 const pageFieldsElement = document.querySelector("#page-fields");
 const pageFieldsStatus = document.querySelector("#page-fields-status");
-const baseUrlSelect = document.querySelector("#base-url-select");
+const monitoredTabSelect = document.querySelector("#monitored-tab-select");
 let pageFieldsPanel;
 
 function loadFloatingControlsPreference(callback) {
@@ -163,11 +163,11 @@ pageFieldsPanel = initPageFieldsPanel({
     clearAllButton,
     floatingControlsToggle,
     remapAllButton,
-    baseUrlSelect,
+    monitoredTabSelect,
     copyAuditButton
   },
   sendToPage,
-  getActiveTab,
+  getSelectedTab,
   readProfiles: profileControls.readProfiles,
   updateSavedProfiles: profileControls.updateSavedProfiles,
   getCurrentProfile: profileControls.getCurrentProfile,
@@ -184,7 +184,7 @@ migrateLegacyProfiles(() => {
   loadFloatingControlsPreference(() => {
     navigationControls.detectPopupMode((isPopup) => {
       navigationControls.applyPopupMode(isPopup);
-      refreshBaseUrlOptions(() => {
+      refreshMonitoredTabOptions(() => {
         if (pageFieldsElement) pageFieldsPanel.scanPageFields();
       });
     });
@@ -195,10 +195,33 @@ if (chrome.tabs && chrome.tabs.onActivated) {
     state.activeTab = null;
     state.activePageUrl = "";
     state.activeBaseUrl = "";
-    refreshBaseUrlOptions(() => pageFieldsPanel.scanPageFields());
+    refreshMonitoredTabOptions(() => pageFieldsPanel.scanPageFields());
   });
 }
-// A6: aceita apenas mensagens da aba ativa cuja origem bate com a base da página.
+if (chrome.tabs && chrome.tabs.onUpdated) {
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (!changeInfo || (!changeInfo.url && changeInfo.status !== "complete")) return;
+    const shouldScan = changeInfo.status === "complete" && state.selectedTabId === tabId;
+    refreshMonitoredTabOptions(() => {
+      if (shouldScan) pageFieldsPanel.scanPageFields();
+    });
+  });
+}
+if (chrome.tabs && chrome.tabs.onRemoved) {
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    const selectedTabRemoved = state.selectedTabId === tabId;
+    if (selectedTabRemoved) {
+      state.selectedTabId = null;
+      state.activeTab = null;
+      state.activePageUrl = "";
+      state.activeBaseUrl = "";
+    }
+    refreshMonitoredTabOptions(() => {
+      if (selectedTabRemoved) pageFieldsPanel.scanPageFields();
+    });
+  });
+}
+// A6: aceita apenas mensagens da guia monitorada cuja origem bate com a base da página.
 // Sem `sender.tab` (ex.: mensagens internas) a mensagem é aceita, como antes.
 function shouldHandlePageContentChange(sender) {
   if (!state.activeTab) return false;
@@ -257,28 +280,29 @@ function clearDisplayedPageFields(statusMessage) {
   if (pageFieldsStatus) pageFieldsStatus.textContent = statusMessage;
 }
 
-function getActiveTab(callback) {
-  findActiveTab(state.selectedBaseUrl, callback);
+function getSelectedTab(callback) {
+  findSelectedTab(state.selectedTabId, callback);
 }
 
-function refreshBaseUrlOptions(callback = () => {}) {
-  if (!baseUrlSelect || !chrome.tabs || !chrome.tabs.query) {
+function refreshMonitoredTabOptions(callback = () => {}) {
+  if (!monitoredTabSelect || !chrome.tabs || !chrome.tabs.query) {
     callback();
     return;
   }
   chrome.tabs.query({}, (tabs) => {
-    const bases = [...new Set((tabs || [])
-      .map((tab) => tab && /^https?:/i.test(tab.url || "") ? getBaseUrl(tab.url) : "")
-      .filter(Boolean))].sort();
-    if (state.selectedBaseUrl && !bases.includes(state.selectedBaseUrl)) state.selectedBaseUrl = "";
-    baseUrlSelect.innerHTML = bases.length
-      ? bases.map((base) => `<option value="${escapeHtml(base)}">${escapeHtml(base)}</option>`).join("")
-      : '<option value="">Nenhuma página HTTP(S) aberta</option>';
-    if (!state.selectedBaseUrl) {
-      const activeWebTab = (tabs || []).find((tab) => tab && tab.active && /^https?:/i.test(tab.url || ""));
-      state.selectedBaseUrl = activeWebTab ? getBaseUrl(activeWebTab.url) : bases[0] || "";
+    const webTabs = (tabs || []).filter((tab) =>
+      tab && Number.isInteger(tab.id) && /^https?:/i.test(tab.url || "")
+    );
+    if (!webTabs.some((tab) => tab.id === state.selectedTabId)) {
+      const activeWebTab = webTabs.find((tab) => tab.active);
+      state.selectedTabId = (activeWebTab || webTabs[0] || {}).id ?? null;
     }
-    baseUrlSelect.value = state.selectedBaseUrl;
+    monitoredTabSelect.innerHTML = webTabs.length
+      ? webTabs.map((tab) =>
+        `<option value="${tab.id}">${escapeHtml(tab.url)}</option>`
+      ).join("")
+      : '<option value="">Nenhuma página HTTP(S) aberta</option>';
+    monitoredTabSelect.value = state.selectedTabId === null ? "" : String(state.selectedTabId);
     callback();
   });
 }
@@ -288,7 +312,7 @@ function sendToPage(message, callback) {
     callback(null, new Error("Nenhuma página ativa."));
     return;
   }
-  getActiveTab((tab) => {
+  getSelectedTab((tab) => {
     state.activeTab = tab;
     if (!state.activeTab || !state.activeTab.id || !/^https?:/i.test(state.activeTab.url || "")) {
       callback(null, new Error("Nenhuma página ativa."));

@@ -79,6 +79,8 @@ export function createChromeMock(overrides = {}) {
     },
     tabs: {
       onActivated: { addListener: vi.fn() },
+      onUpdated: { addListener: vi.fn() },
+      onRemoved: { addListener: vi.fn() },
       query: vi.fn((queryInfo, callback) => callback(openTabs)),
       sendMessage: vi.fn((tabId, message, callback) => {
         sentMessages.push({ tabId, message: clone(message) });

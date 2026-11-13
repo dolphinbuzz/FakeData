@@ -18,7 +18,7 @@ export function initPageFieldsPanel({
   state,
   refs,
   sendToPage,
-  getActiveTab,
+  getSelectedTab,
   readProfiles,
   updateSavedProfiles,
   getCurrentProfile,
@@ -44,7 +44,7 @@ export function initPageFieldsPanel({
     clearAllButton,
     floatingControlsToggle,
     remapAllButton,
-    baseUrlSelect,
+    monitoredTabSelect,
     copyAuditButton
   } = refs;
 
@@ -177,7 +177,7 @@ export function initPageFieldsPanel({
   function scanPageFields(remapping = false, preserveCurrent = false) {
     if (!pageFieldsStatus) return;
     pageFieldsStatus.textContent = remapping ? "Remapeando campos automaticamente..." : "Lendo campos da página...";
-    getActiveTab((tab) => {
+    getSelectedTab((tab) => {
       state.activeTab = tab;
       state.activePageUrl = normalizePageUrl(tab && tab.url ? tab.url : "");
       state.activeBaseUrl = getBaseUrl(state.activePageUrl);
@@ -692,8 +692,9 @@ export function initPageFieldsPanel({
   }
 
   if (scanFieldsButton) scanFieldsButton.addEventListener("click", () => scanPageFields());
-  if (baseUrlSelect) baseUrlSelect.addEventListener("change", () => {
-    state.selectedBaseUrl = baseUrlSelect.value;
+  if (monitoredTabSelect) monitoredTabSelect.addEventListener("change", () => {
+    const selectedTabId = Number(monitoredTabSelect.value);
+    state.selectedTabId = Number.isInteger(selectedTabId) ? selectedTabId : null;
     scanPageFields();
   });
   if (emptyStateScanButton) emptyStateScanButton.addEventListener("click", () => scanPageFields());

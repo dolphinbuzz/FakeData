@@ -3,7 +3,7 @@ import { ACTIONS } from "../src/scripts/messages.js";
 import { createChromeMock } from "./fixtures/chrome-mock.js";
 import { createPopupDOM, scannedFields } from "./fixtures/dom-factory.js";
 import { loadApp, nextTick } from "./helpers/app-loader.js";
-import { click, pressShortcut, expectSentAction, getPageFieldsStatus, getLastSentMessage } from "./helpers/interaction.js";
+import { click, pressShortcut, expectSentAction } from "./helpers/interaction.js";
 
 let dom;
 let chromeMock;
@@ -118,8 +118,8 @@ describe("popup app - modo popup vs aba dedicada", () => {
   });
 });
 
-describe("popup app - mudança de base URL e abas", () => {
-  it("lista bases registráveis sem duplicar subdomínios", async () => {
+describe("popup app - seleção de guias monitoradas", () => {
+  it("lista cada guia HTTP(S) com a URL completa", async () => {
     appUtils.cleanup();
     chromeMock = createChromeMock({
       scanFields: scannedFields,
@@ -133,32 +133,45 @@ describe("popup app - mudança de base URL e abas", () => {
     dom = createPopupDOM();
     appUtils = await loadApp(chromeMock);
 
-    expect([...document.querySelectorAll("#base-url-select option")].map((o) => o.value))
-      .toEqual(["https://exemplo.com.br", "https://outro.com"]);
+    expect([...document.querySelectorAll("#monitored-tab-select option")].map((o) => [o.value, o.textContent]))
+      .toEqual([
+        ["10", "https://www.exemplo.com.br/cadastro"],
+        ["11", "https://app.exemplo.com.br/outra"],
+        ["12", "https://www.outro.com/login"],
+      ]);
   });
 
-  it("troca a página monitorada ao selecionar outra base", async () => {
+  it("mapeia a guia selecionada mesmo quando outra guia tem a mesma URL base", async () => {
     appUtils.cleanup();
     const tabs = [
-      { id: 10, url: "https://www.exemplo.com.br/cadastro", active: true },
-      { id: 11, url: "https://app.outro.com/login" },
+      { id: 10, url: "https://www.exemplo.com.br/cadastro?origem=1#form", active: true },
+      { id: 11, url: "https://app.exemplo.com.br/outra?origem=2#login" },
     ];
     chromeMock = createChromeMock({ scanFields: scannedFields, openTabs: tabs });
     dom = createPopupDOM();
     appUtils = await loadApp(chromeMock);
 
     appUtils.clearSentMessages();
-    const select = document.querySelector("#base-url-select");
-    select.value = "https://outro.com";
+    chromeMock.tabs.sendMessage.mockClear();
+    const select = document.querySelector("#monitored-tab-select");
+    select.value = "11";
     select.dispatchEvent(new Event("change", { bubbles: true }));
 
     expect(chromeMock.tabs.query).toHaveBeenCalled();
     expect(expectSentAction(chromeMock, ACTIONS.SCAN_FIELDS)).toBe(true);
-    const scanMsg = getLastSentMessage(chromeMock, ACTIONS.SCAN_FIELDS);
-    expect(scanMsg).toBeTruthy();
+    expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(
+      11,
+      { action: ACTIONS.SCAN_FIELDS },
+      expect.any(Function)
+    );
+    expect([...select.options].map((option) => option.textContent))
+      .toEqual([
+        "https://www.exemplo.com.br/cadastro?origem=1#form",
+        "https://app.exemplo.com.br/outra?origem=2#login",
+      ]);
   });
 
-  it("ignora alterações de outra aba ou de outra base", async () => {
+  it("ignora alterações enviadas por outra guia", async () => {
     const listener = appUtils.getAppMessageListener();
     appUtils.clearSentMessages();
 

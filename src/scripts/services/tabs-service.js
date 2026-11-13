@@ -1,5 +1,3 @@
-import { getBaseUrl } from "../domain/url-utils.js";
-
 // Injeções em andamento por aba (tabId -> callbacks aguardando o fim da injeção).
 // Serializa a injeção sob demanda: chamadas concorrentes na mesma aba compartilham
 // uma única execução de content.js e são notificadas juntas ao terminar.
@@ -64,16 +62,14 @@ export function sendMessageToTab(tabId, message, callback, allowInjection) {
   });
 }
 
-export function findActiveTab(selectedBaseUrl, callback) {
+export function findSelectedTab(selectedTabId, callback) {
   if (!chrome.tabs || !chrome.tabs.query) {
     callback(null);
     return;
   }
   chrome.tabs.query({}, (tabs) => {
     const webTabs = (tabs || []).filter((tab) => tab && /^https?:/i.test(tab.url || ""));
-    const selectedTabs = selectedBaseUrl
-      ? webTabs.filter((tab) => getBaseUrl(tab.url) === selectedBaseUrl)
-      : webTabs;
-    callback(selectedTabs.find((tab) => tab.active) || selectedTabs[0] || null);
+    const selectedTab = webTabs.find((tab) => tab.id === selectedTabId);
+    callback(selectedTab || webTabs.find((tab) => tab.active) || webTabs[0] || null);
   });
 }

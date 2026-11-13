@@ -55,7 +55,7 @@ chrome.windows.getCurrent((win) => {
 ## Mapear Campos (Aba Mapping)
 
 ### Automático
-- **URL Base**: Dropdown agrupado por domínio base (`getBaseUrl()`)
+- **URL monitorada**: Dropdown com uma opção por guia HTTP(S), mostrando a URL completa e selecionando pela identidade da guia (`tabId`)
 - **Escanear**: `SCAN_FIELDS` → lista campos com tipo inferido, mesclando com o mapeamento salvo (não remapeia; o remapeamento tem botão próprio)
 - **Linha de campo**: Label (editável), seletor pesquisável com 34 opções em ordem alfabética (33 tipos + auto), Seletor (editável), Fixed checkbox + value, Ações
 - Ao abrir o seletor de tipo, a busca aparece dentro da lista e filtra por rótulo ou chave, ignorando caixa e acentos; o tipo atual muda somente após escolher uma opção
@@ -72,7 +72,7 @@ chrome.windows.getCurrent((win) => {
 - Copiar JSON: `{locatorName: selector}`
 
 ## Perfis (Dropdown)
-- Agrupados por `pageUrl` normalizada = URL ativa
+- Agrupados por `pageUrl` normalizada (host e caminho; query string e fragmento são ignorados)
 - Seleção automática se apenas 1 perfil na URL
 - Ações: Renomear (modal), Excluir (confirmação)
 
