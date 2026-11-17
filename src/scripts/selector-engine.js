@@ -17,6 +17,18 @@ const normalize = (value) => String(value || "")
   .replace(/\s+/g, " ")
   .trim();
 
+function normalizeInferenceText(value) {
+  return String(value || "")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/([a-z])(\d)|(\d)([a-z])/gi, "$1$3 $2$4")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 const escapeAttribute = (value) => String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 const escapeCssIdentifier = (value) => window.CSS && typeof window.CSS.escape === "function"
   ? window.CSS.escape(String(value))
@@ -45,69 +57,105 @@ function labelsFor(element) {
 }
 
 function fieldText(element) {
-  return normalize([
+  return normalizeInferenceText([
     element.getAttribute("name"),
     element.getAttribute("autocomplete"),
     element.getAttribute("aria-label"),
     element.getAttribute("placeholder"),
     element.getAttribute("title"),
     labelsFor(element),
-    element.type,
     element.tagName === "SELECT" ? Array.from(element.options).slice(0, 8).map((option) => option.textContent).join(" ") : ""
   ].join(" "));
 }
 
 function hasAny(text, words) {
-  return words.some((word) => text.includes(word));
+  const normalizedText = ` ${text} `;
+  return words.some((word) => normalizedText.includes(` ${word} `));
 }
+
+function inferenceRule(type, keywords = [], inputTypes = []) {
+  return {
+    type,
+    keywords: keywords.map(normalizeInferenceText),
+    inputTypes
+  };
+}
+
+const INFERENCE_RULES = [
+  inferenceRule("email", ["e mail", "email", "correo"], ["email"]),
+  inferenceRule("cnpj", ["cnpj", "company registration"]),
+  inferenceRule("cpf", ["cpf", "taxpayer"]),
+  inferenceRule("cep", ["cep", "postal code", "codigo postal", "postcode", "zip code", "zip"]),
+  inferenceRule("rg", ["rg", "identity document", "identidade"]),
+  inferenceRule("phone", ["phone", "telephone", "telefone", "celular", "mobile", "whatsapp", "tel"], ["tel"]),
+  inferenceRule("mother", ["mother", "mae", "mãe"]),
+  inferenceRule("father", ["father", "pai"]),
+  inferenceRule("birthDate", ["birth", "nascimento", "nasc"]),
+  inferenceRule("openingDate", ["opening date", "data de abertura", "data abertura", "company opening"]),
+  inferenceRule("stateRegistration", ["state registration", "inscricao estadual", "inscricaoestadual", "ie"]),
+  inferenceRule("color", ["vehicle color", "cor do veiculo", "color", "cor"], ["color"]),
+  inferenceRule("segment", ["segment", "segmento", "industry", "sector", "ramo de atividade"]),
+  inferenceRule("gender", ["gender", "genero", "gênero", "sexo"]),
+  inferenceRule("profession", ["profession", "profissao", "profissão", "cargo", "occupation", "job"]),
+  inferenceRule("income", ["income", "renda", "salary", "salario", "salário"]),
+  inferenceRule("neighborhood", ["neighborhood", "bairro", "district"]),
+  inferenceRule("city", ["city", "cidade", "municipality", "municipio", "município"]),
+  inferenceRule("state", ["state", "estado", "province", "uf"]),
+  inferenceRule("address", ["street", "address", "endereco", "endereço", "logradouro", "avenida", "rua"]),
+  inferenceRule("number", ["number", "numero", "número", "house"], ["number"]),
+  inferenceRule("plate", ["plate", "placa", "license plate"]),
+  inferenceRule("chassi", ["chassi", "vin", "vehicle identification number"]),
+  inferenceRule("brand", ["brand", "marca", "montadora"]),
+  inferenceRule("model", ["model", "modelo"]),
+  inferenceRule("year", ["year", "ano", "fabricação", "fabricacao"]),
+  inferenceRule("website", ["website", "site", "url", "homepage"], ["url"]),
+  inferenceRule("company", ["company", "empresa", "organization", "razao", "razao social"]),
+  inferenceRule("name", ["name", "nome", "full name", "fullname"])
+];
+
+const STATE_CODES = new Set(["ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt", "pa", "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp", "to"]);
+const SELECT_GENDER_WORDS = ["masculino", "feminino", "male", "female"].map(normalizeInferenceText);
+const SELECT_INFERENCE_RULES = [
+  {
+    type: "state",
+    matches: (options) => options.filter((option) => STATE_CODES.has(option)).length >= 2
+  },
+  {
+    type: "gender",
+    matches: (options) => hasAny(options.join(" "), SELECT_GENDER_WORDS)
+  }
+];
+const INPUT_TYPE_FALLBACKS = [
+  { type: "checkbox", inputTypes: ["checkbox"] },
+  { type: "radio", inputTypes: ["radio"] },
+  { type: "birthDate", inputTypes: ["date", "month"] }
+];
 
 function isCustomSelect(element) {
   return element instanceof Element && element.matches(CUSTOM_FIELD_SELECTOR);
 }
 
+function inferSelectType(element) {
+  if (element.tagName !== "SELECT") return "";
+  const options = Array.from(element.options).map((option) =>
+    normalizeInferenceText(option.value || option.textContent)
+  );
+  const rule = SELECT_INFERENCE_RULES.find(({ matches }) => matches(options));
+  return rule ? rule.type : "";
+}
+
 function inferType(element) {
+  const selectType = inferSelectType(element);
+  if (selectType) return selectType;
+
   const text = fieldText(element);
-  const autocomplete = normalize(element.getAttribute("autocomplete"));
-  if (element.tagName === "SELECT") {
-    const options = Array.from(element.options).map((option) => normalize(option.value || option.textContent));
-    const stateCodes = new Set(["ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt", "pa", "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp", "to"]);
-    if (options.filter((option) => stateCodes.has(option)).length >= 2) return "state";
-    if (hasAny(options.join(" "), ["masculino", "feminino", "male", "female"])) return "gender";
-  }
-  if (element.type === "email" || hasAny(text, ["e mail", "email", "correo"])) return "email";
-  if (hasAny(text, ["cnpj", "company registration"])) return "cnpj";
-  if (hasAny(text, ["cpf", "taxpayer"])) return "cpf";
-  if (hasAny(text, ["cep", "postal code", "postcode", "zip"])) return "cep";
-  if (hasAny(text, ["rg", "identity document", "identidade"])) return "rg";
-  if (hasAny(text, ["phone", "telefone", "celular", "mobile", "whatsapp", "tel"])) return "phone";
-  if (hasAny(text, ["mother", "mae", "mãe"])) return "mother";
-  if (hasAny(text, ["father", "pai"])) return "father";
-  if (hasAny(text, ["birth", "nascimento", "nasc"])) return "birthDate";
-  if (hasAny(text, ["opening date", "data de abertura", "data abertura", "company opening"])) return "openingDate";
-  if (hasAny(text, ["state registration", "inscricao estadual", "inscricaoestadual"]) ||
-    /(^|\s)ie($|\s)/.test(text)) return "stateRegistration";
-  if (hasAny(text, ["vehicle color", "cor do veiculo", "color"]) || /(^|\s)cor($|\s)/.test(text)) return "color";
-  if (hasAny(text, ["segment", "segmento", "industry", "sector", "ramo de atividade"])) return "segment";
-  if (hasAny(text, ["gender", "genero", "gênero", "sexo"])) return "gender";
-  if (hasAny(text, ["profession", "profissao", "profissão", "cargo", "occupation", "job"])) return "profession";
-  if (hasAny(text, ["income", "renda", "salary", "salario", "salário"])) return "income";
-  if (hasAny(text, ["neighborhood", "bairro", "district"])) return "neighborhood";
-  if (hasAny(text, ["city", "cidade", "municipality", "municipio", "município"]) || autocomplete === "address-level2") return "city";
-  if (hasAny(text, ["state", "estado", "province", "uf"]) || autocomplete === "address-level1") return "state";
-  if (hasAny(text, ["street", "address", "endereco", "endereço", "logradouro", "avenida", "rua"]) || autocomplete === "street-address") return "address";
-  if (hasAny(text, ["number", "numero", "número", "house"])) return "number";
-  if (hasAny(text, ["plate", "placa", "license"])) return "plate";
-  if (hasAny(text, ["chassi", "vin", "vehicle identification number"])) return "chassi";
-  if (hasAny(text, ["brand", "marca", "montadora"])) return "brand";
-  if (hasAny(text, ["model", "modelo"])) return "model";
-  if (hasAny(text, ["year", "ano", "fabricação", "fabricacao"])) return "year";
-  if (hasAny(text, ["website", "site", "url", "homepage"])) return "website";
-  if (hasAny(text, ["company", "empresa", "organization", "razao", "razão"]) || autocomplete === "organization") return "company";
-  if (autocomplete === "given-name" || autocomplete === "family-name" || autocomplete === "name" ||
-    hasAny(text, ["name", "nome", "full name", "fullname"])) return "name";
-  if (element.type === "number") return "number";
-  if (element.type === "date" || element.type === "month") return "birthDate";
-  return "text";
+  const rule = INFERENCE_RULES.find(({ inputTypes, keywords }) =>
+    inputTypes.includes(element.type) || hasAny(text, keywords)
+  );
+  if (rule) return rule.type;
+
+  const fallback = INPUT_TYPE_FALLBACKS.find(({ inputTypes }) => inputTypes.includes(element.type));
+  return fallback ? fallback.type : "text";
 }
 
 const ANGULAR_ATTR_PATTERN = /^(ng-reflect-|_ng(content|host)-|ng-version$)/i;
