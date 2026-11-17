@@ -236,6 +236,17 @@ describe("selector engine", () => {
     expect(inferType(document.querySelector("[autocomplete='street-address']"))).toBe("address");
   });
 
+  it("usa rótulo e opções quando select não corresponde a UF ou gênero", () => {
+    document.body.innerHTML = `
+      <select aria-label="Bairro">
+        <option value="">Selecione</option>
+        <option value="centro">Centro</option>
+      </select>
+    `;
+
+    expect(inferType(document.querySelector("select"))).toBe("neighborhood");
+  });
+
   it("infere todas as categorias textuais e usa fallbacks de tipo", () => {
     document.body.innerHTML = `
       <input id="rg" aria-label="RG">
