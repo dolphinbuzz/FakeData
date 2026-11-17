@@ -17,7 +17,7 @@ Sistema de descoberta, inferência e mapeamento de campos de formulário em pág
 - **Marcar/Desmarcar encontrados**: Highlight visual dos matches
 - **Copiar JSON**: Exporta `locatorName: selector`
 
-## Inferência de Tipo (29 tipos + `auto`)
+## Inferência de Tipo (33 tipos + `auto`)
 
 | Categoria | Tipos | Heurística |
 |-----------|-------|------------|
@@ -25,9 +25,11 @@ Sistema de descoberta, inferência e mapeamento de campos de formulário em pág
 | Contato | `email`, `phone` | type=email/tel, autocomplete, label |
 | Endereço | `cep`, `address`, `number`, `neighborhood`, `city`, `state` | autocomplete, label, select options (UF) |
 | Pessoal | `birthDate`, `gender`, `mother`, `father`, `profession`, `income` | label, type=date/month, select options |
-| Veículo | `brand`, `model`, `year`, `plate`, `chassi`, `renavam` | label, placeholder |
-| Empresa | `company`, `website` | autocomplete=organization, label |
+| Veículo | `brand`, `model`, `color`, `year`, `plate`, `chassi`, `renavam` | label, placeholder |
+| Empresa | `company`, `stateRegistration`, `openingDate`, `segment`, `website` | autocomplete=organization, label |
 | UI | `checkbox`, `radio`, `text`, `number` | type attribute |
+
+Todos os campos gerados nas categorias Pessoa, Veículo e Empresa possuem um tipo correspondente para preenchimento. Para Veículo e Empresa, isso inclui Cor, Inscrição Estadual, Data de abertura e Segmento.
 
 ## Geração de Seletores (Prioridade)
 

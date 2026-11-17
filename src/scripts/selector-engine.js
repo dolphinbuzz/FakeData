@@ -83,6 +83,11 @@ function inferType(element) {
   if (hasAny(text, ["mother", "mae", "mãe"])) return "mother";
   if (hasAny(text, ["father", "pai"])) return "father";
   if (hasAny(text, ["birth", "nascimento", "nasc"])) return "birthDate";
+  if (hasAny(text, ["opening date", "data de abertura", "data abertura", "company opening"])) return "openingDate";
+  if (hasAny(text, ["state registration", "inscricao estadual", "inscricaoestadual"]) ||
+    /(^|\s)ie($|\s)/.test(text)) return "stateRegistration";
+  if (hasAny(text, ["vehicle color", "cor do veiculo", "color"]) || /(^|\s)cor($|\s)/.test(text)) return "color";
+  if (hasAny(text, ["segment", "segmento", "industry", "sector", "ramo de atividade"])) return "segment";
   if (hasAny(text, ["gender", "genero", "gênero", "sexo"])) return "gender";
   if (hasAny(text, ["profession", "profissao", "profissão", "cargo", "occupation", "job"])) return "profession";
   if (hasAny(text, ["income", "renda", "salary", "salario", "salário"])) return "income";
