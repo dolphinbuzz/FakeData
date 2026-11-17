@@ -30,6 +30,10 @@ export const MAPPING_TYPES = [
   ["website", "Site / URL"],
   ["checkbox", "Checkbox"],
   ["radio", "Radio"],
+  ["color", "Cor"],
+  ["stateRegistration", "Inscrição Estadual"],
+  ["openingDate", "Data de abertura"],
+  ["segment", "Segmento"],
   ["text", "Texto"]
 ].sort(([, firstLabel], [, secondLabel]) => collator.compare(firstLabel, secondLabel));
 

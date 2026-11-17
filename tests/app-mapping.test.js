@@ -32,6 +32,12 @@ describe("popup app - mapeamento de campos", () => {
     expect(labels).toEqual([...labels].sort((first, second) =>
       first.localeCompare(second, "pt-BR", { sensitivity: "base" })
     ));
+    expect(labels).toEqual(expect.arrayContaining([
+      "Cor",
+      "Data de abertura",
+      "Inscrição Estadual",
+      "Segmento"
+    ]));
     expect(firstMenu.hidden).toBe(true);
 
     firstType.click();

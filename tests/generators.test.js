@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_MODEL_YEARS } from "../src/scripts/data/vehicle-catalog.js";
+import { MAPPING_TYPES } from "../src/scripts/data/mapping-types.js";
 import {
   cnpj,
   cpf,
@@ -172,6 +173,51 @@ describe("geradores", () => {
     ]);
   });
 
+  it("oferece um tipo de mapeamento para cada campo gerado", () => {
+    const typeByLabel = {
+      Nome: "name",
+      CPF: "cpf",
+      RG: "rg",
+      Sexo: "gender",
+      "E-mail": "email",
+      Telefone: "phone",
+      "Data nasc.": "birthDate",
+      Mãe: "mother",
+      Pai: "father",
+      CEP: "cep",
+      Endereço: "address",
+      Número: "number",
+      Bairro: "neighborhood",
+      Cidade: "city",
+      Estado: "state",
+      Profissão: "profession",
+      "Renda mensal": "income",
+      Marca: "brand",
+      Modelo: "model",
+      Placa: "plate",
+      Chassi: "chassi",
+      Ano: "year",
+      Renavam: "renavam",
+      Cor: "color",
+      UF: "state",
+      "Razão social": "company",
+      CNPJ: "cnpj",
+      "Inscrição Estadual": "stateRegistration",
+      "Data de abertura": "openingDate",
+      Site: "website",
+      Segmento: "segment"
+    };
+    const data = createGeneratorData();
+
+    Object.values(data).forEach((definition) => {
+      definition.fields.forEach(([label]) => {
+        const type = typeByLabel[label];
+        expect(type, `tipo de mapeamento para "${label}"`).toBeTruthy();
+        expect(MAPPING_TYPES.some(([value]) => value === type), `tipo "${type}"`).toBe(true);
+      });
+    });
+  });
+
   it("gera nomes variados com dois sobrenomes distintos", () => {
     const names = Array.from({ length: 60 }, () => {
       const context = createGeneratorData().person.context();
@@ -282,5 +328,22 @@ describe("geradores", () => {
     expect(generateMappedValue("model", context, "", {
       getVehicleCatalog: () => [{ marca: "Ford", modelos: ["Ka"] }]
     })).toBe("Ka");
+  });
+
+  it("gera valores para todos os campos que não tinham tipo mapeável", () => {
+    const context = createGeneratorData().person.context();
+
+    expect(["Preto", "Branco", "Prata", "Azul", "Vermelho", "Cinza", "Verde"])
+      .toContain(generateMappedValue("color", context));
+    expect(generateMappedValue("color", context, "color")).toMatch(/^#[\dA-F]{6}$/i);
+    expect(generateMappedValue("stateRegistration", context)).toMatch(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/);
+    const openingDate = generateMappedValue("openingDate", context);
+    expect(openingDate).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+    expect(Number(openingDate.slice(-4))).toBeGreaterThanOrEqual(1980);
+    expect(Number(openingDate.slice(-4))).toBeLessThanOrEqual(2025);
+    expect([
+      "Tecnologia", "Varejo", "Consultoria", "Educação", "Saúde",
+      "Logística", "Construção", "Alimentos", "Finanças", "Marketing"
+    ]).toContain(generateMappedValue("segment", context));
   });
 });

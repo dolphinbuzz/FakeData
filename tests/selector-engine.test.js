@@ -138,6 +138,20 @@ describe("selector engine", () => {
     expect(inferType(document.querySelector("#state"))).toBe("state");
   });
 
+  it.each([
+    ["color", "Cor do veículo", "text"],
+    ["stateRegistration", "Inscrição Estadual", "text"],
+    ["openingDate", "Data de abertura", "date"],
+    ["segment", "Segmento da empresa", "text"]
+  ])("infere o tipo %s pelos dados gerados correspondentes", (expectedType, label, inputType) => {
+    const input = document.createElement("input");
+    input.type = inputType;
+    input.setAttribute("aria-label", label);
+    document.body.appendChild(input);
+
+    expect(inferType(input)).toBe(expectedType);
+  });
+
   it("normaliza texto e escapa atributos difíceis", () => {
     expect(normalize(" João__da--Silva ")).toBe("joao da silva");
     const element = document.createElement("input");

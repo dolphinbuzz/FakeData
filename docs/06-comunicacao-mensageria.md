@@ -82,7 +82,7 @@ interface Field {
   key: string;                    // "${selector}::${index}"
   selector: string;               // CSS selector único
   label: string;                  // Label legível (max 120)
-  inferredType: MappingType;      // 29 tipos
+  inferredType: MappingType;      // 33 tipos
   tagName: "input"|"select"|"textarea"|"multi-select";
   inputType: string;              // "text"|"email"|"number"|"date"|"month"|"checkbox"|"radio"|""
   value: string;

@@ -44,7 +44,7 @@ src/scripts/
   privacy.js          # Privacy page logic
   data/
     estados.js        # Const: ESTADOS (27), DDDS
-    mapping-types.js  # Const: MAPPING_TYPES (30 entradas: 29 tipos + auto)
+    mapping-types.js  # Const: MAPPING_TYPES (34 entradas: 33 tipos + auto)
     vehicle-catalog.js # Pure CRUD functions
   domain/             # Helpers puros extraídos do app.js
     url-utils.js      # normalizePageUrl, getBaseUrl

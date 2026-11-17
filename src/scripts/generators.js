@@ -34,6 +34,16 @@ const PERSON_SURNAMES = [
   "Ramos", "Moraes", "Vieira", "Fonseca", "Matos", "Siqueira", "Tavares",
   "Peixoto", "Coelho", "Neves", "Assis", "Braga", "Macedo", "Vasconcelos"
 ];
+const VEHICLE_COLORS = [
+  ["Preto", "#000000"],
+  ["Branco", "#FFFFFF"],
+  ["Prata", "#C0C0C0"],
+  ["Azul", "#0000FF"],
+  ["Vermelho", "#FF0000"],
+  ["Cinza", "#808080"],
+  ["Verde", "#008000"]
+];
+const COMPANY_SEGMENTS = ["Tecnologia", "Varejo", "Consultoria", "Educação", "Saúde", "Logística", "Construção", "Alimentos", "Finanças", "Marketing"];
 
 function pickDistinct(items, count) {
   const available = [...items];
@@ -307,7 +317,7 @@ export function createGeneratorData({
         ["Modelo", (ctx) => ctx.modelo],
         ["Placa", () => gerarPlaca()], ["Chassi", () => gerarChassi()], ["Ano", (ctx) => ctx.ano ? `${ctx.ano}/${ctx.ano + 1}` : gerarAno()],
         ["Renavam", () => gerarRenavam(getRenavamFormatted())],
-        ["Cor", () => pick(["Preto", "Branco", "Prata", "Azul", "Vermelho", "Cinza", "Verde"])],
+        ["Cor", () => pick(VEHICLE_COLORS)[0]],
         ["UF", (ctx) => `${ctx.estado.sigla} - ${ctx.estado.nome}`]
       ]
     },
@@ -315,7 +325,7 @@ export function createGeneratorData({
       title: "Empresa gerada", label: "Empresa",
       context: () => {
         const nome = pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma", "Conecta", "Aliança", "Pleno", "Vértice", "Origem", "Soma", "Mosaico"]);
-        const segmento = pick(["Tecnologia", "Varejo", "Consultoria", "Educação", "Saúde", "Logística", "Construção", "Alimentos", "Finanças", "Marketing"]);
+        const segmento = pick(COMPANY_SEGMENTS);
         const estado = getState();
         return {
           nome, segmento, estado, cidade: pick(estado.cidades),
@@ -347,6 +357,7 @@ export function generateMappedValue(type, context, inputType = "", options = {})
     pickVehicle(options.getVehicleCatalog ? options.getVehicleCatalog() : [], pick);
   const ano = vehicle.ano ?? pickModelYear(vehicle.marca, vehicle.modelo, pick);
   const year = ano === undefined ? gerarAno() : `${ano}/${ano + 1}`;
+  const [vehicleColor, vehicleColorValue] = pick(VEHICLE_COLORS);
   const personValues = {
     name: `${resolvedContext.nome} ${resolvedContext.sobrenome}`,
     cpf: cpf(options.getCpfFormatted ? options.getCpfFormatted() : true),
@@ -364,7 +375,12 @@ export function generateMappedValue(type, context, inputType = "", options = {})
     cnpj: cnpj(options.getCnpjFormatted ? options.getCnpjFormatted() : true, options.getCnpjAlphanumeric ? options.getCnpjAlphanumeric() : false),
     brand: vehicle.marca, model: vehicle.modelo, year,
     plate: gerarPlaca(), chassi: gerarChassi(), renavam: gerarRenavam(options.getRenavamFormatted ? options.getRenavamFormatted() : false),
-    website: gerarSite(pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma"])), text: randomWord()
+    website: gerarSite(pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma"])),
+    color: inputType === "color" ? vehicleColorValue : vehicleColor,
+    stateRegistration: gerarInscricaoEstadual(),
+    openingDate: gerarDataAbertura(),
+    segment: pick(COMPANY_SEGMENTS),
+    text: randomWord()
   };
   return personValues[type] || personValues.text;
 }
