@@ -121,15 +121,16 @@ interface Field {
 
 ## Tab Management
 
-### getActiveTab()
+### getSelectedTab()
 - Filtra tabs `http(s)://`
-- Prioriza ativa, depois primeira da `selectedBaseUrl`
+- Prioriza a guia selecionada por `selectedTabId`; se não estiver disponível, usa a ativa ou a primeira guia HTTP(S)
 - Retorna `{ id, url, active }`
 
-### refreshBaseUrlOptions()
-- Agrupa tabs por base URL (`getBaseUrl()`)
-- Atualiza dropdown `#base-url-select`
-- Seleciona base da tab ativa ou primeira
+### refreshMonitoredTabOptions()
+- Lista cada guia HTTP(S) individualmente, sem agrupar por URL base
+- Atualiza dropdown `#monitored-tab-select` com a URL completa
+- Mantém a guia selecionada enquanto ela existir; caso contrário, seleciona a guia ativa ou a primeira disponível
+- Atualiza a lista ao navegar ou fechar uma guia
 
 ### Tab Activation Listener
 ```javascript
@@ -137,7 +138,7 @@ chrome.tabs.onActivated.addListener(() => {
   activeTab = null;
   activePageUrl = "";
   activeBaseUrl = "";
-  refreshBaseUrlOptions(() => scanPageFields());
+  refreshMonitoredTabOptions(() => scanPageFields());
 });
 ```
 
@@ -212,7 +213,7 @@ chrome.sidePanel.close({ windowId })
 
 ## Arquivos Relacionados
 - `src/scripts/messages.js` - ACTIONS enum (Object.freeze, 17 actions)
-- `src/scripts/app.js` - sendToPage, getActiveTab, listeners
-- `src/scripts/services/tabs-service.js` - sendMessageToTab, findActiveTab, injectContentScript, pendingInjections
+- `src/scripts/app.js` - sendToPage, getSelectedTab, listeners
+- `src/scripts/services/tabs-service.js` - sendMessageToTab, findSelectedTab, injectContentScript, pendingInjections
 - `src/scripts/content.js` - handleMessage, chrome.runtime.onMessage, installationProbe, dispose, disposeNavigationObserver
 - `src/scripts/selector-engine.js` - installNavigationObserver (retorna cleanup function)

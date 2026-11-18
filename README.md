@@ -60,7 +60,7 @@ O catálogo é salvo em `chrome.storage.local`. Ao gerar um veículo, a extensã
 ## Mapear e preencher campos
 
 1. Abra **Mapear campos**.
-2. Se houver várias páginas HTTP(S) abertas, escolha a **URL base monitorada**. Subdomínios são agrupados em bases como `exemplo.com.br` e `exemplo.com`; o monitoramento continua limitado à aba selecionada.
+2. Se houver várias páginas HTTP(S) abertas, escolha a **URL completa monitorada** para selecionar a guia específica. O endereço exibido inclui caminho, query string e fragmento; os perfis continuam associados ao host e caminho.
 3. Na subaba **Automático**, clique em **Escanear campos**.
 4. Revise cada campo encontrado, seu tipo e seu seletor CSS.
 5. Use **Marcar** para destacar um campo, **Localizar** para centralizá-lo na página ou **🎯** para capturar outro elemento.

@@ -12,7 +12,7 @@ function createInitialState() {
     activeTab: null,
     activePageUrl: "",
     activeBaseUrl: "",
-    selectedBaseUrl: "",
+    selectedTabId: null,
     savedProfiles: [],
     selectedProfileId: "",
     mappingModalResolver: null,

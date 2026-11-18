@@ -55,7 +55,7 @@ src/scripts/
     vehicle-context.js # resolveVehicleContext (coerência marca/modelo)
     batch-export.js   # Validação do tamanho do lote e serialização JSON/CSV
   services/           # Serviços com dependência de chrome.*
-    tabs-service.js   # pendingInjections, injectContentScript, sendMessageToTab, findActiveTab
+    tabs-service.js   # pendingInjections, injectContentScript, sendMessageToTab, findSelectedTab
     profiles-repository.js # migrateLegacyProfiles, readProfiles, writeProfiles
   state/
     app-store.js      # Estado mutável compartilhado pelos controladores
