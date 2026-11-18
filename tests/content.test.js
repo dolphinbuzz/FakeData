@@ -95,12 +95,18 @@ describe("content script", () => {
     const email = document.querySelector("#email");
     const cpf = document.querySelector("#cpf");
     const uf = document.querySelector("#uf");
-    const inputEvents = vi.fn();
-    const changeEvents = vi.fn();
-    [email, cpf, uf].forEach((element) => {
-      element.addEventListener("input", inputEvents);
-      element.addEventListener("change", changeEvents);
-    });
+    const emailInput = vi.fn();
+    const cpfInput = vi.fn();
+    const ufInput = vi.fn();
+    const emailChange = vi.fn();
+    const cpfChange = vi.fn();
+    const ufChange = vi.fn();
+    email.addEventListener("input", emailInput);
+    cpf.addEventListener("input", cpfInput);
+    uf.addEventListener("input", ufInput);
+    email.addEventListener("change", emailChange);
+    cpf.addEventListener("change", cpfChange);
+    uf.addEventListener("change", ufChange);
 
     const response = await sendContentMessage({
       action: ACTIONS.FILL_ALL,
@@ -115,8 +121,55 @@ describe("content script", () => {
     expect(email.value).toBe("qa@example.test");
     expect(cpf.value).toBe("123.456.789-09");
     expect(uf.value).toBe("CE");
-    expect(inputEvents).toHaveBeenCalledTimes(3);
-    expect(changeEvents).toHaveBeenCalledTimes(3);
+    expect(emailInput).toHaveBeenCalledTimes("qa@example.test".length);
+    expect(cpfInput).toHaveBeenCalledTimes("123.456.789-09".length);
+    expect(ufInput).toHaveBeenCalledTimes(1);
+    expect(emailChange).toHaveBeenCalledTimes(1);
+    expect(cpfChange).toHaveBeenCalledTimes(1);
+    expect(ufChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("insere texto caractere por caractere e substitui valores existentes", async () => {
+    document.body.insertAdjacentHTML("beforeend", `
+      <input id="typing" value="antigo">
+      <textarea id="notes">antigo</textarea>
+    `);
+    const fields = ["#typing", "#notes"].map((selector) => document.querySelector(selector));
+    const inputEvents = fields.map((field) => {
+      const events = [];
+      field.addEventListener("input", (event) => {
+        events.push({
+          value: field.value,
+          data: event.data,
+          inputType: event.inputType
+        });
+      });
+      return events;
+    });
+    const changeEvents = fields.map((field) => {
+      const listener = vi.fn();
+      field.addEventListener("change", listener);
+      return listener;
+    });
+
+    const response = await sendContentMessage({
+      action: ACTIONS.FILL_ALL,
+      fields: [
+        { selector: "#typing", value: "A🙂" },
+        { selector: "#notes", value: "A🙂" }
+      ]
+    });
+
+    expect(response).toEqual({ filled: 2, total: 2, failed: [] });
+    expect(fields.map((field) => field.value)).toEqual(["A🙂", "A🙂"]);
+    inputEvents.forEach((events) => {
+      expect(events).toEqual([
+        { value: "", data: null, inputType: "deleteContentBackward" },
+        { value: "A", data: "A", inputType: "insertText" },
+        { value: "A🙂", data: "🙂", inputType: "insertText" }
+      ]);
+    });
+    changeEvents.forEach((listener) => expect(listener).toHaveBeenCalledTimes(1));
   });
 
   it("exibe um botão de preenchimento junto aos campos sincronizados", async () => {

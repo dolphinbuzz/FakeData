@@ -152,6 +152,33 @@ describe("selector engine", () => {
     expect(inferType(input)).toBe(expectedType);
   });
 
+  it.each([
+    ["placa em snake_case", '<input name="license_plate">', "plate"],
+    ["CEP como código postal", '<input aria-label="Código postal">', "cep"],
+    ["CEP em camelCase com sigla", '<input name="CEPInput">', "cep"],
+    ["endereço em camelCase", '<input name="enderecoResidencial">', "address"],
+    ["data em camelCase", '<input name="birthDate">', "birthDate"],
+    ["inscrição estadual em camelCase", '<input name="stateRegistration">', "stateRegistration"],
+    ["razão social", '<input name="razaoSocial">', "company"],
+    ["campo de cor pelo tipo do input", '<input type="color">', "color"],
+    ["checkbox sem rótulo semântico", '<input type="checkbox">', "checkbox"],
+    ["radio sem rótulo semântico", '<input type="radio">', "radio"]
+  ])("detecta %s", (_, markup, expectedType) => {
+    document.body.innerHTML = markup;
+
+    expect(inferType(document.querySelector("input"))).toBe(expectedType);
+  });
+
+  it("não infere tipos por coincidência parcial de texto", () => {
+    document.body.innerHTML = `
+      <input name="target">
+      <input name="hotel">
+      <input name="username">
+    `;
+
+    expect(Array.from(document.querySelectorAll("input"), inferType)).toEqual(["text", "text", "text"]);
+  });
+
   it("normaliza texto e escapa atributos difíceis", () => {
     expect(normalize(" João__da--Silva ")).toBe("joao da silva");
     const element = document.createElement("input");
@@ -207,6 +234,27 @@ describe("selector engine", () => {
     expect(inferType(document.querySelector("[placeholder='Renda mensal']"))).toBe("income");
     expect(inferType(document.querySelector("select"))).toBe("gender");
     expect(inferType(document.querySelector("[autocomplete='street-address']"))).toBe("address");
+  });
+
+  it("infere cidade e estado pelos valores de autocomplete padronizados", () => {
+    document.body.innerHTML = `
+      <input autocomplete="address-level1">
+      <input autocomplete="address-level2">
+    `;
+
+    expect(inferType(document.querySelector("[autocomplete='address-level1']"))).toBe("state");
+    expect(inferType(document.querySelector("[autocomplete='address-level2']"))).toBe("city");
+  });
+
+  it("usa rótulo e opções quando select não corresponde a UF ou gênero", () => {
+    document.body.innerHTML = `
+      <select aria-label="Bairro">
+        <option value="">Selecione</option>
+        <option value="centro">Centro</option>
+      </select>
+    `;
+
+    expect(inferType(document.querySelector("select"))).toBe("neighborhood");
   });
 
   it("infere todas as categorias textuais e usa fallbacks de tipo", () => {

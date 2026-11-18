@@ -192,13 +192,49 @@
   }
 
   function setNativeValue(element, value) {
+    assignNativeValue(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function assignNativeValue(element, value) {
     const prototype = element.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype :
       element.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
     const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
     if (descriptor && descriptor.set) descriptor.set.call(element, String(value));
     else element.value = String(value);
+  }
+
+  function dispatchTypedInput(element, data, inputType) {
+    const InputEventConstructor = element.ownerDocument.defaultView.InputEvent;
+    if (typeof InputEventConstructor === "function") {
+      element.dispatchEvent(new InputEventConstructor("input", {
+        bubbles: true,
+        data,
+        inputType
+      }));
+      return;
+    }
     element.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function typeTextValue(element, value) {
+    const text = String(value);
+    if (element.value) {
+      assignNativeValue(element, "");
+      dispatchTypedInput(element, null, "deleteContentBackward");
+    }
+    for (const character of text) {
+      assignNativeValue(element, `${element.value || ""}${character}`);
+      dispatchTypedInput(element, character, "insertText");
+    }
+    if (!text.length && !element.value) dispatchTypedInput(element, "", "insertText");
     element.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function supportsIncrementalTyping(element) {
+    return element.tagName === "TEXTAREA" ||
+      (element.tagName === "INPUT" && ["text", "email", "password", "search", "tel", "url"].includes(element.type));
   }
 
   async function fill(selector, value) {
@@ -228,7 +264,8 @@
         ? value.replace(/\./g, "").replace(",", ".")
         : value.replace(/[^\d-]/g, "");
     }
-    setNativeValue(element, value);
+    if (supportsIncrementalTyping(element)) typeTextValue(element, value);
+    else setNativeValue(element, value);
     return true;
   }
 
