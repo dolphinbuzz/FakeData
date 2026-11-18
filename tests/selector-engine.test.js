@@ -236,6 +236,16 @@ describe("selector engine", () => {
     expect(inferType(document.querySelector("[autocomplete='street-address']"))).toBe("address");
   });
 
+  it("infere cidade e estado pelos valores de autocomplete padronizados", () => {
+    document.body.innerHTML = `
+      <input autocomplete="address-level1">
+      <input autocomplete="address-level2">
+    `;
+
+    expect(inferType(document.querySelector("[autocomplete='address-level1']"))).toBe("state");
+    expect(inferType(document.querySelector("[autocomplete='address-level2']"))).toBe("city");
+  });
+
   it("usa rótulo e opções quando select não corresponde a UF ou gênero", () => {
     document.body.innerHTML = `
       <select aria-label="Bairro">

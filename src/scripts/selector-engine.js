@@ -149,6 +149,10 @@ function inferType(element) {
   if (selectType) return selectType;
 
   const text = fieldText(element);
+  const autocomplete = normalize(element.getAttribute("autocomplete"));
+  if (autocomplete === "address level1") return "state";
+  if (autocomplete === "address level2") return "city";
+
   const rule = INFERENCE_RULES.find(({ inputTypes, keywords }) =>
     inputTypes.includes(element.type) || hasAny(text, keywords)
   );
