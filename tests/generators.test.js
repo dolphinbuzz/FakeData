@@ -289,6 +289,14 @@ describe("geradores", () => {
     expect(validarRenavam("123.456.789-01")).toBe(false);
   });
 
+  it("mantém a opção de formatação do Renavam na ficha de veículo", () => {
+    const gerarCampoRenavam = (options) =>
+      createGeneratorData(options).vehicle.fields.find(([label]) => label === "Renavam")[1]();
+
+    expect(gerarCampoRenavam({ getRenavamFormatted: () => true })).toMatch(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/);
+    expect(gerarCampoRenavam({ getRenavamFormatted: () => false })).toMatch(/^\d{11}$/);
+  });
+
   it("rejeita documentos inválidos e aceita entradas mascaradas", () => {
     expect(validarCPF("123")).toBe(false);
     expect(validarCPF(null)).toBe(false);
@@ -320,7 +328,7 @@ describe("geradores", () => {
     expect(generateMappedValue("unknown", context)).toMatch(/^(acme|qa-lab|teste|sandbox|exemplo)\d{2}$/);
     expect(generateMappedValue("chassi", context)).toMatch(/^[A-HJ-NPR-Z0-9]{17}$/);
     expect(generateMappedValue("renavam", context)).toMatch(/^\d{11}$/);
-    expect(generateMappedValue("renavam", context, "", { getRenavamFormatted: () => true })).toMatch(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/);
+    expect(generateMappedValue("renavam", context, "", { getRenavamFormatted: () => true })).toMatch(/^\d{11}$/);
     expect(generateMappedValue("renavam", context, "", { getRenavamFormatted: () => false })).toMatch(/^\d{11}$/);
     expect(generateMappedValue("brand", context, "", {
       getVehicleCatalog: () => [{ marca: "Ford", modelos: ["Ka"] }]
