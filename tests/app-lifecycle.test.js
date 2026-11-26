@@ -615,8 +615,8 @@ describe("popup app - ciclo de vida da guia monitorada", () => {
   it("atualiza a URL exibida e reescaneia a guia selecionada ao terminar navegação", async () => {
     appUtils.cleanup();
     const tabs = [
-      { id: 10, url: "https://sistema.example.test/cadastro", active: true },
-      { id: 11, url: "https://sistema.example.test/login" },
+      { id: 10, title: "Cadastro", url: "https://sistema.example.test/cadastro", active: true },
+      { id: 11, title: "Login", url: "https://sistema.example.test/login" },
     ];
     chromeMock = createChromeMock({ scanFields: scannedFields, openTabs: tabs });
     dom = createPopupDOM();
@@ -627,7 +627,7 @@ describe("popup app - ciclo de vida da guia monitorada", () => {
     listener(10, { url: tabs[0].url }, tabs[0]);
 
     const select = document.querySelector("#monitored-tab-select");
-    expect(select.options[0].textContent).toBe(tabs[0].url);
+    expect(select.options[0].textContent).toBe(`Cadastro - ${tabs[0].url}`);
 
     chromeMock.tabs.sendMessage.mockClear();
     listener(10, { status: "complete" }, tabs[0]);
