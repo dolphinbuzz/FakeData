@@ -78,6 +78,8 @@ Retorna objeto com `person`, `vehicle`, `company`, cada um com `context()` e `fi
 ```javascript
 generateMappedValue(type, context, inputType, options)
 // Para preenchimento de campos mapeados (content script)
+// O Renavam mapeado é sempre gerado sem pontuação; getRenavamFormatted
+// continua controlando apenas o Renavam da ficha de Veículo.
 ```
 
 ## Arquivos Relacionados

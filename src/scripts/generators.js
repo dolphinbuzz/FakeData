@@ -374,7 +374,7 @@ export function generateMappedValue(type, context, inputType = "", options = {})
     company: `${pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma", "Conecta", "Aliança", "Pleno", "Vértice"])} Tecnologia Ltda.`,
     cnpj: cnpj(options.getCnpjFormatted ? options.getCnpjFormatted() : true, options.getCnpjAlphanumeric ? options.getCnpjAlphanumeric() : false),
     brand: vehicle.marca, model: vehicle.modelo, year,
-    plate: gerarPlaca(), chassi: gerarChassi(), renavam: gerarRenavam(options.getRenavamFormatted ? options.getRenavamFormatted() : false),
+    plate: gerarPlaca(), chassi: gerarChassi(), renavam: gerarRenavam(false),
     website: gerarSite(pick(["Horizonte", "Norte", "Ponto", "Viva", "Nexo", "Aurora", "Integra", "Prisma"])),
     color: inputType === "color" ? vehicleColorValue : vehicleColor,
     stateRegistration: gerarInscricaoEstadual(),
