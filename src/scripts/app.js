@@ -299,7 +299,7 @@ function refreshMonitoredTabOptions(callback = () => {}) {
     }
     monitoredTabSelect.innerHTML = webTabs.length
       ? webTabs.map((tab) =>
-        `<option value="${tab.id}">${escapeHtml(tab.url)}</option>`
+        `<option value="${tab.id}">${escapeHtml(tab.title && tab.title.trim() ? tab.title : "Sem título")} - ${escapeHtml(tab.url)}</option>`
       ).join("")
       : '<option value="">Nenhuma página HTTP(S) aberta</option>';
     monitoredTabSelect.value = state.selectedTabId === null ? "" : String(state.selectedTabId);

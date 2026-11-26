@@ -119,13 +119,13 @@ describe("popup app - modo popup vs aba dedicada", () => {
 });
 
 describe("popup app - seleção de guias monitoradas", () => {
-  it("lista cada guia HTTP(S) com a URL completa", async () => {
+  it("lista cada guia HTTP(S) com título e URL completa", async () => {
     appUtils.cleanup();
     chromeMock = createChromeMock({
       scanFields: scannedFields,
       openTabs: [
-        { id: 10, url: "https://www.exemplo.com.br/cadastro", active: true },
-        { id: 11, url: "https://app.exemplo.com.br/outra" },
+        { id: 10, title: "Cadastro <cliente>", url: "https://www.exemplo.com.br/cadastro", active: true },
+        { id: 11, title: "Outra página", url: "https://app.exemplo.com.br/outra" },
         { id: 12, url: "https://www.outro.com/login" },
         { id: 13, url: "chrome://settings/" },
       ],
@@ -135,17 +135,17 @@ describe("popup app - seleção de guias monitoradas", () => {
 
     expect([...document.querySelectorAll("#monitored-tab-select option")].map((o) => [o.value, o.textContent]))
       .toEqual([
-        ["10", "https://www.exemplo.com.br/cadastro"],
-        ["11", "https://app.exemplo.com.br/outra"],
-        ["12", "https://www.outro.com/login"],
+        ["10", "Cadastro <cliente> - https://www.exemplo.com.br/cadastro"],
+        ["11", "Outra página - https://app.exemplo.com.br/outra"],
+        ["12", "Sem título - https://www.outro.com/login"],
       ]);
   });
 
   it("mapeia a guia selecionada mesmo quando outra guia tem a mesma URL base", async () => {
     appUtils.cleanup();
     const tabs = [
-      { id: 10, url: "https://www.exemplo.com.br/cadastro?origem=1#form", active: true },
-      { id: 11, url: "https://app.exemplo.com.br/outra?origem=2#login" },
+      { id: 10, title: "Cadastro", url: "https://www.exemplo.com.br/cadastro?origem=1#form", active: true },
+      { id: 11, title: "Login", url: "https://app.exemplo.com.br/outra?origem=2#login" },
     ];
     chromeMock = createChromeMock({ scanFields: scannedFields, openTabs: tabs });
     dom = createPopupDOM();
@@ -166,8 +166,8 @@ describe("popup app - seleção de guias monitoradas", () => {
     );
     expect([...select.options].map((option) => option.textContent))
       .toEqual([
-        "https://www.exemplo.com.br/cadastro?origem=1#form",
-        "https://app.exemplo.com.br/outra?origem=2#login",
+        "Cadastro - https://www.exemplo.com.br/cadastro?origem=1#form",
+        "Login - https://app.exemplo.com.br/outra?origem=2#login",
       ]);
   });
 
